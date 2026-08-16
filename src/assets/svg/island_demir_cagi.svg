@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300">
+  <defs>
+    <radialGradient id="fireGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FF5722" stop-opacity="1"/>
+      <stop offset="60%" stop-color="#FF9800" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#3E2723" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="anvilGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#78909C"/>
+      <stop offset="50%" stop-color="#37474F"/>
+      <stop offset="100%" stop-color="#212121"/>
+    </linearGradient>
+    <linearGradient id="caveGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#4E342E"/>
+      <stop offset="100%" stop-color="#1B0000"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Island Base Platform -->
+  <ellipse cx="150" cy="220" rx="130" ry="55" fill="url(#caveGrad)" stroke="#FF5722" stroke-width="4"/>
+
+  <!-- Cave Arch Backing -->
+  <path d="M 40 220 Q 40 80 150 70 Q 260 80 260 220 Z" fill="#2C1B18"/>
+  <path d="M 60 215 Q 60 100 150 90 Q 240 100 240 215 Z" fill="url(#fireGlow)"/>
+
+  <!-- Furnace Fire Glowing -->
+  <path d="M 120 190 Q 150 120 180 190 Z" fill="#FF3D00"/>
+  <path d="M 130 190 Q 150 140 170 190 Z" fill="#FFC107"/>
+
+  <!-- Anvil -->
+  <path d="M 100 180 L 200 180 L 180 200 L 180 215 L 120 215 L 120 200 Z" fill="url(#anvilGrad)" stroke="#FF9800" stroke-width="2"/>
+  <rect x="90" y="175" width="120" height="10" fill="#B0BEC5" rx="2"/>
+
+  <!-- Blacksmith Hammer -->
+  <g transform="rotate(-30 170 150)">
+    <rect x="165" y="120" width="10" height="55" fill="#8D6E63" rx="2"/>
+    <rect x="155" y="112" width="30" height="18" fill="#455A64" rx="3" stroke="#FFC107" stroke-width="1.5"/>
+  </g>
+
+  <!-- Sparks Embers -->
+  <circle cx="120" cy="130" r="4" fill="#FFEB3B"/>
+  <circle cx="180" cy="120" r="5" fill="#FF5722"/>
+  <circle cx="150" cy="110" r="3" fill="#FF9800"/>
+  <circle cx="135" cy="100" r="2" fill="#FFFFFF"/>
+  <circle cx="165" cy="95" r="3.5" fill="#FFEB3B"/>
+</svg>

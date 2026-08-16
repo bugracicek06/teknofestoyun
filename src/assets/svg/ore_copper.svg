@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <defs>
+    <linearGradient id="copperGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF7A50"/>
+      <stop offset="50%" stop-color="#D84315"/>
+      <stop offset="100%" stop-color="#4E342E"/>
+    </linearGradient>
+  </defs>
+  <!-- Rough Copper Ore Rock -->
+  <polygon points="25,20 85,15 105,60 80,105 20,95 10,50" fill="url(#copperGrad)" stroke="#FFAB91" stroke-width="2.5"/>
+  <!-- Green Malachite Veins -->
+  <path d="M 35 30 Q 55 45 75 35 M 40 70 Q 65 65 90 80" fill="none" stroke="#10B981" stroke-width="3.5" stroke-linecap="round"/>
+</svg>

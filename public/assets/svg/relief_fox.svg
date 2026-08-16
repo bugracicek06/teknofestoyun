@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 110" width="110" height="110">
+  <defs>
+    <radialGradient id="reliefStoneGrad" cx="45%" cy="40%" r="55%">
+      <stop offset="0%" stop-color="#FEF3C7"/>
+      <stop offset="50%" stop-color="#D97706"/>
+      <stop offset="100%" stop-color="#451A03"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Limestone Plaque -->
+  <polygon points="12,12 98,8 102,98 8,102" fill="url(#reliefStoneGrad)" stroke="#B45309" stroke-width="2"/>
+
+  <!-- Bas-Relief Carved Fox Silhouette (Engraved with depth shadow) -->
+  <path d="M 28 65 Q 40 45 60 50 Q 75 42 85 30 Q 88 40 82 55 Q 88 65 78 75 Q 65 80 48 78 Q 32 82 25 72 Z" fill="#2E1805" opacity="0.85"/>
+  <path d="M 85 30 L 78 45 L 88 40 Z" fill="#2E1805"/>
+  <!-- Relief Rim Highlight -->
+  <path d="M 28 64 Q 40 44 60 49 Q 75 41 85 29" fill="none" stroke="#FFFBEB" stroke-width="1.8" opacity="0.6"/>
+</svg>

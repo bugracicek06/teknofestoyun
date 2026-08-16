@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <defs>
+    <linearGradient id="bronzeIngotGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#CD7F32"/>
+      <stop offset="50%" stop-color="#B8860B"/>
+      <stop offset="100%" stop-color="#5C3A21"/>
+    </linearGradient>
+  </defs>
+  <!-- Metallic Bronze Ingot Bar -->
+  <polygon points="20,35 100,35 110,85 10,85" fill="url(#bronzeIngotGrad)" stroke="#FFD700" stroke-width="2.5"/>
+  <polygon points="20,35 100,35 90,20 30,20" fill="#E5A059" stroke="#FFD700" stroke-width="2"/>
+  <!-- Specular Reflection Highlight -->
+  <line x1="30" y1="45" x2="90" y2="45" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+</svg>

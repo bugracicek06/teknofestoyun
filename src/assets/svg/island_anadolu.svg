@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300">
+  <defs>
+    <radialGradient id="turquoiseGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00F2FE" stop-opacity="0.8"/>
+      <stop offset="70%" stop-color="#00838F" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#0A1128" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="woodGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#A1887F"/>
+      <stop offset="100%" stop-color="#4E342E"/>
+    </linearGradient>
+    <linearGradient id="gearGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFD700"/>
+      <stop offset="100%" stop-color="#B78103"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Island Base Platform -->
+  <ellipse cx="150" cy="220" rx="130" ry="55" fill="url(#woodGrad)" stroke="#00F2FE" stroke-width="4"/>
+
+  <!-- Turquoise Aura -->
+  <circle cx="150" cy="140" r="85" fill="url(#turquoiseGlow)"/>
+
+  <!-- Seljuk Pointed Arch Roof -->
+  <path d="M 60 215 L 60 130 Q 150 70 240 130 L 240 215 Z" fill="#1565C0" opacity="0.3"/>
+  <path d="M 70 215 L 70 140 Q 150 90 230 140 L 230 215 Z" fill="none" stroke="#00F2FE" stroke-width="3"/>
+
+  <!-- Central Clockwork Gear -->
+  <g transform="translate(150, 140)">
+    <circle cx="0" cy="0" r="35" fill="url(#gearGrad)" stroke="#FFFFFF" stroke-width="2"/>
+    <circle cx="0" cy="0" r="14" fill="#0A1128"/>
+    <!-- Gear Teeth -->
+    <rect x="-6" y="-45" width="12" height="90" fill="url(#gearGrad)" rx="2"/>
+    <rect x="-45" y="-6" width="90" height="12" fill="url(#gearGrad)" rx="2"/>
+    <rect x="-6" y="-45" width="12" height="90" fill="url(#gearGrad)" rx="2" transform="rotate(45)"/>
+    <rect x="-45" y="-6" width="90" height="12" fill="url(#gearGrad)" rx="2" transform="rotate(45)"/>
+  </g>
+
+  <!-- Copper Craft Vessel -->
+  <path d="M 85 190 Q 95 160 115 170 L 115 210 L 85 210 Z" fill="#D84315" stroke="#FF8A65" stroke-width="1.5"/>
+
+  <!-- Geometric Seljuk Star Motif -->
+  <polygon points="210,165 215,175 225,175 217,182 220,192 210,185 200,192 203,182 195,175 205,175" fill="#FFD700"/>
+</svg>

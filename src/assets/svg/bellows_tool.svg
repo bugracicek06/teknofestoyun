@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 140" width="140" height="140">
+  <defs>
+    <linearGradient id="bellowsWood" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#8D6E63"/>
+      <stop offset="100%" stop-color="#3E2723"/>
+    </linearGradient>
+  </defs>
+  <!-- Leather Accordion Body -->
+  <polygon points="30,35 110,35 95,105 45,105" fill="#4E342E" stroke="#FFD700" stroke-width="2.5"/>
+  <path d="M 35 55 L 105 55 M 38 75 L 102 75 M 42 95 L 98 95" fill="none" stroke="#261C14" stroke-width="3"/>
+  <!-- Top Wooden Handle Board -->
+  <rect x="25" y="20" width="90" height="20" rx="6" fill="url(#bellowsWood)" stroke="#FFD700" stroke-width="2"/>
+  <!-- Nozzle Pipe -->
+  <rect x="60" y="105" width="20" height="25" fill="#78909C" stroke="#1A237E" stroke-width="1.5"/>
+</svg>

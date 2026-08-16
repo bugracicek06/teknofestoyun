@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300">
+  <defs>
+    <linearGradient id="bladeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="40%" stop-color="#CFD8DC"/>
+      <stop offset="70%" stop-color="#78909C"/>
+      <stop offset="100%" stop-color="#37474F"/>
+    </linearGradient>
+    <radialGradient id="steelGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#80DEEA" stop-opacity="0.9"/>
+      <stop offset="60%" stop-color="#00ACC1" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#070B19" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Base Platform -->
+  <ellipse cx="150" cy="220" rx="130" ry="55" fill="#37474F" stroke="#80DEEA" stroke-width="4"/>
+
+  <!-- Steel Glow Aura -->
+  <circle cx="150" cy="130" r="85" fill="url(#steelGlow)"/>
+
+  <!-- Yatagan Curved Blade -->
+  <g transform="rotate(-35 150 140)">
+    <!-- Blade Body -->
+    <path d="M 60 135 Q 150 110 240 120 Q 150 150 60 135 Z" fill="url(#bladeGrad)" stroke="#FFFFFF" stroke-width="2"/>
+    <!-- Blade Engraving / Groove -->
+    <path d="M 80 134 Q 150 118 220 123" fill="none" stroke="#00ACC1" stroke-width="2"/>
+    <!-- Horn Handle (Ears) -->
+    <path d="M 40 120 C 45 130 45 140 40 150 L 65 142 L 65 128 Z" fill="#3E2723" stroke="#FFD700" stroke-width="2"/>
+    <circle cx="50" cy="135" r="4" fill="#FFD700"/>
+  </g>
+
+  <!-- Anvil Base -->
+  <path d="M 110 185 L 190 185 L 175 210 L 125 210 Z" fill="#263238" stroke="#78909C" stroke-width="2"/>
+
+  <!-- Sparks -->
+  <circle cx="170" cy="110" r="4" fill="#E0F7FA"/>
+  <circle cx="120" cy="90" r="3.5" fill="#FFD700"/>
+  <circle cx="190" cy="140" r="5" fill="#80DEEA"/>
+</svg>

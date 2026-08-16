@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300">
+  <defs>
+    <radialGradient id="sunGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFF3B0" stop-opacity="1"/>
+      <stop offset="50%" stop-color="#E8A838" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#8C4A19" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="hillGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#D4A359"/>
+      <stop offset="100%" stop-color="#734B22"/>
+    </linearGradient>
+    <linearGradient id="stoneGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E0C39E"/>
+      <stop offset="50%" stop-color="#B8936A"/>
+      <stop offset="100%" stop-color="#6B4D2B"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Island Base Platform -->
+  <ellipse cx="150" cy="220" rx="130" ry="55" fill="url(#hillGrad)" stroke="#FFD700" stroke-width="4"/>
+  <ellipse cx="150" cy="220" rx="115" ry="42" fill="#8C5C2E"/>
+
+  <!-- Golden Sun Rays -->
+  <circle cx="150" cy="90" r="70" fill="url(#sunGlow)"/>
+
+  <!-- Ancient Hills Mound -->
+  <path d="M 30 220 Q 90 140 150 150 Q 210 140 270 220 Z" fill="#996836"/>
+
+  <!-- Left T-Pillar -->
+  <rect x="80" y="100" width="32" height="90" fill="url(#stoneGrad)" rx="3"/>
+  <rect x="68" y="90" width="56" height="24" fill="url(#stoneGrad)" rx="4" stroke="#FFF3B0" stroke-width="1.5"/>
+  <!-- Animal Relief Carving on Pillar -->
+  <path d="M 90 120 L 102 120 L 102 135 L 94 135 L 94 150 L 88 150 Z" fill="#54391D"/>
+
+  <!-- Right T-Pillar -->
+  <rect x="188" y="100" width="32" height="90" fill="url(#stoneGrad)" rx="3"/>
+  <rect x="176" y="90" width="56" height="24" fill="url(#stoneGrad)" rx="4" stroke="#FFF3B0" stroke-width="1.5"/>
+  <path d="M 198 120 L 210 120 L 210 135 L 202 135 L 202 150 L 196 150 Z" fill="#54391D"/>
+
+  <!-- Central Mystical Pillar -->
+  <rect x="134" y="70" width="32" height="115" fill="url(#stoneGrad)" rx="3"/>
+  <rect x="122" y="60" width="56" height="24" fill="url(#stoneGrad)" rx="4" stroke="#FFD700" stroke-width="2"/>
+  <!-- Sun Emblem -->
+  <circle cx="150" cy="72" r="6" fill="#FFD700"/>
+
+  <!-- Wild Flowers & Rocks -->
+  <circle cx="50" cy="225" r="8" fill="#D4A359"/>
+  <circle cx="250" cy="220" r="10" fill="#D4A359"/>
+  <path d="M 40 215 L 45 200 L 50 215 Z" fill="#4A7C59"/>
+  <path d="M 255 210 L 260 195 L 265 210 Z" fill="#4A7C59"/>
+</svg>

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="600" height="400">
+  <defs>
+    <radialGradient id="copperPlateGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FF7A50"/>
+      <stop offset="70%" stop-color="#D84315"/>
+      <stop offset="100%" stop-color="#4E342E"/>
+    </radialGradient>
+  </defs>
+
+  <rect x="10" y="10" width="580" height="380" rx="30" fill="url(#copperPlateGrad)" stroke="#FFAB91" stroke-width="4"/>
+  <rect x="25" y="25" width="550" height="350" rx="20" fill="none" stroke="#FFD700" stroke-width="2" stroke-dasharray="8 6"/>
+  <!-- Specular Reflection Diagonal Highlight -->
+  <polygon points="50,10 200,10 100,390 10,390" fill="#FFFFFF" opacity="0.12"/>
+</svg>

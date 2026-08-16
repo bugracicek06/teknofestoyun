@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 220" width="140" height="220">
+  <defs>
+    <!-- Warm Sunset Limestone Lighting Gradient -->
+    <linearGradient id="tpillarCapGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDE68A"/>
+      <stop offset="35%" stop-color="#D97706"/>
+      <stop offset="85%" stop-color="#78350F"/>
+      <stop offset="100%" stop-color="#451A03"/>
+    </linearGradient>
+    <linearGradient id="tpillarShaftGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FEF3C7"/>
+      <stop offset="25%" stop-color="#D97706"/>
+      <stop offset="70%" stop-color="#92400E"/>
+      <stop offset="100%" stop-color="#451A03"/>
+    </linearGradient>
+    <!-- Chiseled Edge Highlights -->
+    <filter id="stoneBevel" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="4" stdDeviation="3" flood-color="#1E1005" flood-opacity="0.7"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#stoneBevel)">
+    <!-- Vertical Megalith Shaft -->
+    <polygon points="40,55 100,55 108,205 32,205" fill="url(#tpillarShaftGrad)" stroke="#B45309" stroke-width="2.5"/>
+
+    <!-- Subtle Chisel Crack Lines on Shaft -->
+    <path d="M 46 85 L 68 95 L 62 120 M 82 135 L 70 160 L 92 180" fill="none" stroke="#451A03" stroke-width="1.8" opacity="0.6"/>
+    <line x1="42" y1="60" x2="42" y2="200" stroke="#FFFBEB" stroke-width="2" opacity="0.6"/>
+
+    <!-- Horizontal Megalith T-Cap Head -->
+    <polygon points="12,10 128,10 134,58 6,58" fill="url(#tpillarCapGrad)" stroke="#B45309" stroke-width="2.5"/>
+
+    <!-- Cap Top Sunlight Rim Specular -->
+    <line x1="16" y1="14" x2="124" y2="14" stroke="#FFFBEB" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+    <!-- Chisel Notch on Cap -->
+    <path d="M 35 22 L 50 38 L 42 50" fill="none" stroke="#451A03" stroke-width="1.8" opacity="0.7"/>
+  </g>
+</svg>

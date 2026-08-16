@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <defs>
+    <linearGradient id="stampGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFD700"/>
+      <stop offset="100%" stop-color="#B78103"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Outer Wavy Stamp Border -->
+  <circle cx="50" cy="50" r="46" fill="url(#stampGold)" stroke="#FFFFFF" stroke-width="3"/>
+  <circle cx="50" cy="50" r="40" fill="none" stroke="#070B19" stroke-width="2" stroke-dasharray="4,3"/>
+
+  <!-- Inner Circle -->
+  <circle cx="50" cy="50" r="32" fill="#0A1128"/>
+
+  <!-- Checkmark / Star Emblem -->
+  <path d="M 32 50 L 44 62 L 68 38" fill="none" stroke="#00F2FE" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

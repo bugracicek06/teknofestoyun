@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100" width="160" height="100">
+  <defs>
+    <linearGradient id="chiselGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ECEFF1"/>
+      <stop offset="50%" stop-color="#78909C"/>
+      <stop offset="100%" stop-color="#37474F"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Formed Iron Chisel Bit Tool -->
+  <polygon points="20,40 110,35 145,50 110,65 20,60" fill="url(#chiselGrad)" stroke="#FFD700" stroke-width="2.5"/>
+  <polygon points="110,35 145,50 110,65" fill="#FFFFFF" opacity="0.6"/>
+  <!-- Beveled Edge Line -->
+  <line x1="20" y1="50" x2="145" y2="50" stroke="#00F2FE" stroke-width="2.5"/>
+</svg>

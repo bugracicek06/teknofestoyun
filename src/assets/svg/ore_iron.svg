@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <defs>
+    <linearGradient id="ironOreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#455A64"/>
+      <stop offset="50%" stop-color="#263238"/>
+      <stop offset="100%" stop-color="#102A38"/>
+    </linearGradient>
+    <radialGradient id="ironGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FF5722" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#FF5722" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <circle cx="60" cy="60" r="50" fill="url(#ironGlow)"/>
+
+  <!-- Rough Dark Iron Ore Polygon -->
+  <polygon points="30,15 88,18 108,62 82,106 22,98 12,52" fill="url(#ironOreGrad)" stroke="#00F2FE" stroke-width="2.5"/>
+  <path d="M 30 15 L 58 58 L 82 106 M 58 58 L 108 62" fill="none" stroke="#90A4AE" stroke-width="2"/>
+  <!-- Metallic Specular Sparkle -->
+  <polygon points="50,30 55,42 67,42 57,50 61,62 50,54 39,62 43,50 33,42 45,42" fill="#00F2FE" opacity="0.8"/>
+</svg>

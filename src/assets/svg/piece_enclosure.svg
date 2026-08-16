@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 110" width="160" height="110">
+  <defs>
+    <linearGradient id="wallBlockGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDE68A"/>
+      <stop offset="30%" stop-color="#D97706"/>
+      <stop offset="75%" stop-color="#92400E"/>
+      <stop offset="100%" stop-color="#451A03"/>
+    </linearGradient>
+    <filter id="wallShadow">
+      <feDropShadow dx="2" dy="4" stdDeviation="3" flood-color="#1E1005" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#wallShadow)">
+    <!-- Textured Dry-Stone Wall Segment -->
+    <polygon points="15,20 145,15 155,90 8,95" fill="url(#wallBlockGrad)" stroke="#B45309" stroke-width="2.5"/>
+
+    <!-- Masonry Tier Lines -->
+    <path d="M 12 55 Q 80 50 150 52" fill="none" stroke="#451A03" stroke-width="2.2" opacity="0.8"/>
+    <path d="M 55 20 L 52 55 M 105 18 L 102 53 M 75 55 L 78 92" fill="none" stroke="#451A03" stroke-width="2" opacity="0.8"/>
+
+    <!-- Sunlight Top Rim Highlight -->
+    <path d="M 18 22 Q 80 17 142 17" fill="none" stroke="#FFFBEB" stroke-width="2.5" stroke-linecap="round" opacity="0.7"/>
+  </g>
+</svg>

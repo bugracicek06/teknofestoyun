@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <defs>
+    <linearGradient id="patGrad6" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8B5CF6"/>
+      <stop offset="100%" stop-color="#6D28D9"/>
+    </linearGradient>
+  </defs>
+  <rect x="5" y="5" width="110" height="110" rx="14" fill="#0A1128" stroke="#8B5CF6" stroke-width="2.5"/>
+  <!-- Directional Diamond Spike Motif (Pointing Top) -->
+  <polygon points="60,15 100,60 60,105 20,60" fill="url(#patGrad6)" stroke="#FFD700" stroke-width="2"/>
+  <circle cx="60" cy="30" r="10" fill="#FFD700"/>
+</svg>

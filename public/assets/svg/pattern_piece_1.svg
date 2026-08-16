@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <defs>
+    <linearGradient id="patGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00F2FE"/>
+      <stop offset="100%" stop-color="#007799"/>
+    </linearGradient>
+  </defs>
+  <!-- Directional Asymmetric Anatolian Star Corner (Top-Right Arrow Motif) -->
+  <rect x="5" y="5" width="110" height="110" rx="14" fill="#0A1128" stroke="#00F2FE" stroke-width="2.5"/>
+  <path d="M 20 100 L 100 20 L 100 70 Z" fill="url(#patGrad1)" stroke="#FFD700" stroke-width="2"/>
+  <!-- Directional Golden Indicator Arrow Dot at Top Corner -->
+  <circle cx="90" cy="30" r="10" fill="#FFD700"/>
+</svg>

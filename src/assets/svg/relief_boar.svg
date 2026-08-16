@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 110" width="110" height="110">
+  <defs>
+    <radialGradient id="boarStoneGrad" cx="45%" cy="40%" r="55%">
+      <stop offset="0%" stop-color="#FEF3C7"/>
+      <stop offset="50%" stop-color="#D97706"/>
+      <stop offset="100%" stop-color="#451A03"/>
+    </radialGradient>
+  </defs>
+
+  <polygon points="10,14 100,10 96,102 12,96" fill="url(#boarStoneGrad)" stroke="#B45309" stroke-width="2"/>
+
+  <!-- Bas-Relief Carved Wild Boar Silhouette -->
+  <path d="M 24 55 Q 35 32 60 35 Q 80 30 88 45 Q 92 60 82 72 Q 68 76 50 74 Q 30 76 22 62 Z" fill="#2E1805" opacity="0.85"/>
+  <path d="M 88 45 L 94 48 L 86 54 Z" fill="#2E1805"/>
+  <path d="M 24 54 Q 35 31 60 34 Q 80 29 88 44" fill="none" stroke="#FFFBEB" stroke-width="1.8" opacity="0.6"/>
+</svg>

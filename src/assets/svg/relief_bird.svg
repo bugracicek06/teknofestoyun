@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 110" width="110" height="110">
+  <defs>
+    <radialGradient id="birdStoneGrad" cx="45%" cy="40%" r="55%">
+      <stop offset="0%" stop-color="#FEF3C7"/>
+      <stop offset="50%" stop-color="#D97706"/>
+      <stop offset="100%" stop-color="#451A03"/>
+    </radialGradient>
+  </defs>
+
+  <polygon points="14,10 98,14 102,96 10,100" fill="url(#birdStoneGrad)" stroke="#B45309" stroke-width="2"/>
+
+  <!-- Bas-Relief Carved Long-Necked Crane/Bird Silhouette -->
+  <path d="M 45 80 L 45 45 Q 45 25 65 25 Q 75 25 80 30 L 68 35 Q 55 35 55 45 L 55 80 Q 40 85 30 75 Z" fill="#2E1805" opacity="0.85"/>
+  <path d="M 65 25 L 85 20 L 78 28 Z" fill="#2E1805"/>
+  <path d="M 45 80 L 45 45 Q 45 25 65 25 Q 75 25 80 30" fill="none" stroke="#FFFBEB" stroke-width="1.8" opacity="0.6"/>
+</svg>
