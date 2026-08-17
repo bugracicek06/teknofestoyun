@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 70" width="240" height="70">
+  <defs>
+    <!-- Hand-Tooled Vegetable Tanned Saddle Leather Gradient -->
+    <linearGradient id="saddleLeatherGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#78350F"/>
+      <stop offset="25%" stop-color="#92400E"/>
+      <stop offset="60%" stop-color="#451A03"/>
+      <stop offset="100%" stop-color="#1C0A02"/>
+    </linearGradient>
+    <filter id="sheathShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000000" flood-opacity="0.85"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#sheathShadow)">
+    <!-- Leather Sheath Body (Blade Opening on the Left) -->
+    <!-- Sheath Mouth (Left opening where knife enters) -->
+    <path d="M 20 16 C 30 16, 175 14, 205 24 Q 230 32, 235 38 Q 215 52, 140 52 L 20 50 Q 15 33, 20 16 Z" fill="url(#saddleLeatherGrad)" stroke="#271004" stroke-width="2.5" stroke-linejoin="round"/>
+
+    <!-- Brass Chape / Tip Reinforcement -->
+    <path d="M 195 23 Q 230 32, 235 38 Q 215 52, 185 52 L 195 23 Z" fill="#D97706" stroke="#FDE047" stroke-width="1.5"/>
+
+    <!-- Brass Collar Throat Ring at Sheath Mouth -->
+    <path d="M 18 14 L 32 14 L 32 52 L 18 52 Z" fill="#D97706" stroke="#FDE047" stroke-width="1.5"/>
+
+    <!-- Decorative Hand-Stitched Thread Along Outer Edge -->
+    <path d="M 36 48 L 140 48 Q 210 48, 228 37" fill="none" stroke="#FDE68A" stroke-width="1.8" stroke-dasharray="4,4" stroke-linecap="round"/>
+    <path d="M 36 18 L 170 16 Q 198 23, 222 34" fill="none" stroke="#FDE68A" stroke-width="1.8" stroke-dasharray="4,4" stroke-linecap="round"/>
+
+    <!-- Traditional Seljuk Geometric Embossed Motif on Leather -->
+    <circle cx="105" cy="33" r="10" fill="none" stroke="#B45309" stroke-width="1.5"/>
+    <polygon points="105,24 113,33 105,42 97,33" fill="none" stroke="#F59E0B" stroke-width="1.2"/>
+    <circle cx="145" cy="33" r="7" fill="none" stroke="#B45309" stroke-width="1.2"/>
+  </g>
+</svg>

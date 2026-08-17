@@ -1,10 +1,13 @@
+import Phaser from 'phaser';
 import { BaseScene } from './BaseScene';
 import { SceneKeys } from '../../types/game';
-import { GameButton } from '../objects/GameButton';
-import { PusulaCharacter } from '../objects/PusulaCharacter';
 import { EventBus } from '../state/EventBus';
 
 // Safe TypeScript Asset Imports for Vite production bundler
+import pauLogoUrl from '../../assets/logos/pau_logo.png';
+import teknokentLogoUrl from '../../assets/logos/teknokent_logo.png';
+import teknofestLogoUrl from '../../assets/logos/teknofest_logo.png';
+
 import pusulaMascotUrl from '../../assets/svg/pusula_mascot.svg';
 import islandGobeklitepeUrl from '../../assets/svg/island_gobeklitepe.svg';
 import islandDemirCagiUrl from '../../assets/svg/island_demir_cagi.svg';
@@ -14,21 +17,63 @@ import islandMilliTeknoUrl from '../../assets/svg/island_milli_tekno.svg';
 import islandUzayUrl from '../../assets/svg/island_uzay.svg';
 import passportStampUrl from '../../assets/svg/passport_stamp.svg';
 
-// Preload Göbeklitepe assets early to guarantee instant chapter 1 opening
+// Preload Göbeklitepe assets
 import gobeklitepeBgUrl from '../../assets/gobeklitepe_bg.png';
-import pieceTpillarUrl from '../../assets/svg/piece_tpillar.svg';
-import pieceEnclosureUrl from '../../assets/svg/piece_enclosure.svg';
-import reliefFoxUrl from '../../assets/svg/relief_fox.svg';
-import reliefBoarUrl from '../../assets/svg/relief_boar.svg';
-import reliefBirdUrl from '../../assets/svg/relief_bird.svg';
+import reliefFoxLeftUrl from '../../assets/svg/relief_fox_left.svg';
+import reliefBoarLeftUrl from '../../assets/svg/relief_boar_left.svg';
+import reliefCraneLeftUrl from '../../assets/svg/relief_crane_left.svg';
+import reliefFoxRightUrl from '../../assets/svg/relief_fox_right.svg';
+import reliefBoarRightUrl from '../../assets/svg/relief_boar_right.svg';
+import reliefCraneRightUrl from '../../assets/svg/relief_crane_right.svg';
+
+import socketFoxLeftUrl from '../../assets/svg/socket_fox_left.svg';
+import socketBoarLeftUrl from '../../assets/svg/socket_boar_left.svg';
+import socketCraneLeftUrl from '../../assets/svg/socket_crane_left.svg';
+import socketFoxRightUrl from '../../assets/svg/socket_fox_right.svg';
+import socketBoarRightUrl from '../../assets/svg/socket_boar_right.svg';
+import socketCraneRightUrl from '../../assets/svg/socket_crane_right.svg';
+
+// Preload Landing Hero & World Map Background Images
+import landingHeroBgUrl from '../../assets/landing_hero_bg.jpg';
+import worldMapBgUrl from '../../assets/world_map_bg.jpg';
+
+// Preload Demir Çağı / Serinhisar 4-Stage Cinematic assets early
+import ironStage1BgUrl from '../../assets/iron_stage1_furnace.jpg';
+import ironStage2BgUrl from '../../assets/iron_stage2_anvil.jpg';
+import ironStage3BgUrl from '../../assets/iron_stage3_quench.jpg';
+import ironStage4BgUrl from '../../assets/iron_stage4_showcase.jpg';
+
+import oreIronRedUrl from '../../assets/svg/ore_iron_red.svg';
+import oreCharcoalUrl from '../../assets/svg/ore_charcoal.svg';
+import serinhisarHotRodUrl from '../../assets/svg/serinhisar_hot_rod.svg';
+import serinhisarBladeForgingUrl from '../../assets/svg/serinhisar_blade_forging.svg';
+import serinhisarBladeHotUrl from '../../assets/svg/serinhisar_blade_hot.svg';
+import serinhisarBladeSteelUrl from '../../assets/svg/serinhisar_blade_steel.svg';
+import serinhisarSheathUrl from '../../assets/svg/serinhisar_sheath.svg';
+import smithHammerUrl from '../../assets/svg/smith_hammer.svg';
 
 export class StartScene extends BaseScene {
+  private bgImage?: Phaser.GameObjects.Image;
+
   constructor() {
     super(SceneKeys.START);
   }
 
   preload(): void {
-    // 1. World Map & Navigation SVG assets
+    // 1. Landing Hero & World Map Backgrounds
+    if (!this.textures.exists('landing_hero_bg')) {
+      this.load.image('landing_hero_bg', landingHeroBgUrl);
+      this.load.image('world_map_bg', worldMapBgUrl);
+    }
+
+    // 2. Corporate Logos
+    if (!this.textures.exists('pau_logo')) {
+      this.load.image('pau_logo', pauLogoUrl);
+      this.load.image('teknokent_logo', teknokentLogoUrl);
+      this.load.image('teknofest_logo', teknofestLogoUrl);
+    }
+
+    // 3. World Map & Navigation SVG assets
     if (!this.textures.exists('pusula_mascot')) {
       this.load.image('pusula_mascot', pusulaMascotUrl);
       this.load.image('island_gobeklitepe', islandGobeklitepeUrl);
@@ -40,161 +85,181 @@ export class StartScene extends BaseScene {
       this.load.image('passport_stamp', passportStampUrl);
     }
 
-    // 2. Preload Göbeklitepe assets so Chapter 1 opens instantaneously
+    // 4. Preload Göbeklitepe assets
     if (!this.textures.exists('gobeklitepe_bg')) {
       this.load.image('gobeklitepe_bg', gobeklitepeBgUrl);
     }
-    if (!this.textures.exists('piece_tpillar')) {
-      this.load.image('piece_tpillar', pieceTpillarUrl);
-      this.load.image('piece_enclosure', pieceEnclosureUrl);
-      this.load.image('relief_fox', reliefFoxUrl);
-      this.load.image('relief_boar', reliefBoarUrl);
-      this.load.image('relief_bird', reliefBirdUrl);
+    if (!this.textures.exists('relief_fox_left')) {
+      this.load.image('relief_fox_left', reliefFoxLeftUrl);
+      this.load.image('relief_boar_left', reliefBoarLeftUrl);
+      this.load.image('relief_crane_left', reliefCraneLeftUrl);
+      this.load.image('relief_fox_right', reliefFoxRightUrl);
+      this.load.image('relief_boar_right', reliefBoarRightUrl);
+      this.load.image('relief_crane_right', reliefCraneRightUrl);
+    }
+    if (!this.textures.exists('socket_fox_left')) {
+      this.load.image('socket_fox_left', socketFoxLeftUrl);
+      this.load.image('socket_boar_left', socketBoarLeftUrl);
+      this.load.image('socket_crane_left', socketCraneLeftUrl);
+      this.load.image('socket_fox_right', socketFoxRightUrl);
+      this.load.image('socket_boar_right', socketBoarRightUrl);
+      this.load.image('socket_crane_right', socketCraneRightUrl);
+    }
+
+    // 5. Preload Demir Çağı / Serinhisar assets
+    if (!this.textures.exists('iron_stage1_furnace')) {
+      this.load.image('iron_stage1_furnace', ironStage1BgUrl);
+      this.load.image('iron_stage2_anvil', ironStage2BgUrl);
+      this.load.image('iron_stage3_quench', ironStage3BgUrl);
+      this.load.image('iron_stage4_showcase', ironStage4BgUrl);
+
+      this.load.image('ore_iron_red', oreIronRedUrl);
+      this.load.image('ore_charcoal', oreCharcoalUrl);
+      this.load.image('serinhisar_hot_rod', serinhisarHotRodUrl);
+      this.load.image('serinhisar_blade_forging', serinhisarBladeForgingUrl);
+      this.load.image('serinhisar_blade_hot', serinhisarBladeHotUrl);
+      this.load.image('serinhisar_blade_steel', serinhisarBladeSteelUrl);
+      this.load.image('serinhisar_sheath', serinhisarSheathUrl);
+      this.load.image('smith_hammer', smithHammerUrl);
     }
   }
 
   create(): void {
-    // 1. Fullscreen Panoramic Time-Travel Environment (Left Ancient -> Middle Metal -> Right Space)
-    this.createCinematicTimeTravelLandscape();
+    // 1. High-Resolution Pure Minimalist Background (1920x1080)
+    this.createCleanBackground();
 
-    // 2. Title & Subtitle Header
-    const titleText = this.createText(this.GAME_WIDTH / 2, 230, 'MEDENİYETTEN MİLLÎ TEKNOLOJİYE', {
-      fontSize: '62px',
-      fontStyle: '900',
-      color: '#FFD700',
-      align: 'center',
-      shadow: {
-        color: '#00F2FE',
-        blur: 20,
-        fill: true,
-      },
-    });
-    titleText.setOrigin(0.5);
+    // 2. Ultra-clean Minimalist Floating Header
+    this.createCorporateKioskHeader();
 
-    // Floating tween for main title
-    this.tweens.add({
-      targets: titleText,
-      y: 222,
-      duration: 2200,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
+    // 3. Subtle & Elegant Minimalist Typography (Centered in High Negative Space)
+    this.createMinimalistTitle();
 
-    const subtitleText = this.createText(this.GAME_WIDTH / 2, 320, 'ZAMAN YOLCULUĞU MACERASI', {
-      fontSize: '32px',
-      fontStyle: 'bold',
-      color: '#00F2FE',
-      align: 'center',
-    });
-    subtitleText.setOrigin(0.5);
-
-    // 3. Pusula Mascot Companion Character
-    new PusulaCharacter(
-      this,
-      280,
-      640,
-      'Geçmişin ustalığını keşfetmeye hazır mısın?\nZaman yolculuğumuz başlıyor!'
-    );
-
-    // 4. Center Main Action Button: "MACERAYA BAŞLA ➔"
-    new GameButton(
-      this,
-      this.GAME_WIDTH / 2,
-      660,
-      440,
-      96, // 96px touch target height
-      'MACERAYA BAŞLA  ➔',
-      () => this.onStartAdventureClicked(),
-      0xffd700, // Gold button fill
-      '#070B19'
-    );
-
-    // 5. Subtle Floating Stars & Spark Particles Background
-    this.createBackgroundParticles();
+    // 4. Minimalist Glass Pill Button: "ZAMAN YOLCULUĞUNA BAŞLA ➔"
+    this.createMinimalistStartButton();
 
     EventBus.emit('current-scene-ready', SceneKeys.START);
   }
 
-  /**
-   * Panoramic gradient landscape: Left Earthy Ancient -> Middle Fiery Metal -> Right Deep Space
-   */
-  private createCinematicTimeTravelLandscape(): void {
-    const bg = this.add.graphics();
+  private createCleanBackground(): void {
+    // Base Canvas Background
+    const bgFill = this.add.graphics();
+    bgFill.fillStyle(0x0a0f1d, 1);
+    bgFill.fillRect(0, 0, this.GAME_WIDTH, this.GAME_HEIGHT);
+    bgFill.setDepth(0);
 
-    // Base background dark gradient fill
-    bg.fillStyle(0x070b19, 1);
-    bg.fillRect(0, 0, this.GAME_WIDTH, this.GAME_HEIGHT);
-
-    // Left Sector: Ancient Göbeklitepe Earthy Glow (M.Ö. 9600)
-    const leftGlow = this.add.graphics();
-    leftGlow.fillStyle(0xd4af37, 0.12);
-    leftGlow.fillCircle(300, 540, 550);
-
-    // Center Sector: Metal & Forge Fiery Glow
-    const centerGlow = this.add.graphics();
-    centerGlow.fillStyle(0xff5722, 0.1);
-    centerGlow.fillCircle(960, 540, 500);
-
-    // Right Sector: High-Tech & Space Deep Cosmic Glow
-    const rightGlow = this.add.graphics();
-    rightGlow.fillStyle(0x9b59b6, 0.15);
-    rightGlow.fillCircle(1620, 540, 550);
-
-    // Horizon Distant Silhouette Mountain & City Lines
-    const DistantLandscape = this.add.graphics();
-
-    // Left Mountain Hills
-    DistantLandscape.fillStyle(0x3e2723, 0.4);
-    DistantLandscape.beginPath();
-    DistantLandscape.moveTo(0, 1080);
-    DistantLandscape.lineTo(0, 750);
-    DistantLandscape.lineTo(250, 640);
-    DistantLandscape.lineTo(550, 780);
-    DistantLandscape.lineTo(550, 1080);
-    DistantLandscape.closePath();
-    DistantLandscape.fillPath();
-
-    // Right High-Tech City Skylines
-    DistantLandscape.fillStyle(0x0f172a, 0.6);
-    DistantLandscape.fillRect(1350, 700, 60, 380);
-    DistantLandscape.fillRect(1430, 640, 90, 440);
-    DistantLandscape.fillRect(1540, 680, 75, 400);
-    DistantLandscape.fillRect(1640, 620, 120, 460);
-
-    // Glowing cyan outline on tech skyline
-    DistantLandscape.lineStyle(1.5, 0x00f2fe, 0.4);
-    DistantLandscape.strokeRect(1430, 640, 90, 440);
-    DistantLandscape.strokeRect(1640, 620, 120, 460);
+    // Pure 16:9 Landing Hero Background Artwork
+    this.bgImage = this.add.image(this.GAME_WIDTH / 2, this.GAME_HEIGHT / 2, 'landing_hero_bg');
+    this.bgImage.setDisplaySize(this.GAME_WIDTH, this.GAME_HEIGHT);
+    this.bgImage.setDepth(0);
   }
 
-  private createBackgroundParticles(): void {
-    // Floating star dust particles across screen
-    for (let i = 0; i < 35; i++) {
-      const x = Math.floor(Math.random() * (1870 - 50 + 1)) + 50;
-      const y = Math.floor(Math.random() * (1030 - 50 + 1)) + 50;
-      const color = x < 600 ? 0xffd700 : x < 1300 ? 0xff5722 : 0x00f2fe;
-      const radius = Math.floor(Math.random() * 3) + 2;
-      const particle = this.add.circle(x, y, radius, color, 0.6);
+  private createMinimalistTitle(): void {
+    const titleGroup = this.add.container(this.GAME_WIDTH / 2, 280);
+    titleGroup.setDepth(100);
 
+    // Elegant, Subtle Main Title (No heavy boxes, pure modern typography)
+    const titleText = this.add.text(0, 0, 'MEDENİYETTEN MİLLÎ TEKNOLOJİYE', {
+      fontFamily: this.SYSTEM_FONT,
+      fontSize: '36px',
+      fontStyle: '800',
+      color: '#FFFFFF',
+      letterSpacing: 2,
+    });
+    titleText.setOrigin(0.5, 0.5);
+    titleText.setShadow(0, 3, 'rgba(0, 0, 0, 0.65)', 8, true, true);
+    titleGroup.add(titleText);
+
+    // Clean Subtitle
+    const subtitleText = this.add.text(0, 48, "Göbeklitepe'den Türkiye Yüzyılı'na Zaman Yolculuğu", {
+      fontFamily: this.SYSTEM_FONT,
+      fontSize: '18px',
+      fontStyle: '500',
+      color: '#CBD5E1',
+      letterSpacing: 1,
+    });
+    subtitleText.setOrigin(0.5, 0.5);
+    subtitleText.setShadow(0, 2, 'rgba(0, 0, 0, 0.55)', 6, true, true);
+    titleGroup.add(subtitleText);
+
+    // Subtle floating breathing tween
+    this.tweens.add({
+      targets: titleGroup,
+      y: 275,
+      duration: 2600,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+  }
+
+  private createMinimalistStartButton(): void {
+    const btnW = 340;
+    const btnH = 58;
+    const btnX = this.GAME_WIDTH / 2;
+    const btnY = 640;
+
+    const btnContainer = this.add.container(btnX, btnY);
+    btnContainer.setDepth(120);
+
+    // Subtle Ambient Glow
+    const glow = this.add.graphics();
+    glow.fillStyle(0xe11d48, 0.25);
+    glow.fillRoundedRect(-btnW / 2 - 6, -btnH / 2 - 6, btnW + 12, btnH + 12, 32);
+
+    // Minimalist Pill Glass Button (#E11D48 with subtle 1.5px white outline)
+    const btnBg = this.add.graphics();
+    btnBg.fillStyle(0xe11d48, 0.95);
+    btnBg.fillRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 29);
+    btnBg.lineStyle(1.5, 0xffffff, 0.85);
+    btnBg.strokeRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 29);
+
+    const btnText = this.add.text(0, 0, 'ZAMAN YOLCULUĞUNA BAŞLA ➔', {
+      fontFamily: this.SYSTEM_FONT,
+      fontSize: '17px',
+      fontStyle: 'bold',
+      color: '#FFFFFF',
+    });
+    btnText.setOrigin(0.5, 0.5);
+    btnText.setShadow(0, 2, 'rgba(0,0,0,0.5)', 4, true, true);
+
+    btnContainer.add([glow, btnBg, btnText]);
+    btnContainer.setSize(btnW, btnH);
+    btnContainer.setInteractive({ useHandCursor: true });
+
+    btnContainer.on('pointerover', () => {
       this.tweens.add({
-        targets: particle,
-        y: y - (Math.floor(Math.random() * 30) + 20),
-        alpha: 0.1,
-        duration: Math.floor(Math.random() * 2500) + 2000,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut',
+        targets: btnContainer,
+        scaleX: 1.04,
+        scaleY: 1.04,
+        duration: 120,
       });
-    }
-  }
+      btnBg.clear();
+      btnBg.fillStyle(0xf43f5e, 1.0);
+      btnBg.fillRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 29);
+      btnBg.lineStyle(2, 0xffffff, 1.0);
+      btnBg.strokeRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 29);
+    });
 
-  private onStartAdventureClicked(): void {
-    // Camera zoom out & flash transition to World Map
-    this.cameras.main.zoomTo(1.15, 450, 'Quad.easeIn');
-    this.cameras.main.fadeOut(450, 7, 11, 25);
-    this.cameras.main.once('camerafadeoutcomplete', () => {
-      this.scene.start(SceneKeys.WORLD_MAP);
+    btnContainer.on('pointerout', () => {
+      this.tweens.add({
+        targets: btnContainer,
+        scaleX: 1.0,
+        scaleY: 1.0,
+        duration: 120,
+      });
+      btnBg.clear();
+      btnBg.fillStyle(0xe11d48, 0.95);
+      btnBg.fillRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 29);
+      btnBg.lineStyle(1.5, 0xffffff, 0.85);
+      btnBg.strokeRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 29);
+    });
+
+    btnContainer.on('pointerdown', () => {
+      this.cameras.main.zoomTo(1.08, 320, 'Quad.easeIn');
+      this.cameras.main.fadeOut(320, 10, 15, 29);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start(SceneKeys.WORLD_MAP);
+      });
     });
   }
 }

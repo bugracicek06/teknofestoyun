@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 135" width="110" height="135">
+  <defs>
+    <linearGradient id="craneGradL" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F3DCB8"/>
+      <stop offset="30%" stop-color="#D0A46E"/>
+      <stop offset="70%" stop-color="#9A6B38"/>
+      <stop offset="100%" stop-color="#563316"/>
+    </linearGradient>
+    <filter id="reliefCraneShadowL" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="1.5" dy="2.5" stdDeviation="1.8" flood-color="#241407" flood-opacity="0.85"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#reliefCraneShadowL)">
+    <!-- Graceful Standing Crane Bird Facing Right -->
+    <!-- Head & Long Sharp Beak -->
+    <path d="M 62 16 L 90 18 L 68 24 Z" fill="url(#craneGradL)"/>
+
+    <!-- Slender S-Curved Neck & Plump Body -->
+    <path d="M 58 18 Q 54 8 64 12 Q 72 14 68 24 Q 58 34 60 56 Q 60 62 48 62 Q 38 50 60 56 Q 74 64 72 84 Q 64 98 44 96 Q 24 94 24 76 Q 24 68 26 60 Q 46 38 58 18 Z" fill="url(#craneGradL)"/>
+
+    <!-- Wing Details -->
+    <path d="M 36 60 Q 56 58 64 72 Q 64 88 46 92 Q 32 86 34 70 Z" fill="#935722" opacity="0.65"/>
+    <path d="M 38 68 L 60 76 M 40 76 L 58 82 M 42 82 L 54 88" stroke="#4A2B11" stroke-width="1.5" stroke-linecap="round"/>
+
+    <!-- Tail Feathers -->
+    <path d="M 26 80 L 14 100 L 22 104 L 34 90 Z" fill="url(#craneGradL)"/>
+
+    <!-- Long Slender Crane Legs -->
+    <path d="M 52 94 L 54 128 L 66 131 M 54 128 L 46 131" stroke="url(#craneGradL)" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+    <path d="M 40 96 L 40 126 L 50 129 M 40 126 L 32 129" stroke="url(#craneGradL)" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+
+    <!-- High-Relief Highlights -->
+    <path d="M 64 12 L 90 18 L 68 24" fill="none" stroke="#FFFDF2" stroke-width="1.8" stroke-linecap="round" opacity="0.9"/>
+    <path d="M 58 18 Q 54 8 64 12" fill="none" stroke="#FFFDF2" stroke-width="2" opacity="0.9"/>
+    <path d="M 46 38 Q 58 18 68 24 Q 58 34 60 56 Q 74 64 72 84" fill="none" stroke="#FFFDF2" stroke-width="2" opacity="0.85"/>
+    <path d="M 26 60 Q 38 50 60 56" fill="none" stroke="#FFFDF2" stroke-width="1.8" opacity="0.8"/>
+
+    <!-- Eye Detail -->
+    <circle cx="66" cy="18" r="1.4" fill="#3D1D08"/>
+    <circle cx="67" cy="17" r="0.5" fill="#FFFDF5"/>
+  </g>
+</svg>

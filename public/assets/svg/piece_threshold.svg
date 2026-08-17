@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 110" width="160" height="110">
+  <defs>
+    <linearGradient id="thresholdTopGrad" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFF5DC"/>
+      <stop offset="35%" stop-color="#DEAA66"/>
+      <stop offset="80%" stop-color="#9C5F25"/>
+      <stop offset="100%" stop-color="#542B0D"/>
+    </linearGradient>
+    <linearGradient id="thresholdFrontGrad" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#E8B774"/>
+      <stop offset="45%" stop-color="#B27433"/>
+      <stop offset="85%" stop-color="#733D14"/>
+      <stop offset="100%" stop-color="#3D1E08"/>
+    </linearGradient>
+    <filter id="thresholdShadow" x="-15%" y="-10%" width="130%" height="125%">
+      <feDropShadow dx="-2" dy="6" stdDeviation="4" flood-color="#1A0D04" flood-opacity="0.75"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#thresholdShadow)">
+    <!-- Base Opening Contact Shadow -->
+    <ellipse cx="80" cy="100" rx="72" ry="8" fill="#1C0E04" opacity="0.7"/>
+
+    <!-- Bottom Stepped Monolith Base -->
+    <polygon points="12,48 148,45 154,102 6,105" fill="url(#thresholdFrontGrad)" stroke="#8A4A16" stroke-width="2"/>
+
+    <!-- Top Dressed Step Plateau Surface -->
+    <polygon points="22,12 138,10 148,45 12,48" fill="url(#thresholdTopGrad)" stroke="#8A4A16" stroke-width="2"/>
+
+    <!-- Sunlight Step Edge Specular -->
+    <line x1="13" y1="47" x2="147" y2="44" stroke="#FFFFFF" stroke-width="2.8" stroke-linecap="round" opacity="0.9"/>
+    <line x1="23" y1="13" x2="137" y2="11" stroke="#FFF7E6" stroke-width="2" opacity="0.75"/>
+
+    <!-- Authentic Dry-Stone Masonry Joint Chisel Grooves -->
+    <path d="M 52 47 L 50 103" stroke="#482208" stroke-width="2" opacity="0.8"/>
+    <path d="M 104 46 L 106 102" stroke="#482208" stroke-width="2" opacity="0.8"/>
+    <path d="M 12 75 L 50 74 M 52 74 L 104 76 M 106 73 L 152 74" stroke="#482208" stroke-width="1.8" opacity="0.75"/>
+
+    <!-- Chisel Weathering Texture -->
+    <path d="M 30 24 L 45 32 M 85 22 L 95 30" stroke="#5E2F0A" stroke-width="1.5" opacity="0.6"/>
+  </g>
+</svg>

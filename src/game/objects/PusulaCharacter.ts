@@ -74,27 +74,35 @@ export class PusulaCharacter extends Phaser.GameObjects.Container {
   }
 
   private setupSpeechBubble(scene: Phaser.Scene) {
-    this.bubbleContainer = scene.add.container(80, -70);
+    this.bubbleContainer = scene.add.container(80, -75);
 
-    // Speech Bubble Background Frame
+    // Speech Bubble Background Frame (Dark Navy Slate #0f172a, 94% opacity)
     const bg = scene.add.graphics();
-    bg.fillStyle(0x0a1128, 0.92);
-    bg.fillRoundedRect(0, 0, 380, 75, 14);
-    bg.lineStyle(2, 0x00f2fe, 0.8);
-    bg.strokeRoundedRect(0, 0, 380, 75, 14);
+    bg.fillStyle(0x0f172a, 0.94);
+    bg.fillRoundedRect(0, 0, 420, 85, 16);
+    bg.lineStyle(2, 0x38bdf8, 0.9);
+    bg.strokeRoundedRect(0, 0, 420, 85, 16);
 
     // Pointer Tail
-    bg.fillStyle(0x0a1128, 0.92);
-    bg.fillTriangle(-12, 40, 0, 30, 0, 50);
+    bg.fillStyle(0x0f172a, 0.94);
+    bg.fillTriangle(-14, 45, 0, 32, 0, 58);
 
-    // Text Label
-    this.bubbleText = scene.add.text(18, 14, '', {
+    // Crisp White Text with Sharp Contrast Shadow
+    this.bubbleText = scene.add.text(20, 15, '', {
       fontFamily: this.SYSTEM_FONT,
-      fontSize: '18px',
-      fontStyle: '600',
-      color: '#F8FAFC',
-      wordWrap: { width: 344 },
+      fontSize: '17px',
+      fontStyle: 'bold',
+      color: '#FFFFFF',
+      wordWrap: { width: 380 },
+      lineSpacing: 4,
       resolution: 2,
+      shadow: {
+        offsetX: 1,
+        offsetY: 1,
+        color: 'rgba(0, 0, 0, 0.9)',
+        blur: 4,
+        fill: true,
+      },
     });
 
     this.bubbleContainer.add([bg, this.bubbleText]);

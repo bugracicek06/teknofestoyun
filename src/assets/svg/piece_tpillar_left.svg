@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 300" width="140" height="300">
+  <defs>
+    <!-- Warm Sunlit Limestone Gradients matching background lighting -->
+    <linearGradient id="tpillarCapGradL" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFF3D6"/>
+      <stop offset="25%" stop-color="#E5B26E"/>
+      <stop offset="70%" stop-color="#A7682C"/>
+      <stop offset="100%" stop-color="#542B0D"/>
+    </linearGradient>
+
+    <linearGradient id="tpillarShaftGradL" x1="100%" y1="0%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#FCEFD2"/>
+      <stop offset="30%" stop-color="#DEAA66"/>
+      <stop offset="75%" stop-color="#9C5F25"/>
+      <stop offset="100%" stop-color="#4C250A"/>
+    </linearGradient>
+
+    <linearGradient id="leftBevelGradL" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#3D1E08"/>
+      <stop offset="100%" stop-color="#804B1B"/>
+    </linearGradient>
+
+    <filter id="monolithShadowL" x="-15%" y="-10%" width="130%" height="125%">
+      <feDropShadow dx="-3" dy="6" stdDeviation="4" flood-color="#1A0D04" flood-opacity="0.75"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#monolithShadowL)">
+    <!-- Base Pedestal Ground Contact Shadow -->
+    <ellipse cx="70" cy="285" rx="55" ry="12" fill="#200F05" opacity="0.65"/>
+
+    <!-- Left 3D Extruded Depth Facet -->
+    <polygon points="26,72 40,68 34,278 20,274" fill="url(#leftBevelGradL)" opacity="0.9"/>
+
+    <!-- Main Vertical Megalith Shaft -->
+    <polygon points="40,68 102,68 112,282 34,278" fill="url(#tpillarShaftGradL)" stroke="#8A4A16" stroke-width="2"/>
+
+    <!-- Archaic Göbeklitepe Arm & Hand Contours (Pillar 18) -->
+    <!-- Bent Arm -->
+    <path d="M 98 120 L 72 155 L 72 185" fill="none" stroke="#5E2F0A" stroke-width="3.5" stroke-linecap="round" opacity="0.75"/>
+    <path d="M 97 122 L 73 156 L 73 186" fill="none" stroke="#FFF7E6" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+    <!-- Fingers touching at front belt line -->
+    <path d="M 72 185 L 62 188 M 72 189 L 60 192 M 72 193 L 62 196" fill="none" stroke="#5E2F0A" stroke-width="2" opacity="0.7"/>
+    <!-- Ritual Fox Pelt Loincloth / Belt -->
+    <path d="M 44 202 L 102 205 L 100 216 L 42 213 Z" fill="#6E350C" opacity="0.6"/>
+    <path d="M 68 214 L 66 250 L 76 248 L 74 215 Z" fill="#582909" opacity="0.6"/>
+
+    <!-- Chiseled Surface Fissures & Weathering -->
+    <path d="M 46 95 L 60 106 L 56 128" fill="none" stroke="#4F2709" stroke-width="1.8" opacity="0.6"/>
+    <path d="M 85 220 L 92 245 L 82 265" fill="none" stroke="#4F2709" stroke-width="1.8" opacity="0.55"/>
+
+    <!-- Sunlight Right Edge Specular Highlight -->
+    <line x1="102" y1="70" x2="111" y2="280" stroke="#FFF9EB" stroke-width="2.5" opacity="0.75"/>
+
+    <!-- Horizontal Megalith T-Cap Head -->
+    <!-- Cap Left 3D Depth -->
+    <polygon points="6,24 16,14 16,66 4,72" fill="#3D1E08" opacity="0.95"/>
+    <!-- Main Cap Face -->
+    <polygon points="16,14 126,14 134,66 16,66" fill="url(#tpillarCapGradL)" stroke="#8A4A16" stroke-width="2.5"/>
+
+    <!-- Cap Top Sunlight Rim Specular -->
+    <line x1="18" y1="17" x2="124" y2="17" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
+    <!-- Cap Right Highlight -->
+    <line x1="126" y1="17" x2="133" y2="64" stroke="#FFF9EB" stroke-width="2.5" opacity="0.8"/>
+
+    <!-- Weathering / Chisel Notch on T-Cap -->
+    <path d="M 38 28 L 52 42 L 44 54" fill="none" stroke="#482208" stroke-width="2" opacity="0.7"/>
+    <path d="M 94 32 L 86 46" fill="none" stroke="#482208" stroke-width="1.8" opacity="0.6"/>
+  </g>
+</svg>

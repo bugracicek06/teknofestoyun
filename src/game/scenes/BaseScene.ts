@@ -148,4 +148,106 @@ export abstract class BaseScene extends Phaser.Scene {
 
     return container;
   }
+
+  /**
+   * Minimalist Transparent Corporate Kiosk Header (1920x70px)
+   * Displays PAU (110,38), Teknokent (230,38), TEKNOFEST (1800,38), and Fullscreen HUD (1680,38)
+   */
+  protected createCorporateKioskHeader(centerTitle?: string): Phaser.GameObjects.Container {
+    const headerContainer = this.add.container(0, 0);
+    headerContainer.setDepth(150);
+
+    // 1. Subtle, ultra-clean floating glass bar
+    const barBg = this.add.graphics();
+    barBg.fillStyle(0x0f172a, 0.4);
+    barBg.fillRect(0, 0, this.GAME_WIDTH, 70);
+    barBg.lineStyle(1, 0xffffff, 0.1);
+    barBg.lineBetween(0, 70, this.GAME_WIDTH, 70);
+    headerContainer.add(barBg);
+
+    // 2. PAU Circular Logo (X: 110, Y: 35)
+    if (this.textures.exists('pau_logo')) {
+      const pauLogo = this.add.image(110, 35, 'pau_logo');
+      pauLogo.setDisplaySize(52, 52);
+      headerContainer.add(pauLogo);
+    }
+
+    // 3. Teknokent Logo (X: 230, Y: 35)
+    if (this.textures.exists('teknokent_logo')) {
+      const teknoLogo = this.add.image(230, 35, 'teknokent_logo');
+      teknoLogo.setDisplaySize(90, 42);
+      headerContainer.add(teknoLogo);
+    }
+
+    // 4. Center Title (Optional, subtle 16px)
+    if (centerTitle) {
+      const title = this.add.text(this.GAME_WIDTH / 2, 35, centerTitle, {
+        fontFamily: this.SYSTEM_FONT,
+        fontSize: '16px',
+        fontStyle: 'bold',
+        color: '#E2E8F0',
+        shadow: { color: 'rgba(0,0,0,0.5)', blur: 4, fill: true },
+      });
+      title.setOrigin(0.5, 0.5);
+      headerContainer.add(title);
+    }
+
+    // 5. Fullscreen Toggle HUD Button (X: 1680, Y: 35)
+    const fsBtn = this.add.container(1680, 35);
+    const fsBg = this.add.graphics();
+    fsBg.fillStyle(0x0f172a, 0.6);
+    fsBg.fillRoundedRect(-55, -16, 110, 32, 8);
+    fsBg.lineStyle(1, 0xffffff, 0.3);
+    fsBg.strokeRoundedRect(-55, -16, 110, 32, 8);
+
+    const fsText = this.add.text(0, 0, '⛶ TAM EKRAN', {
+      fontFamily: this.SYSTEM_FONT,
+      fontSize: '11.5px',
+      fontStyle: 'bold',
+      color: '#E2E8F0',
+    });
+    fsText.setOrigin(0.5, 0.5);
+
+    fsBtn.add([fsBg, fsText]);
+    fsBtn.setSize(110, 32);
+    fsBtn.setInteractive({ useHandCursor: true });
+
+    fsBtn.on('pointerover', () => {
+      fsBtn.setScale(1.04);
+      fsBg.clear();
+      fsBg.fillStyle(0x0284c7, 0.8);
+      fsBg.fillRoundedRect(-55, -16, 110, 32, 8);
+      fsText.setColor('#FFFFFF');
+    });
+
+    fsBtn.on('pointerout', () => {
+      fsBtn.setScale(1.0);
+      fsBg.clear();
+      fsBg.fillStyle(0x0f172a, 0.6);
+      fsBg.fillRoundedRect(-55, -16, 110, 32, 8);
+      fsBg.lineStyle(1, 0xffffff, 0.3);
+      fsBg.strokeRoundedRect(-55, -16, 110, 32, 8);
+      fsText.setColor('#E2E8F0');
+    });
+
+    fsBtn.on('pointerdown', () => {
+      if (this.scale.isFullscreen) {
+        this.scale.stopFullscreen();
+      } else {
+        this.scale.startFullscreen();
+      }
+    });
+
+    headerContainer.add(fsBtn);
+
+    // 6. TEKNOFEST Official Logo (X: 1810, Y: 35)
+    if (this.textures.exists('teknofest_logo')) {
+      const tfLogo = this.add.image(1810, 35, 'teknofest_logo');
+      tfLogo.setDisplaySize(115, 48);
+      headerContainer.add(tfLogo);
+    }
+
+    return headerContainer;
+  }
 }
+

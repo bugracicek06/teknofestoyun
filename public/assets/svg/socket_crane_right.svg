@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 135" width="110" height="135">
+  <defs>
+    <filter id="socketCraneGlowR" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+  <g filter="url(#socketCraneGlowR)">
+    <!-- Very subtle transparent depth tint -->
+    <path d="M 48 16 L 20 18 L 42 24 Z" fill="rgba(0,0,0,0.12)"/>
+    <path d="M 52 18 Q 56 8 46 12 Q 38 14 42 24 Q 52 34 50 56 Q 50 62 62 62 Q 72 50 50 56 Q 36 64 38 84 Q 46 98 66 96 Q 86 94 86 76 Q 86 68 84 60 Q 64 38 52 18 Z" fill="rgba(0,0,0,0.12)"/>
+    <path d="M 84 80 L 96 100 L 88 104 L 76 90 Z" fill="rgba(0,0,0,0.12)"/>
+
+    <!-- Elegant Chiseled Golden / Sandstone Contour Line -->
+    <path d="M 48 16 L 20 18 L 42 24 Z" fill="none" stroke="#FDE68A" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity="0.95"/>
+    <path d="M 52 18 Q 56 8 46 12 Q 38 14 42 24 Q 52 34 50 56 Q 50 62 62 62 Q 72 50 50 56 Q 36 64 38 84 Q 46 98 66 96 Q 86 94 86 76 Q 86 68 84 60 Q 64 38 52 18 Z" fill="none" stroke="#FDE68A" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity="0.95"/>
+    <path d="M 84 80 L 96 100 L 88 104 L 76 90 Z" fill="none" stroke="#FDE68A" stroke-width="2" stroke-linecap="round" opacity="0.95"/>
+    <path d="M 58 94 L 56 128 L 44 131 M 56 128 L 64 131" stroke="#FDE68A" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.95"/>
+    <path d="M 70 96 L 70 126 L 60 129 M 70 126 L 78 129" stroke="#FDE68A" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.95"/>
+  </g>
+</svg>

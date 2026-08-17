@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 75" width="130" height="75">
+  <defs>
+    <!-- Natural Sandstone Relief Gradient -->
+    <linearGradient id="foxGradL" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F3DCB8"/>
+      <stop offset="30%" stop-color="#D0A46E"/>
+      <stop offset="70%" stop-color="#9A6B38"/>
+      <stop offset="100%" stop-color="#563316"/>
+    </linearGradient>
+    <filter id="reliefShadowL" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="1.5" dy="2.5" stdDeviation="1.8" flood-color="#241407" flood-opacity="0.85"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#reliefShadowL)">
+    <!-- Main Anatomical Standing Fox Silhouette Facing Right -->
+    <path d="M 34 48 Q 18 50 8 40 Q 15 58 34 56 Q 40 46 64 34 Q 88 34 94 44 L 122 36 L 102 46 Q 96 54 84 58 L 86 72 L 94 72 L 92 56 L 76 56 L 78 70 L 84 70 L 82 58 Q 66 60 48 58 L 42 72 L 50 72 L 54 56 L 54 70 L 60 70 L 60 56 Q 44 58 34 48 Z" fill="url(#foxGradL)"/>
+
+    <!-- Pointed Ears -->
+    <path d="M 90 30 L 96 14 L 104 28 Z" fill="url(#foxGradL)"/>
+    <path d="M 82 30 L 87 18 L 92 30 Z" fill="url(#foxGradL)"/>
+
+    <!-- High-Relief Highlights -->
+    <path d="M 96 14 L 104 28 L 122 36 L 102 46" fill="none" stroke="#FFFDF2" stroke-width="1.8" stroke-linecap="round" opacity="0.9"/>
+    <path d="M 87 18 L 92 30" fill="none" stroke="#FFFDF2" stroke-width="1.5" opacity="0.85"/>
+    <path d="M 34 48 Q 40 46 64 34 Q 88 34 94 44" fill="none" stroke="#FFFDF2" stroke-width="2" opacity="0.85"/>
+    <path d="M 34 48 Q 18 50 8 40" fill="none" stroke="#FFFDF2" stroke-width="1.8" opacity="0.8"/>
+
+    <!-- Eye Detail -->
+    <circle cx="102" cy="36" r="1.4" fill="#3D1D08"/>
+    <circle cx="102.5" cy="35.5" r="0.5" fill="#FFFDF5"/>
+  </g>
+</svg>

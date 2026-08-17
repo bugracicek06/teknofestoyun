@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 65" width="280" height="65">
+  <defs>
+    <linearGradient id="hotKnifeBladeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4E1404"/>
+      <stop offset="20%" stop-color="#BF360C"/>
+      <stop offset="55%" stop-color="#FF6F00"/>
+      <stop offset="85%" stop-color="#FFD54F"/>
+      <stop offset="100%" stop-color="#FFFDE7"/>
+    </linearGradient>
+    <linearGradient id="woodGripHotGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2D1204"/>
+      <stop offset="50%" stop-color="#5C2509"/>
+      <stop offset="100%" stop-color="#8B3E12"/>
+    </linearGradient>
+    <filter id="hotKnifeGlow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="0" stdDeviation="5" flood-color="#FF6F00" flood-opacity="0.85"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#hotKnifeGlow)">
+    <!-- Wooden Ergonomic Serinhisar Handle with Rivets -->
+    <path d="M 15 24 C 20 18, 55 18, 75 20 L 78 45 C 55 48, 20 48, 15 42 Z" fill="url(#woodGripHotGrad)" stroke="#1A0A02" stroke-width="2"/>
+    <circle cx="32" cy="33" r="2.5" fill="#D97706" stroke="#FEF3C7" stroke-width="0.8"/>
+    <circle cx="58" cy="33" r="2.5" fill="#D97706" stroke="#FEF3C7" stroke-width="0.8"/>
+
+    <!-- Brass Bolster / Guard -->
+    <rect x="75" y="18" width="10" height="30" rx="2" fill="#D97706" stroke="#FDE047" stroke-width="1.2"/>
+
+    <!-- Authentic Serinhisar Curved Clip-Point Blade (Akkor Hot) -->
+    <path d="M 85 20 L 210 18 Q 235 21, 268 32 Q 225 45, 140 44 L 85 46 Z" fill="url(#hotKnifeBladeGrad)" stroke="#FFA000" stroke-width="2" stroke-linejoin="round"/>
+
+    <!-- Razor Sharp Curved Cutting Edge -->
+    <path d="M 85 46 L 140 44 Q 225 45, 268 32" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+
+    <!-- Spine Fuller Line (Oluk) -->
+    <path d="M 98 25 L 205 23" stroke="#FFF59D" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+  </g>
+</svg>

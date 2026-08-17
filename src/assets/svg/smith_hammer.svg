@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90 90" width="90" height="90">
+  <defs>
+    <linearGradient id="hammerHeadGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#94A3B8"/>
+      <stop offset="40%" stop-color="#475569"/>
+      <stop offset="100%" stop-color="#1E293B"/>
+    </linearGradient>
+    <linearGradient id="woodHandleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#B45309"/>
+      <stop offset="50%" stop-color="#78350F"/>
+      <stop offset="100%" stop-color="#451A03"/>
+    </linearGradient>
+    <filter id="hammerShadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="2" dy="2" stdDeviation="2" flood-color="#000000" flood-opacity="0.8"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#hammerShadow)">
+    <!-- Wooden Handle (Tilted) -->
+    <path d="M 40 38 L 80 78 L 72 86 L 32 46 Z" fill="url(#woodHandleGrad)" stroke="#271004" stroke-width="1.2"/>
+    <!-- Leather Handle Grip Straps -->
+    <line x1="50" y1="52" x2="44" y2="58" stroke="#D97706" stroke-width="1.5"/>
+    <line x1="60" y1="62" x2="54" y2="68" stroke="#D97706" stroke-width="1.5"/>
+    <line x1="70" y1="72" x2="64" y2="78" stroke="#D97706" stroke-width="1.5"/>
+
+    <!-- Heavy Iron Hammer Head -->
+    <polygon points="12,18 42,6 52,28 22,40" fill="url(#hammerHeadGrad)" stroke="#CBD5E1" stroke-width="1.5" stroke-linejoin="round"/>
+    <!-- Striking Flat Face -->
+    <polygon points="12,18 6,32 16,42 22,40" fill="#64748B" stroke="#0F172A" stroke-width="1.2"/>
+    <!-- Wedge / Peen Top -->
+    <polygon points="42,6 54,10 52,28" fill="#334155"/>
+    <!-- Impact Highlight -->
+    <line x1="12" y1="18" x2="22" y2="40" stroke="#F8FAFC" stroke-width="2" stroke-linecap="round"/>
+  </g>
+</svg>

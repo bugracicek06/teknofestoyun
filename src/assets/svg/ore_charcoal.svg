@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 80" width="100" height="80">
+  <defs>
+    <!-- Deep Charcoal Carbon Gradient -->
+    <linearGradient id="charcoalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3A3A3C"/>
+      <stop offset="35%" stop-color="#242426"/>
+      <stop offset="70%" stop-color="#141416"/>
+      <stop offset="100%" stop-color="#08080A"/>
+    </linearGradient>
+    <filter id="charcoalShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000000" flood-opacity="0.85"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#charcoalShadow)">
+    <!-- Angular Charcoal Carbon Lump -->
+    <polygon points="25,55 18,32 38,15 72,12 88,30 82,62 58,72 32,68" fill="url(#charcoalGrad)" stroke="#555558" stroke-width="1.5" stroke-linejoin="round"/>
+    
+    <!-- Rough Fracture Planes -->
+    <polygon points="38,15 58,28 72,12" fill="#48484A" opacity="0.8"/>
+    <polygon points="18,32 38,15 58,28 40,50" fill="#2E2E30" opacity="0.9"/>
+    <polygon points="58,28 72,12 88,30 68,46" fill="#404042" opacity="0.85"/>
+    <polygon points="40,50 58,28 68,46 56,70 32,68" fill="#1C1C1E" opacity="0.95"/>
+    <polygon points="68,46 88,30 82,62 56,70" fill="#101012" opacity="0.95"/>
+
+    <!-- Subtle Internal Glowing Ember Cracks -->
+    <path d="M 42 48 L 52 42 L 62 46" fill="none" stroke="#FF5722" stroke-width="1.4" opacity="0.85"/>
+    <path d="M 52 42 L 54 32" fill="none" stroke="#FF9800" stroke-width="1.2" opacity="0.75"/>
+  </g>
+</svg>

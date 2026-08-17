@@ -1,105 +1,135 @@
+import Phaser from 'phaser';
 import { BaseScene } from '../BaseScene';
 import { SceneKeys } from '../../../types/game';
 import { GameStore } from '../../state/GameStore';
 import { PusulaCharacter } from '../../objects/PusulaCharacter';
-import { OreSampleNode } from '../../objects/OreSampleNode';
-import type { OreSampleConfig } from '../../objects/OreSampleNode';
-import { TemperatureGauge } from '../../objects/TemperatureGauge';
-import { StrikePointNode } from '../../objects/StrikePointNode';
-import type { StrikePointConfig } from '../../objects/StrikePointNode';
-import { VictoryModal } from '../../objects/VictoryModal';
 import { SoundFx } from '../../utils/audio';
 import { EventBus } from '../../state/EventBus';
-import Phaser from 'phaser';
 
 // Safe TypeScript Asset Imports for Vite production bundler
-import oreStoneUrl from '../../../assets/svg/ore_stone.svg';
-import oreCopperUrl from '../../../assets/svg/ore_copper.svg';
-import oreBronzeUrl from '../../../assets/svg/ore_bronze.svg';
-import oreIronUrl from '../../../assets/svg/ore_iron.svg';
-import bellowsToolUrl from '../../../assets/svg/bellows_tool.svg';
-import hammerToolUrl from '../../../assets/svg/hammer_tool.svg';
-import chiselRawUrl from '../../../assets/svg/chisel_raw.svg';
-import chiselForgedUrl from '../../../assets/svg/chisel_forged.svg';
+import ironStage1BgUrl from '../../../assets/iron_stage1_furnace.jpg';
+import ironStage2BgUrl from '../../../assets/iron_stage2_anvil.jpg';
+import ironStage3BgUrl from '../../../assets/iron_stage3_quench.jpg';
+import ironStage4BgUrl from '../../../assets/iron_stage4_showcase.jpg';
+
+import oreIronRedUrl from '../../../assets/svg/ore_iron_red.svg';
+import oreCharcoalUrl from '../../../assets/svg/ore_charcoal.svg';
+import serinhisarHotRodUrl from '../../../assets/svg/serinhisar_hot_rod.svg';
+import serinhisarBladeForgingUrl from '../../../assets/svg/serinhisar_blade_forging.svg';
+import serinhisarBladeHotUrl from '../../../assets/svg/serinhisar_blade_hot.svg';
+import serinhisarBladeSteelUrl from '../../../assets/svg/serinhisar_blade_steel.svg';
+import serinhisarSheathUrl from '../../../assets/svg/serinhisar_sheath.svg';
+import smithHammerUrl from '../../../assets/svg/smith_hammer.svg';
+
+interface MaterialPiece {
+  container: Phaser.GameObjects.Container;
+  id: string;
+  origX: number;
+  origY: number;
+  isPlaced: boolean;
+}
 
 export class DemirCagiScene extends BaseScene {
   private pusula?: PusulaCharacter;
-  private currentPhase = 1;
-  private wrongMaterialPicks = 0;
-  private totalErrors = 0;
+  private currentStage: 1 | 2 | 3 | 4 = 1;
   private elapsedSeconds = 0;
+  private totalErrors = 0;
   private timerEvent?: Phaser.Time.TimerEvent;
-  private timerText?: Phaser.GameObjects.Text;
-  private phaseTitleText?: Phaser.GameObjects.Text;
   private isCompleted = false;
 
-  // Phase 1 Objects
-  private oreNodes: OreSampleNode[] = [];
-  private workbenchGraphics?: Phaser.GameObjects.Graphics;
+  // Header UI
+  private phaseTitleText?: Phaser.GameObjects.Text;
+  private objectiveText?: Phaser.GameObjects.Text;
+  private counterText?: Phaser.GameObjects.Text;
+  private timerText?: Phaser.GameObjects.Text;
 
-  // Phase 2 Objects
-  private tempGauge?: TemperatureGauge;
-  private bellowsBtn?: Phaser.GameObjects.Container;
-  private furnaceFireGraphics?: Phaser.GameObjects.Graphics;
+  // Background Image Display
+  private bgImage?: Phaser.GameObjects.Image;
 
-  // Phase 3 Objects
-  private anvilGraphics?: Phaser.GameObjects.Graphics;
-  private rawIronBlock?: Phaser.GameObjects.Image;
-  private forgedChisel?: Phaser.GameObjects.Image;
-  private hammerSprite?: Phaser.GameObjects.Image;
-  private strikePoints: StrikePointNode[] = [];
-  private currentStrikeIndex = 0;
-  private coolingTimer?: Phaser.Time.TimerEvent;
-  private isMetalCool = false;
+  // Stage 1 Objects (Furnace Feeding)
+  private stage1Container?: Phaser.GameObjects.Container;
+  private materials: MaterialPiece[] = [];
+  private fedCount = 0;
+
+  // Stage 2 Objects (Anvil Forging)
+  private stage2Container?: Phaser.GameObjects.Container;
+  private hammerStrikes = 0;
+  private anvilHotBar?: Phaser.GameObjects.Image;
+  private hammerTool?: Phaser.GameObjects.Image;
+  private strikeGuideRing?: Phaser.GameObjects.Graphics;
+
+  // Stage 3 Objects (Water Quenching)
+  private stage3Container?: Phaser.GameObjects.Container;
+  private quenchingTongsBlade?: Phaser.GameObjects.Image;
+  private isQuenched = false;
+
+  // Stage 4 Objects (Master Stamping & Sheathing)
+  private stage4Container?: Phaser.GameObjects.Container;
+  private isSheathed = false;
+  private stampGlow?: Phaser.GameObjects.Text;
+
+  private ANCIENT_FONT = '"Cinzel", "Trajan Pro", "Times New Roman", "Georgia", serif';
 
   constructor() {
     super(SceneKeys.DEMIR_CAGI);
   }
 
   preload(): void {
-    if (!this.textures.exists('ore_stone')) {
-      this.load.image('ore_stone', oreStoneUrl);
-      this.load.image('ore_copper', oreCopperUrl);
-      this.load.image('ore_bronze', oreBronzeUrl);
-      this.load.image('ore_iron', oreIronUrl);
-      this.load.image('bellows_tool', bellowsToolUrl);
-      this.load.image('hammer_tool', hammerToolUrl);
-      this.load.image('chisel_raw', chiselRawUrl);
-      this.load.image('chisel_forged', chiselForgedUrl);
+    if (!this.textures.exists('iron_stage1_furnace')) {
+      this.load.image('iron_stage1_furnace', ironStage1BgUrl);
+      this.load.image('iron_stage2_anvil', ironStage2BgUrl);
+      this.load.image('iron_stage3_quench', ironStage3BgUrl);
+      this.load.image('iron_stage4_showcase', ironStage4BgUrl);
+    }
+    if (!this.textures.exists('ore_iron_red')) {
+      this.load.image('ore_iron_red', oreIronRedUrl);
+      this.load.image('ore_charcoal', oreCharcoalUrl);
+      this.load.image('serinhisar_hot_rod', serinhisarHotRodUrl);
+      this.load.image('serinhisar_blade_forging', serinhisarBladeForgingUrl);
+      this.load.image('serinhisar_blade_hot', serinhisarBladeHotUrl);
+      this.load.image('serinhisar_blade_steel', serinhisarBladeSteelUrl);
+      this.load.image('serinhisar_sheath', serinhisarSheathUrl);
+      this.load.image('smith_hammer', smithHammerUrl);
     }
   }
 
   create(): void {
-    this.currentPhase = 1;
-    this.wrongMaterialPicks = 0;
-    this.totalErrors = 0;
+    // Reset state variables
+    this.currentStage = 1;
     this.elapsedSeconds = 0;
+    this.totalErrors = 0;
     this.isCompleted = false;
-    this.currentStrikeIndex = 0;
-    this.isMetalCool = false;
-    this.oreNodes = [];
-    this.strikePoints = [];
+    this.fedCount = 0;
+    this.hammerStrikes = 0;
+    this.isQuenched = false;
+    this.isSheathed = false;
+    this.materials = [];
 
+    // Smooth Camera Fade-in from World Map transition
     this.cameras.main.fadeIn(350, 7, 11, 25);
 
-    // 1. Forge Cave Atmosphere Environment Background
-    this.createForgeEnvironment();
+    // Lifecycle cleanup hooks
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanUpScene, this);
+    this.events.once(Phaser.Scenes.Events.DESTROY, this.cleanUpScene, this);
 
-    // 2. Header UI Panel
+    // 1. Dynamic Stage Background (Depth 0 - 1920x1080)
+    this.createBackgroundLayer();
+
+    // 2. Slim Blacksmith Archaeology Header (Depth 100)
     this.createHeaderUI();
 
-    // 3. Setup Phase 1: Material Workbench (4 Physical Material Samples)
-    this.setupPhase1Workbench();
-
-    // 4. Pusula Companion Character (Bottom Left)
+    // 3. Pusula Companion Character (Bottom Left - Depth 100)
     this.pusula = new PusulaCharacter(
       this,
-      240,
+      210,
       760,
-      'Isıya ve darbeye dayanıklı doğru malzemeyi bul!'
+      'Demirci ocağına hoş geldin! Önce ocağı 2 demir cevheri ve 1 meşe kömürüyle besleyelim.'
     );
 
-    // 5. Neutral Elapsed Timer
+    // 4. Start Stage 1
+    this.setupStage1();
+
+    // 5. Elapsed Time Counter Timer
     this.timerEvent = this.time.addEvent({
       delay: 1000,
       callback: () => {
@@ -111,457 +141,954 @@ export class DemirCagiScene extends BaseScene {
       loop: true,
     });
 
-    // 6. Corner Back Button
+    // 6. Corner Back Button (Top Left - Depth 100)
     this.createCornerBackButton();
 
     EventBus.emit('current-scene-ready', SceneKeys.DEMIR_CAGI);
   }
 
-  update(_time: number, delta: number): void {
-    // Phase 2 Temperature Equilibrium Update
-    if (this.currentPhase === 2 && this.tempGauge && !this.tempGauge.isCompleted) {
-      this.tempGauge.updateGauge(delta, () => this.onPhase2Complete());
+  public getCurrentStage(): number {
+    return this.currentStage;
+  }
 
-      // Update Pusula temperature advice
-      const zoneState = this.tempGauge.getZoneState();
-      if (zoneState === 'low') {
-        this.pusula?.setMessage('Biraz daha hızlı körükle!');
-      } else if (zoneState === 'high') {
-        this.pusula?.setMessage('Ateşi biraz sakinleştir!');
-      } else {
-        this.pusula?.setMessage('Harika! Ateş ideal dövme sıcaklığında!');
-      }
+  private cleanUpScene(): void {
+    if (this.timerEvent) {
+      this.timerEvent.remove();
+      this.timerEvent = undefined;
     }
+    this.tweens.killAll();
   }
 
-  private createForgeEnvironment(): void {
-    const bg = this.add.graphics();
-    bg.fillStyle(0x0a0505, 1);
-    bg.fillRect(0, 0, this.GAME_WIDTH, this.GAME_HEIGHT);
+  private createBackgroundLayer(): void {
+    const letterboxBg = this.add.graphics();
+    letterboxBg.fillStyle(0x0c0704, 1);
+    letterboxBg.fillRect(0, 0, this.GAME_WIDTH, this.GAME_HEIGHT);
+    letterboxBg.setDepth(0);
 
-    // Fiery Furnace Ambient Glow (Center Background)
-    const fireGlow = this.add.graphics();
-    fireGlow.fillStyle(0xff5722, 0.2);
-    fireGlow.fillCircle(this.GAME_WIDTH / 2, 420, 500);
-
-    // Cave Stone Wall Texture Silhouettes
-    const caveWalls = this.add.graphics();
-    caveWalls.fillStyle(0x1c1312, 0.8);
-    caveWalls.fillRect(0, 0, 300, 1080);
-    caveWalls.fillRect(1620, 0, 300, 1080);
-
-    // Central Blacksmith Furnace Fire Arch Structure
-    const furnaceArch = this.add.graphics();
-    furnaceArch.fillStyle(0x2c1b18, 1);
-    furnaceArch.fillRoundedRect(this.GAME_WIDTH / 2 - 240, 200, 480, 340, 30);
-    furnaceArch.lineStyle(4, 0xff5722, 0.8);
-    furnaceArch.strokeRoundedRect(this.GAME_WIDTH / 2 - 240, 200, 480, 340, 30);
-
-    // Furnace Fire Flame Area
-    this.furnaceFireGraphics = this.add.graphics();
-    this.renderFurnaceFire(0xff9800);
-  }
-
-  private renderFurnaceFire(color: number): void {
-    if (!this.furnaceFireGraphics) return;
-    this.furnaceFireGraphics.clear();
-    this.furnaceFireGraphics.fillStyle(color, 0.85);
-    this.furnaceFireGraphics.fillTriangle(
-      this.GAME_WIDTH / 2 - 120, 480,
-      this.GAME_WIDTH / 2, 270,
-      this.GAME_WIDTH / 2 + 120, 480
-    );
-    this.furnaceFireGraphics.fillStyle(0xffeb3b, 0.9);
-    this.furnaceFireGraphics.fillTriangle(
-      this.GAME_WIDTH / 2 - 70, 480,
-      this.GAME_WIDTH / 2, 330,
-      this.GAME_WIDTH / 2 + 70, 480
-    );
+    this.bgImage = this.add.image(this.GAME_WIDTH / 2, this.GAME_HEIGHT / 2, 'iron_stage1_furnace');
+    this.bgImage.setDisplaySize(this.GAME_WIDTH, this.GAME_HEIGHT);
+    this.bgImage.setDepth(0);
   }
 
   private createHeaderUI(): void {
     const headerBg = this.add.graphics();
-    headerBg.fillStyle(0x0a1128, 0.92);
-    headerBg.fillRoundedRect(this.GAME_WIDTH / 2 - 500, 20, 1000, 70, 16);
-    headerBg.lineStyle(2, 0xe67e22, 0.8);
-    headerBg.strokeRoundedRect(this.GAME_WIDTH / 2 - 500, 20, 1000, 70, 16);
+    headerBg.fillStyle(0x180d05, 0.92);
+    headerBg.fillRoundedRect(this.GAME_WIDTH / 2 - 620, 15, 1240, 64, 14);
+    headerBg.lineStyle(2, 0xd97706, 0.85);
+    headerBg.strokeRoundedRect(this.GAME_WIDTH / 2 - 620, 15, 1240, 64, 14);
+    headerBg.setDepth(100);
 
-    this.phaseTitleText = this.createText(this.GAME_WIDTH / 2 - 260, 55, 'AŞAMA 1: MALZEMEYİ KEŞFET', {
-      fontSize: '24px',
+    // 1. Left: Stage Title
+    this.phaseTitleText = this.createText(this.GAME_WIDTH / 2 - 360, 47, '1/4: OCAĞI BESLE', {
+      fontSize: '19px',
       fontStyle: '900',
-      color: '#E67E22',
+      color: '#FDE68A',
     });
     this.phaseTitleText.setOrigin(0.5);
+    this.phaseTitleText.setDepth(101);
 
-    this.timerText = this.createText(this.GAME_WIDTH / 2 + 340, 55, 'SÜRE: 00:00', {
-      fontSize: '22px',
+    // 2. Center: Objective Caption
+    this.objectiveText = this.createText(this.GAME_WIDTH / 2 + 80, 47, 'GÖREV: 2 Demir Cevheri ve 1 Kömürü Kor Ateşine Sürükle', {
+      fontSize: '16px',
+      fontStyle: 'bold',
+      color: '#FCD34D',
+    });
+    this.objectiveText.setOrigin(0.5);
+    this.objectiveText.setDepth(101);
+
+    // 3. Right: Progress Counter & Elapsed Time
+    this.counterText = this.createText(this.GAME_WIDTH / 2 + 370, 47, 'HAMMADDE: 0/3', {
+      fontSize: '19px',
+      fontStyle: 'bold',
+      color: '#38BDF8',
+    });
+    this.counterText.setOrigin(0.5);
+    this.counterText.setDepth(101);
+
+    this.timerText = this.createText(this.GAME_WIDTH / 2 + 510, 47, '00:00', {
+      fontSize: '18px',
       fontStyle: 'bold',
       color: '#F8FAFC',
     });
     this.timerText.setOrigin(0.5);
+    this.timerText.setDepth(101);
   }
 
   private updateTimerUI(): void {
     if (!this.timerText) return;
     const mins = Math.floor(this.elapsedSeconds / 60);
     const secs = this.elapsedSeconds % 60;
-    this.timerText.setText(`SÜRE: ${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`);
+    const formatted = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    this.timerText.setText(formatted);
   }
 
-  // =========================================================================
-  // AŞAMA 1 – MALZEMEYİ KEŞFET
-  // =========================================================================
+  // ==========================================
+  // AŞAMA 1: FIRIN BESLEME (iron_stage1_furnace)
+  // ==========================================
+  private setupStage1(): void {
+    this.currentStage = 1;
+    this.fedCount = 0;
+    this.materials = [];
 
-  private setupPhase1Workbench(): void {
-    // Physical Wooden Workbench Frame
-    this.workbenchGraphics = this.add.graphics();
-    this.workbenchGraphics.fillStyle(0x3e2723, 0.95);
-    this.workbenchGraphics.fillRoundedRect(this.GAME_WIDTH / 2 - 550, 560, 1100, 260, 24);
-    this.workbenchGraphics.lineStyle(3, 0xffd700, 0.7);
-    this.workbenchGraphics.strokeRoundedRect(this.GAME_WIDTH / 2 - 550, 560, 1100, 260, 24);
+    this.stage1Container = this.add.container(0, 0);
+    this.stage1Container.setDepth(10);
 
-    const benchText = this.createText(this.GAME_WIDTH / 2, 582, 'ATÖLYE TEZGÂHI - MALZEME ÖRNEKLERİ', {
-      fontSize: '17px',
-      fontStyle: 'bold',
-      color: '#FFD700',
+    // Furnace Mouth Target Glow (Center: X: 960, Y: 560)
+    const furnaceGlow = this.add.graphics();
+    furnaceGlow.fillStyle(0xff6f00, 0.25);
+    furnaceGlow.fillCircle(960, 560, 160);
+    furnaceGlow.lineStyle(2.5, 0xffd54f, 0.8);
+    furnaceGlow.strokeCircle(960, 560, 160);
+    this.stage1Container.add(furnaceGlow);
+
+    this.tweens.add({
+      targets: furnaceGlow,
+      alpha: { from: 0.3, to: 0.85 },
+      scaleX: { from: 0.95, to: 1.05 },
+      scaleY: { from: 0.95, to: 1.05 },
+      duration: 700,
+      yoyo: true,
+      repeat: -1,
     });
-    benchText.setOrigin(0.5);
 
-    // 4 Material Samples Configs (Taş, Bakır Cevheri, Bronz Külçe, Demir Cevheri)
-    const samples: OreSampleConfig[] = [
-      { id: 'stone', title: 'Taş Örneği', svgKey: 'ore_stone', isCorrect: false, explanation: 'Taş yüksek darbede kırılır.', x: 540, y: 700 },
-      { id: 'copper', title: 'Bakır Cevheri', svgKey: 'ore_copper', isCorrect: false, explanation: 'Bakır yumuşak bir metaldir, yüksek ısıda eğilir.', x: 820, y: 700 },
-      { id: 'bronze', title: 'Bronz Külçe', svgKey: 'ore_bronze', isCorrect: false, explanation: 'Bronz, bakır ve kalayın birleştirilmesiyle elde edilen bir alaşımdır. Demir kadar sert araçlar için uygun değildir.', x: 1100, y: 700 },
-      { id: 'iron', title: 'Demir Cevheri', svgKey: 'ore_iron', isCorrect: true, explanation: 'Harika! Demir cevheri yüksek ısıda dövülerek en dayanıklı araçları oluşturur.', x: 1380, y: 700 },
+    // Bottom Material Tray
+    const trayBg = this.add.graphics();
+    trayBg.fillStyle(0x140c04, 0.94);
+    trayBg.fillRoundedRect(this.GAME_WIDTH / 2 - 540, 880, 1080, 175, 18);
+    trayBg.lineStyle(2.5, 0xd97706, 0.85);
+    trayBg.strokeRoundedRect(this.GAME_WIDTH / 2 - 540, 880, 1080, 175, 18);
+
+    const trayLabel = this.createText(this.GAME_WIDTH / 2, 898, 'DEMİRCİ HAMMADDE TEPSİSİ (FIRIN BESLEME)', {
+      fontSize: '15px',
+      fontStyle: 'bold',
+      color: '#FDE68A',
+    });
+    trayLabel.setOrigin(0.5);
+    this.stage1Container.add([trayBg, trayLabel]);
+
+    // 3 Pieces: 2 Iron Ores + 1 Oak Charcoal
+    const configs = [
+      { id: 'ore_1', title: 'Kızıl Demir Cevheri (1)', key: 'ore_iron_red', x: 640, y: 965 },
+      { id: 'ore_2', title: 'Kızıl Demir Cevheri (2)', key: 'ore_iron_red', x: 960, y: 965 },
+      { id: 'coal', title: 'Meşe Kömürü Bloğu', key: 'ore_charcoal', x: 1280, y: 965 },
     ];
 
-    samples.forEach((cfg) => {
-      const node = new OreSampleNode(this, cfg, (selected) => this.handleOreSelected(selected));
-      this.oreNodes.push(node);
+    configs.forEach((cfg) => {
+      const pContainer = this.add.container(cfg.x, cfg.y);
+      pContainer.setSize(120, 90);
+      pContainer.setDepth(15);
+
+      const shadow = this.add.graphics();
+      shadow.fillStyle(0x0a0502, 0.6);
+      shadow.fillEllipse(0, 34, 90, 20);
+      pContainer.add(shadow);
+
+      const img = this.add.image(0, 0, cfg.key);
+      img.setDisplaySize(100, 75);
+      pContainer.add(img);
+
+      const lbl = this.createText(0, 48, cfg.title, {
+        fontSize: '13px',
+        fontStyle: 'bold',
+        color: '#FEF3C7',
+      });
+      lbl.setOrigin(0.5);
+      pContainer.add(lbl);
+
+      pContainer.setInteractive({ useHandCursor: true });
+      this.input.setDraggable(pContainer);
+
+      const matObj: MaterialPiece = {
+        container: pContainer,
+        id: cfg.id,
+        origX: cfg.x,
+        origY: cfg.y,
+        isPlaced: false,
+      };
+      this.materials.push(matObj);
+
+      pContainer.on('dragstart', () => {
+        if (matObj.isPlaced) return;
+        pContainer.setDepth(30);
+        SoundFx.playStoneDrag();
+        this.tweens.add({
+          targets: pContainer,
+          scaleX: 1.08,
+          scaleY: 1.08,
+          duration: 120,
+        });
+      });
+
+      pContainer.on('drag', (_pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
+        if (matObj.isPlaced) return;
+        pContainer.x = dragX;
+        pContainer.y = dragY;
+      });
+
+      pContainer.on('dragend', () => {
+        if (matObj.isPlaced) return;
+        const dist = Phaser.Math.Distance.Between(pContainer.x, pContainer.y, 960, 560);
+        if (dist <= 170) {
+          this.feedMaterialIntoHearth(matObj);
+        } else {
+          SoundFx.playSandSlide();
+          this.tweens.add({
+            targets: pContainer,
+            x: matObj.origX,
+            y: matObj.origY,
+            scaleX: 1.0,
+            scaleY: 1.0,
+            duration: 250,
+            ease: 'Back.easeOut',
+            onComplete: () => pContainer.setDepth(15),
+          });
+        }
+      });
     });
   }
 
-  private handleOreSelected(sample: OreSampleNode): void {
-    if (this.currentPhase !== 1) return;
+  private feedMaterialIntoHearth(mat: MaterialPiece): void {
+    mat.isPlaced = true;
+    mat.container.disableInteractive();
 
-    if (!sample.config.isCorrect) {
-      this.wrongMaterialPicks++;
-      this.totalErrors++;
-      this.pusula?.setMessage(sample.config.explanation);
+    SoundFx.playChiselStrike();
+    this.createHearthSparks(960, 560);
 
-      // Trigger hint pulse on Demir Cevheri after 2 wrong picks
-      if (this.wrongMaterialPicks >= 2) {
-        const ironNode = this.oreNodes.find((n) => n.config.isCorrect);
-        ironNode?.showHintPulse();
-      }
-    } else {
-      // Correct choice: Demir Cevheri!
-      this.pusula?.setMessage('Harika! Demirin işlenmesi, dayanıklı araçların yaygınlaşmasını sağladı.');
+    this.tweens.add({
+      targets: mat.container,
+      x: 960,
+      y: 560,
+      scaleX: 0.1,
+      scaleY: 0.1,
+      alpha: 0,
+      duration: 240,
+      ease: 'Quad.easeIn',
+      onComplete: () => {
+        mat.container.setVisible(false);
+      },
+    });
 
-      // Animate iron ore into furnace
-      this.tweens.add({
-        targets: sample,
-        x: this.GAME_WIDTH / 2,
-        y: 440,
-        scaleX: 0.5,
-        scaleY: 0.5,
-        duration: 800,
-        ease: 'Quad.easeIn',
-        onComplete: () => {
-          sample.setVisible(false);
-          this.time.delayedCall(400, () => this.startPhase2());
-        },
+    this.fedCount++;
+    if (this.counterText) {
+      this.counterText.setText(`HAMMADDE: ${this.fedCount}/3`);
+    }
+
+    if (this.fedCount === 1) {
+      this.pusula?.setMessage('Demir cevheri kor ateşine girdi! Şimdi diğer parçaları da atalım.');
+    } else if (this.fedCount === 2) {
+      this.pusula?.setMessage('Meşe kömürü yüksek ısının ve karbon dengesinin kaynağıdır.');
+    } else if (this.fedCount === 3) {
+      this.pusula?.setMessage('Ocak hazır! Demir 1200°C akkor kıvama geldi; şimdi örse geçiyoruz!');
+
+      this.time.delayedCall(700, () => {
+        this.transitionToStage(2);
       });
     }
   }
 
-  // =========================================================================
-  // AŞAMA 2 – FIRINI ISIT
-  // =========================================================================
+  private createHearthSparks(x: number, y: number): void {
+    for (let i = 0; i < 24; i++) {
+      const spark = this.add.circle(
+        x + Phaser.Math.Between(-30, 30),
+        y + Phaser.Math.Between(-20, 20),
+        Phaser.Math.Between(3, 7),
+        0xff6f00,
+        1
+      );
+      spark.setDepth(25);
 
-  private startPhase2(): void {
-    this.currentPhase = 2;
-    if (this.phaseTitleText) {
-      this.phaseTitleText.setText('AŞAMA 2: FIRINI ISIT (KÖRÜKLE ATEŞİ DENGEDE TUT)');
+      const angle = (Math.PI * 2 * i) / 24;
+      const speed = Phaser.Math.Between(50, 110);
+
+      this.tweens.add({
+        targets: spark,
+        x: spark.x + Math.cos(angle) * speed,
+        y: spark.y + Math.sin(angle) * speed - 25,
+        alpha: 0,
+        scale: 0.2,
+        duration: Phaser.Math.Between(400, 750),
+        ease: 'Quad.easeOut',
+        onComplete: () => spark.destroy(),
+      });
     }
-
-    // Hide workbench samples
-    this.oreNodes.forEach((n) => n.setVisible(false));
-    if (this.workbenchGraphics) this.workbenchGraphics.setVisible(false);
-
-    // Temperature Gauge
-    this.tempGauge = new TemperatureGauge(this, this.GAME_WIDTH / 2, 120);
-
-    // Bellows Tool Button (Right Side)
-    this.bellowsBtn = this.add.container(1560, 680);
-    const bellowsBg = this.add.graphics();
-    bellowsBg.fillStyle(0x0a1128, 0.95);
-    bellowsBg.fillCircle(0, 0, 90);
-    bellowsBg.lineStyle(3, 0xffd700, 0.9);
-    bellowsBg.strokeCircle(0, 0, 90);
-
-    if (this.textures.exists('bellows_tool')) {
-      const bellowsImg = this.add.image(0, -10, 'bellows_tool');
-      bellowsImg.setDisplaySize(120, 120);
-      this.bellowsBtn.add(bellowsImg);
-    }
-
-    const bellowsText = this.createText(0, 55, 'KÖRÜKLE', {
-      fontSize: '20px',
-      fontStyle: '900',
-      color: '#FFD700',
-    });
-    bellowsText.setOrigin(0.5);
-
-    this.bellowsBtn.add([bellowsBg, bellowsText]);
-
-    const hitArea = new Phaser.Geom.Circle(0, 0, 90);
-    this.bellowsBtn.setInteractive(hitArea, Phaser.Geom.Circle.Contains, true);
-
-    this.bellowsBtn.on('pointerdown', () => {
-      if (this.tempGauge && !this.tempGauge.isCompleted) {
-        SoundFx.playSuccessTone();
-        this.tempGauge.pumpBellows();
-
-        // Pump animation
-        this.tweens.add({
-          targets: this.bellowsBtn,
-          scaleX: 0.9,
-          scaleY: 0.9,
-          duration: 90,
-          yoyo: true,
-        });
-
-        // Fire flash
-        this.renderFurnaceFire(0xffeb3b);
-        this.time.delayedCall(250, () => this.renderFurnaceFire(0xff9800));
-      }
-    });
-
-    this.pusula?.setMessage('Körüğe dokunarak sıcaklığı ideal yeşil bölgede 8 saniye tut!');
   }
 
-  private onPhase2Complete(): void {
-    if (this.currentPhase !== 2) return;
-    this.currentPhase = 3;
+  // ==========================================
+  // AŞAMA 2: ÖRS ÜZERİNDE DÖVME (iron_stage2_anvil)
+  // ==========================================
+  private setupStage2(): void {
+    this.currentStage = 2;
+    this.hammerStrikes = 0;
 
-    this.pusula?.setMessage('Mükemmel! Körük ateşe fazla hava vererek metali ideal sıcaklığa getirdi.');
+    if (this.phaseTitleText) this.phaseTitleText.setText('2/4: ÖRS ÜZERİNDE DÖVME');
+    if (this.objectiveText) this.objectiveText.setText('GÖREV: Örs Üzerindeki Akkor Demire 3 Ritmik Çekiç Darbesi İndir');
+    if (this.counterText) this.counterText.setText('ÇEKİÇ DARBESİ: 0/3');
 
-    if (this.bellowsBtn) this.bellowsBtn.setVisible(false);
-    if (this.tempGauge) this.tempGauge.setVisible(false);
+    this.stage2Container = this.add.container(0, 0);
+    this.stage2Container.setDepth(10);
 
-    this.time.delayedCall(800, () => this.startPhase3());
+    // Target strike guide ring over glowing hot billet (X: 980, Y: 465)
+    this.strikeGuideRing = this.add.graphics();
+    this.strikeGuideRing.lineStyle(3, 0xffd54f, 0.9);
+    this.strikeGuideRing.strokeCircle(980, 465, 55);
+    this.stage2Container.add(this.strikeGuideRing);
+
+    this.tweens.add({
+      targets: this.strikeGuideRing,
+      scaleX: { from: 0.85, to: 1.2 },
+      scaleY: { from: 0.85, to: 1.2 },
+      alpha: { from: 0.4, to: 1 },
+      duration: 500,
+      yoyo: true,
+      repeat: -1,
+    });
+
+    // Dynamic Hot Workpiece Overlay
+    this.anvilHotBar = this.add.image(980, 465, 'serinhisar_hot_rod');
+    this.anvilHotBar.setDisplaySize(200, 50);
+    this.stage2Container.add(this.anvilHotBar);
+
+    // Floating Animated Hammer Tool
+    this.hammerTool = this.add.image(1050, 360, 'smith_hammer');
+    this.hammerTool.setDisplaySize(110, 110);
+    this.hammerTool.setDepth(25);
+    this.stage2Container.add(this.hammerTool);
+
+    this.tweens.add({
+      targets: this.hammerTool,
+      y: 340,
+      angle: -10,
+      duration: 450,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+
+    // Touch Interactive Hit Zone (X: 980, Y: 465, Radius: 120px)
+    const hitZone = this.add.zone(980, 465, 240, 200);
+    hitZone.setInteractive({ useHandCursor: true });
+    hitZone.setDepth(30);
+
+    hitZone.on('pointerdown', () => {
+      this.handleStage2HammerHit(hitZone);
+    });
   }
 
-  // =========================================================================
-  // AŞAMA 3 – DEMİRİ ŞEKİLLENDİR
-  // =========================================================================
+  private handleStage2HammerHit(hitZone: Phaser.GameObjects.Zone): void {
+    if (this.hammerStrikes >= 3 || !this.anvilHotBar || !this.hammerTool) return;
 
-  private startPhase3(): void {
-    if (this.phaseTitleText) {
-      this.phaseTitleText.setText('AŞAMA 3: DEMİRİ ŞEKİLLENDİR (PARLAYAN NOKTALARA VUR)');
+    this.hammerStrikes++;
+
+    // Hammer swing animation
+    this.tweens.add({
+      targets: this.hammerTool,
+      x: 980,
+      y: 440,
+      angle: 25,
+      duration: 80,
+      yoyo: true,
+      ease: 'Quad.easeIn',
+    });
+
+    // Sound & 100ms camera shake
+    SoundFx.playAnvilHit();
+    this.cameras.main.shake(100, 0.006);
+
+    // Metal sparks
+    this.createAnvilSparks(980, 465);
+
+    if (this.counterText) {
+      this.counterText.setText(`ÇEKİÇ DARBESİ: ${this.hammerStrikes}/3`);
     }
 
-    // Render Anvil (Örs) in Center Floor
-    this.anvilGraphics = this.add.graphics();
-    this.anvilGraphics.fillStyle(0x263238, 1);
-    this.anvilGraphics.fillRoundedRect(this.GAME_WIDTH / 2 - 200, 680, 400, 140, 20);
-    this.anvilGraphics.lineStyle(3, 0x78909c, 1);
-    this.anvilGraphics.strokeRoundedRect(this.GAME_WIDTH / 2 - 200, 680, 400, 140, 20);
+    if (this.hammerStrikes === 1) {
+      this.anvilHotBar.setScale(1.25, 0.85);
+      this.pusula?.setMessage('İlk darbe! Çubuk yassılaşarak namlu tabanına dönüştü.');
+    } else if (this.hammerStrikes === 2) {
+      this.anvilHotBar.setTexture('serinhisar_blade_forging');
+      this.anvilHotBar.setDisplaySize(260, 65);
+      this.anvilHotBar.setScale(1.0);
+      this.pusula?.setMessage('İkinci darbe! Namlu sivrilip sırt eğimi oluştu.');
+    } else if (this.hammerStrikes === 3) {
+      this.anvilHotBar.setTexture('serinhisar_blade_hot');
+      this.anvilHotBar.setDisplaySize(300, 70);
+      hitZone.disableInteractive();
+      this.hammerTool.setVisible(false);
+      if (this.strikeGuideRing) this.strikeGuideRing.setVisible(false);
 
-    const anvilText = this.createText(this.GAME_WIDTH / 2, 795, 'DEMİRCİ ÖRSÜ', {
+      this.pusula?.setMessage('Kusursuz Serinhisar namlu profili ortaya çıktı! Şimdi su verme aşamasına geçiyoruz!');
+
+      this.time.delayedCall(700, () => {
+        this.transitionToStage(3);
+      });
+    }
+  }
+
+  private createAnvilSparks(x: number, y: number): void {
+    for (let i = 0; i < 30; i++) {
+      const spark = this.add.circle(
+        x + Phaser.Math.Between(-25, 25),
+        y + Phaser.Math.Between(-15, 15),
+        Phaser.Math.Between(2.5, 6),
+        0xffd54f,
+        1
+      );
+      spark.setDepth(20);
+
+      const angle = (Math.PI * 2 * i) / 30 + (Math.random() * 0.4 - 0.2);
+      const speed = Phaser.Math.Between(60, 140);
+
+      this.tweens.add({
+        targets: spark,
+        x: spark.x + Math.cos(angle) * speed,
+        y: spark.y + Math.sin(angle) * speed - 35,
+        alpha: 0,
+        scale: 0.15,
+        duration: Phaser.Math.Between(350, 650),
+        ease: 'Quad.easeOut',
+        onComplete: () => spark.destroy(),
+      });
+    }
+  }
+
+  // ==========================================
+  // AŞAMA 3: SU VERME VE BUHAR (iron_stage3_quench)
+  // ==========================================
+  private setupStage3(): void {
+    this.currentStage = 3;
+    this.isQuenched = false;
+
+    if (this.phaseTitleText) this.phaseTitleText.setText('3/4: SU VERME & TAVLAMA');
+    if (this.objectiveText) this.objectiveText.setText('GÖREV: Akkor Namluyu Su Teknesine Daldırarak Çelikleştir');
+    if (this.counterText) this.counterText.setText('TAVLAMA: %0');
+
+    this.stage3Container = this.add.container(0, 0);
+    this.stage3Container.setDepth(10);
+
+    // Glowing Hot Blade held by tongs in center of water surface (X: 960, Y: 580)
+    this.quenchingTongsBlade = this.add.image(960, 560, 'serinhisar_blade_hot');
+    this.quenchingTongsBlade.setDisplaySize(320, 75);
+    this.quenchingTongsBlade.setAngle(20);
+    this.quenchingTongsBlade.setDepth(12);
+    this.stage3Container.add(this.quenchingTongsBlade);
+
+    // Water ripple guide circle
+    const rippleGuide = this.add.graphics();
+    rippleGuide.lineStyle(2.5, 0x38bdf8, 0.8);
+    rippleGuide.strokeCircle(960, 580, 75);
+    this.stage3Container.add(rippleGuide);
+
+    this.tweens.add({
+      targets: rippleGuide,
+      scaleX: { from: 0.8, to: 1.25 },
+      scaleY: { from: 0.8, to: 1.25 },
+      alpha: { from: 0.3, to: 0.9 },
+      duration: 600,
+      yoyo: true,
+      repeat: -1,
+    });
+
+    const actionPrompt = this.createText(960, 460, '👇 Namluyu Suya Daldırmak İçin Dokun / Tıkla', {
       fontSize: '18px',
       fontStyle: 'bold',
-      color: '#90A4AE',
+      color: '#FDE68A',
     });
-    anvilText.setOrigin(0.5);
+    actionPrompt.setOrigin(0.5);
+    this.stage3Container.add(actionPrompt);
 
-    // Glowing Hot Iron Block on Anvil
-    if (this.textures.exists('chisel_raw')) {
-      this.rawIronBlock = this.add.image(this.GAME_WIDTH / 2, 650, 'chisel_raw');
-      this.rawIronBlock.setDisplaySize(200, 120);
-    }
+    // Interactive Quench Zone
+    const quenchZone = this.add.zone(960, 580, 360, 240);
+    quenchZone.setInteractive({ useHandCursor: true });
+    quenchZone.setDepth(30);
 
-    // Blacksmith Hammer Tool (Hovering right)
-    if (this.textures.exists('hammer_tool')) {
-      this.hammerSprite = this.add.image(this.GAME_WIDTH / 2 + 240, 560, 'hammer_tool');
-      this.hammerSprite.setDisplaySize(140, 140);
-    }
-
-    // 6 Sequential Strike Point Nodes across the hot iron block
-    const pointPositions: StrikePointConfig[] = [
-      { id: 1, x: this.GAME_WIDTH / 2 - 80, y: 650 },
-      { id: 2, x: this.GAME_WIDTH / 2 - 40, y: 650 },
-      { id: 3, x: this.GAME_WIDTH / 2, y: 650 },
-      { id: 4, x: this.GAME_WIDTH / 2 + 40, y: 650 },
-      { id: 5, x: this.GAME_WIDTH / 2 + 80, y: 650 },
-      { id: 6, x: this.GAME_WIDTH / 2, y: 650 },
-    ];
-
-    pointPositions.forEach((cfg) => {
-      const node = new StrikePointNode(this, cfg, (struckNode) => this.handleStrike(struckNode));
-      this.strikePoints.push(node);
+    quenchZone.once('pointerdown', () => {
+      quenchZone.destroy();
+      actionPrompt.destroy();
+      rippleGuide.destroy();
+      this.performQuenchingAction();
     });
-
-    this.currentStrikeIndex = 0;
-    this.activateNextStrikePoint();
-
-    // Start cooling timer (Metal cools down if player waits > 7 seconds)
-    this.resetCoolingTimer();
   }
 
-  private activateNextStrikePoint(): void {
-    if (this.currentStrikeIndex < this.strikePoints.length) {
-      const node = this.strikePoints[this.currentStrikeIndex];
-      node.activatePoint();
-    }
+  private performQuenchingAction(): void {
+    if (this.isQuenched || !this.quenchingTongsBlade) return;
+    this.isQuenched = true;
+
+    // Plunge deeper into water
+    this.tweens.add({
+      targets: this.quenchingTongsBlade,
+      y: 600,
+      duration: 350,
+      ease: 'Quad.easeInOut',
+      onComplete: () => {
+        // Sound & Steam particles
+        SoundFx.playWaterQuench();
+        this.cameras.main.shake(90, 0.003);
+
+        // Turn to cold polished high-carbon steel
+        this.quenchingTongsBlade?.setTexture('serinhisar_blade_steel');
+        this.createDenseSteamClouds(960, 580);
+
+        if (this.counterText) {
+          this.counterText.setText('TAVLAMA: %100');
+        }
+
+        this.pusula?.setMessage('Su verildi! Çelik sertleşti ve parlak namlu çeliğine dönüştü.');
+
+        this.time.delayedCall(900, () => {
+          this.transitionToStage(4);
+        });
+      },
+    });
   }
 
-  private handleStrike(node: StrikePointNode): void {
-    if (this.isMetalCool) return; // Must reheat metal if cooled
+  private createDenseSteamClouds(x: number, y: number): void {
+    for (let i = 0; i < 40; i++) {
+      const steam = this.add.circle(
+        x + Phaser.Math.Between(-60, 60),
+        y + Phaser.Math.Between(-30, 30),
+        Phaser.Math.Between(15, 35),
+        0xf1f5f9,
+        0.85
+      );
+      steam.setDepth(22);
 
-    this.resetCoolingTimer();
-    node.markStruck();
-
-    // Hammer swing strike animation
-    if (this.hammerSprite) {
       this.tweens.add({
-        targets: this.hammerSprite,
-        x: node.x + 30,
-        y: node.y - 40,
-        angle: -50,
-        duration: 120,
-        yoyo: true,
-        ease: 'Power2',
-        onComplete: () => {
-          this.hammerSprite?.setPosition(this.GAME_WIDTH / 2 + 240, 560);
-          this.hammerSprite?.setAngle(0);
-        },
+        targets: steam,
+        y: steam.y - Phaser.Math.Between(90, 220),
+        x: steam.x + Phaser.Math.Between(-70, 70),
+        alpha: 0,
+        scale: 2.0,
+        duration: Phaser.Math.Between(900, 1600),
+        ease: 'Quad.easeOut',
+        onComplete: () => steam.destroy(),
       });
     }
+  }
 
-    // Progressive Iron Shaping: Gradually scale & deform raw block
-    if (this.rawIronBlock) {
-      const progressRatio = (this.currentStrikeIndex + 1) / 6;
-      this.tweens.add({
-        targets: this.rawIronBlock,
-        scaleX: 1.0 - progressRatio * 0.2,
-        scaleY: 1.0 - progressRatio * 0.35,
-        duration: 120,
+  // ==========================================
+  // AŞAMA 4: USTA DAMGASI VE KINLAMA (iron_stage4_showcase)
+  // ==========================================
+  private setupStage4(): void {
+    this.currentStage = 4;
+    this.isSheathed = false;
+
+    if (this.phaseTitleText) this.phaseTitleText.setText('4/4: SERİNHİSAR DAMGASI & KINLAMA');
+    if (this.objectiveText) this.objectiveText.setText('GÖREV: Namluya "SERİNHİSAR" Damgasını Vur ve Bıçağı Kınına Sür');
+    if (this.counterText) this.counterText.setText('KINLAMA: 0/1');
+
+    this.stage4Container = this.add.container(0, 0);
+    this.stage4Container.setDepth(10);
+
+    // Step 4A: Master Stamp Punch on Blade (X: 430, Y: 560)
+    this.time.delayedCall(450, () => {
+      SoundFx.playStampEngrave();
+      this.cameras.main.shake(80, 0.004);
+      this.createStampSparks(430, 560);
+
+      this.stampGlow = this.add.text(430, 560, '★ SERİNHİSAR ★', {
+        fontFamily: this.ANCIENT_FONT,
+        fontSize: '20px',
+        fontStyle: 'bold',
+        color: '#FDE047',
+        shadow: { color: '#B45309', blur: 8, fill: true },
       });
-    }
+      this.stampGlow.setOrigin(0.5, 0.5);
+      this.stampGlow.setAngle(-25);
+      this.stampGlow.setDepth(15);
+      this.stage4Container?.add(this.stampGlow);
 
-    this.currentStrikeIndex++;
+      this.pusula?.setMessage('Usta "SERİNHİSAR" damgası vuruldu! Şimdi bıçağı deri kınına yerleştir.');
 
-    if (this.currentStrikeIndex < this.strikePoints.length) {
-      this.activateNextStrikePoint();
-    } else {
-      // 6th Hit Complete!
-      this.onForgingComplete();
+      // Step 4B: Sheathing Interaction
+      this.time.delayedCall(600, () => {
+        this.enableShowcaseSheathing();
+      });
+    });
+  }
+
+  private createStampSparks(x: number, y: number): void {
+    for (let i = 0; i < 25; i++) {
+      const spark = this.add.circle(
+        x + Phaser.Math.Between(-20, 20),
+        y + Phaser.Math.Between(-15, 15),
+        Phaser.Math.Between(2.5, 5),
+        0xfde047,
+        1
+      );
+      spark.setDepth(20);
+
+      this.tweens.add({
+        targets: spark,
+        y: spark.y - Phaser.Math.Between(25, 60),
+        x: spark.x + Phaser.Math.Between(-35, 35),
+        alpha: 0,
+        scale: 0.1,
+        duration: Phaser.Math.Between(350, 700),
+        ease: 'Quad.easeOut',
+        onComplete: () => spark.destroy(),
+      });
     }
   }
 
-  private resetCoolingTimer(): void {
-    if (this.coolingTimer) this.coolingTimer.remove();
-    this.isMetalCool = false;
-    if (this.rawIronBlock) this.rawIronBlock.clearTint();
+  private enableShowcaseSheathing(): void {
+    if (!this.stage4Container) return;
 
-    this.coolingTimer = this.time.delayedCall(7000, () => {
-      if (this.currentPhase === 3 && !this.isCompleted) {
-        this.triggerMetalCooling();
+    const actionPrompt = this.createText(this.GAME_WIDTH / 2, 850, '👆 Bıçağı Kınına Kilitlemek İçin Dokun / Tıkla', {
+      fontSize: '20px',
+      fontStyle: 'bold',
+      color: '#FDE68A',
+    });
+    actionPrompt.setOrigin(0.5);
+    this.stage4Container.add(actionPrompt);
+
+    const sheatheZone = this.add.zone(this.GAME_WIDTH / 2, 540, 900, 400);
+    sheatheZone.setInteractive({ useHandCursor: true });
+    sheatheZone.setDepth(30);
+
+    sheatheZone.once('pointerdown', () => {
+      sheatheZone.destroy();
+      actionPrompt.destroy();
+      this.performFinalSheathing();
+    });
+  }
+
+  private performFinalSheathing(): void {
+    if (this.isSheathed) return;
+    this.isSheathed = true;
+
+    // Play crisp leather sheathing and metal lock sound
+    SoundFx.playSwordSheath();
+    this.cameras.main.shake(80, 0.003);
+
+    // Celebratory light glow
+    const lockGlow = this.add.graphics();
+    lockGlow.fillStyle(0xffd54f, 0.3);
+    lockGlow.fillCircle(560, 440, 90);
+    lockGlow.setDepth(18);
+    this.stage4Container?.add(lockGlow);
+
+    this.tweens.add({
+      targets: lockGlow,
+      alpha: 0,
+      scaleX: 1.8,
+      scaleY: 1.8,
+      duration: 600,
+      onComplete: () => lockGlow.destroy(),
+    });
+
+    if (this.counterText) {
+      this.counterText.setText('KINLAMA: 1/1');
+    }
+
+    this.pusula?.setMessage('Muhteşem bir zanaat! Bin yıllık Serinhisar Bıçağı başarıyla dövüldü ve kınlandı!');
+
+    this.time.delayedCall(850, () => {
+      this.onGameCompleted();
+    });
+  }
+
+  // ==========================================
+  // CAMERA TRANSITIONS BETWEEN STAGES (300ms fade)
+  // ==========================================
+  private transitionToStage(nextStage: 2 | 3 | 4): void {
+    // 300ms Fade out
+    this.cameras.main.fadeOut(300, 5, 3, 2);
+
+    this.cameras.main.once('camerafadeoutcomplete', () => {
+      // Clean up previous stage containers
+      if (this.stage1Container) {
+        this.stage1Container.destroy();
+        this.stage1Container = undefined;
       }
+      if (this.stage2Container) {
+        this.stage2Container.destroy();
+        this.stage2Container = undefined;
+      }
+      if (this.stage3Container) {
+        this.stage3Container.destroy();
+        this.stage3Container = undefined;
+      }
+
+      // Switch Background Image
+      if (nextStage === 2) {
+        this.bgImage?.setTexture('iron_stage2_anvil');
+        this.setupStage2();
+      } else if (nextStage === 3) {
+        this.bgImage?.setTexture('iron_stage3_quench');
+        this.setupStage3();
+      } else if (nextStage === 4) {
+        this.bgImage?.setTexture('iron_stage4_showcase');
+        this.setupStage4();
+      }
+
+      // 300ms Fade in
+      this.cameras.main.fadeIn(300, 5, 3, 2);
     });
   }
 
-  private triggerMetalCooling(): void {
-    this.isMetalCool = true;
-    if (this.rawIronBlock) {
-      this.rawIronBlock.setTint(0x475569); // Dark cooled grey tint
-    }
-    this.pusula?.setMessage('Metal soğudu, yeniden ısıtalım!');
-
-    // Reheating transition animation (2 seconds)
-    this.time.delayedCall(1200, () => {
-      this.pusula?.setMessage('Demir fırında yeniden ısıtılıyor...');
-      this.tweens.add({
-        targets: this.rawIronBlock,
-        x: this.GAME_WIDTH / 2,
-        y: 440,
-        scaleX: 0.6,
-        scaleY: 0.6,
-        duration: 800,
-        yoyo: true,
-        onComplete: () => {
-          this.resetCoolingTimer();
-          this.pusula?.setMessage('Demir kızardı! Dövme işlemine devam et!');
-        },
-      });
-    });
-  }
-
-  private onForgingComplete(): void {
+  private onGameCompleted(): void {
     if (this.isCompleted) return;
     this.isCompleted = true;
 
-    if (this.coolingTimer) this.coolingTimer.remove();
-    if (this.timerEvent) this.timerEvent.remove();
-
-    // Replace raw block with polished forged iron chisel
-    if (this.rawIronBlock) this.rawIronBlock.setVisible(false);
-
-    if (this.textures.exists('chisel_forged')) {
-      this.forgedChisel = this.add.image(this.GAME_WIDTH / 2, 540, 'chisel_forged');
-      this.forgedChisel.setDisplaySize(240, 150);
-
-      // Celebratory 360 rotation & rise presentation animation
-      this.tweens.add({
-        targets: this.forgedChisel,
-        y: 400,
-        angle: 360,
-        scaleX: 1.3,
-        scaleY: 1.3,
-        duration: 900,
-        ease: 'Back.easeOut',
-      });
+    if (this.timerEvent) {
+      this.timerEvent.remove();
     }
 
-    this.pusula?.setMessage('Ustalar metali ısıtarak ve döverek biçimlendirdi!');
+    // Mark Module 2 Completed in GameStore
+    GameStore.completeModule('iron_age');
 
-    // Update GameStore: Complete Demir Cagi & Unlock Anadolu Ustaligi ONCE
-    GameStore.completeModule('demir_cagi');
-
-    // Calculate Victory Stats
-    const stats = VictoryModal.calculateStats(this.elapsedSeconds, this.totalErrors);
-
-    this.time.delayedCall(1200, () => {
-      new VictoryModal(this, stats, () => {
-        this.cameras.main.fadeOut(350, 7, 11, 25);
-        this.cameras.main.once('camerafadeoutcomplete', () => {
-          this.scene.start(SceneKeys.WORLD_MAP);
-        });
-      });
+    this.time.delayedCall(600, () => {
+      this.createMonumentalSteleVictoryModal();
     });
   }
 
+  /**
+   * Monumental Ancient Stone Stele Victory Modal (Matching Göbeklitepe Standard)
+   * Size: 1040x600 px, Center: (X: 960, Y: 530), Serif Antiqua Typography
+   */
+  private createMonumentalSteleVictoryModal(): void {
+    SoundFx.playVictoryFanfare();
+
+    const modal = this.add.container(this.GAME_WIDTH / 2, 530);
+    modal.setDepth(200);
+
+    const steleW = 1040;
+    const steleH = 600;
+
+    // 1. Dark Backdrop Overlay (Dim & Focus: 0.72)
+    const backdrop = this.add.graphics();
+    backdrop.fillStyle(0x050302, 0.72);
+    backdrop.fillRect(-this.GAME_WIDTH / 2, -530, this.GAME_WIDTH, this.GAME_HEIGHT);
+    modal.add(backdrop);
+
+    // 2. Outer Soft Ambient Depth Glow
+    const outerAura = this.add.graphics();
+    outerAura.fillStyle(0xf59e0b, 0.15);
+    outerAura.fillRoundedRect(-steleW / 2 - 12, -steleH / 2 - 12, steleW + 24, steleH + 24, 26);
+    modal.add(outerAura);
+
+    // 3. Dark Basalt / Anthracite Monumental Slab
+    const steleSlab = this.add.graphics();
+    steleSlab.fillStyle(0x120e0a, 0.96);
+    steleSlab.fillRoundedRect(-steleW / 2, -steleH / 2, steleW, steleH, 20);
+
+    // Outer Thick Weathered Stone Stroke (3px)
+    steleSlab.lineStyle(3, 0x92400e, 0.95);
+    steleSlab.strokeRoundedRect(-steleW / 2, -steleH / 2, steleW, steleH, 20);
+
+    // Inner Chiseled Inscription Antique Gold Border (1.5px)
+    steleSlab.lineStyle(1.5, 0xf59e0b, 0.75);
+    steleSlab.strokeRoundedRect(-steleW / 2 + 10, -steleH / 2 + 10, steleW - 20, steleH - 20, 14);
+
+    // Antique Chiseled Corner Brackets
+    const bLen = 24;
+    steleSlab.lineStyle(3, 0xfde047, 0.95);
+    // Top-Left
+    steleSlab.lineBetween(-steleW / 2 + 18, -steleH / 2 + 18 + bLen, -steleW / 2 + 18, -steleH / 2 + 18);
+    steleSlab.lineBetween(-steleW / 2 + 18, -steleH / 2 + 18, -steleW / 2 + 18 + bLen, -steleH / 2 + 18);
+    // Top-Right
+    steleSlab.lineBetween(steleW / 2 - 18 - bLen, -steleH / 2 + 18, steleW / 2 - 18, -steleH / 2 + 18);
+    steleSlab.lineBetween(steleW / 2 - 18, -steleH / 2 + 18, steleW / 2 - 18, -steleH / 2 + 18 + bLen);
+    // Bottom-Left
+    steleSlab.lineBetween(-steleW / 2 + 18, steleH / 2 - 18 - bLen, -steleW / 2 + 18, steleH / 2 - 18);
+    steleSlab.lineBetween(-steleW / 2 + 18, steleH / 2 - 18, -steleW / 2 + 18 + bLen, steleH / 2 - 18);
+    // Bottom-Right
+    steleSlab.lineBetween(steleW / 2 - 18 - bLen, steleH / 2 - 18, steleW / 2 - 18, steleH / 2 - 18);
+    steleSlab.lineBetween(steleW / 2 - 18, steleH / 2 - 18 - bLen, steleW / 2 - 18, steleH / 2 - 18);
+
+    modal.add(steleSlab);
+
+    // 4. Header Section: Monumental Gold Leaf Title with ⚔️ Icon (Y: -238, -188)
+    const iconHeader = this.add.text(0, -238, '⚔️', {
+      fontSize: '44px',
+    });
+    iconHeader.setOrigin(0.5, 0.5);
+
+    const titleText = this.add.text(0, -188, 'SERİNHİSAR DEMİR ZANAATI TAMAMLANDI', {
+      fontFamily: this.ANCIENT_FONT,
+      fontSize: '38px',
+      fontStyle: 'bold',
+      color: '#FEF08A',
+      shadow: { color: '#B45309', blur: 14, fill: true },
+    });
+    titleText.setOrigin(0.5, 0.5);
+    modal.add([iconHeader, titleText]);
+
+    // 5. Archaeological Discovery Note (Y: -118, 22px, 880px width)
+    const discoveryNote = this.add.text(
+      0,
+      -118,
+      'Bin yıllık Denizli Serinhisar demircilik geleneği; yüksek ısıyla tavlanan çeliğin ustalıkla işlenmesiyle dünya çapında bir zanaata dönüştü.',
+      {
+        fontFamily: this.ANCIENT_FONT,
+        fontSize: '22px',
+        fontStyle: 'italic',
+        color: '#FFFBEB',
+        align: 'center',
+        lineSpacing: 8,
+        wordWrap: { width: 880 },
+      }
+    );
+    discoveryNote.setOrigin(0.5, 0.5);
+    modal.add(discoveryNote);
+
+    // 6. Enlarged 3 Skill Assessment Meters (Y: -20, 26px)
+    const badgeRowY = -20;
+    const badgeItems = [
+      { text: '👁️ GÖZLEM: ⭐⭐⭐', x: -320 },
+      { text: '⚒️ USTALIK: ⭐⭐⭐', x: 0 },
+      { text: '📐 METALURJİ: ⭐⭐⭐', x: 320 },
+    ];
+
+    badgeItems.forEach((item) => {
+      const bText = this.add.text(item.x, badgeRowY, item.text, {
+        fontFamily: this.ANCIENT_FONT,
+        fontSize: '26px',
+        fontStyle: 'bold',
+        color: '#FACC15',
+        shadow: { color: '#78350F', blur: 8, fill: true },
+      });
+      bText.setOrigin(0.5, 0.5);
+      modal.add(bText);
+    });
+
+    // 7. Performance Stats Line (Y: +65)
+    const statsText = this.add.text(
+      0,
+      65,
+      `⏱️ Süre: ${this.elapsedSeconds} sn    •    🎯 Hata: ${this.totalErrors}    •    🏆 Ustalık: %100`,
+      {
+        fontFamily: this.ANCIENT_FONT,
+        fontSize: '20px',
+        fontStyle: 'bold',
+        color: '#E5E7EB',
+      }
+    );
+    statsText.setOrigin(0.5, 0.5);
+    modal.add(statsText);
+
+    // 8. Monumental Golden Age Button: "SONRAKİ ÇAĞA GEÇ ➔" (Y: +185, 520x70 px)
+    const btnW = 520;
+    const btnH = 70;
+    const btnY = 185;
+
+    const btnContainer = this.add.container(0, btnY);
+    const btnBg = this.add.graphics();
+    btnBg.fillStyle(0xd97706, 1);
+    btnBg.fillRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 16);
+    btnBg.lineStyle(2.5, 0xfde047, 0.95);
+    btnBg.strokeRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 16);
+
+    const btnText = this.add.text(0, 0, 'SONRAKİ ÇAĞA GEÇ ➔', {
+      fontFamily: this.ANCIENT_FONT,
+      fontSize: '26px',
+      fontStyle: 'bold',
+      color: '#180D04',
+    });
+    btnText.setOrigin(0.5, 0.5);
+
+    btnContainer.add([btnBg, btnText]);
+    btnContainer.setSize(btnW, btnH);
+    btnContainer.setInteractive({ useHandCursor: true });
+
+    btnContainer.on('pointerover', () => {
+      this.tweens.add({
+        targets: btnContainer,
+        scaleX: 1.04,
+        scaleY: 1.04,
+        duration: 100,
+      });
+      btnBg.clear();
+      btnBg.fillStyle(0xf59e0b, 1);
+      btnBg.fillRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 16);
+      btnBg.lineStyle(2.5, 0xffffff, 1);
+      btnBg.strokeRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 16);
+    });
+
+    btnContainer.on('pointerout', () => {
+      this.tweens.add({
+        targets: btnContainer,
+        scaleX: 1.0,
+        scaleY: 1.0,
+        duration: 100,
+      });
+      btnBg.clear();
+      btnBg.fillStyle(0xd97706, 1);
+      btnBg.fillRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 16);
+      btnBg.lineStyle(2.5, 0xfde047, 0.95);
+      btnBg.strokeRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 16);
+    });
+
+    btnContainer.on('pointerdown', () => {
+      this.cameras.main.fadeOut(350, 7, 11, 25);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start(SceneKeys.WORLD_MAP);
+      });
+    });
+
+    modal.add(btnContainer);
+
+    // 9. Smooth Upward Monumental Entrance Animation
+    modal.setScale(0.92);
+    modal.setY(550);
+    modal.setAlpha(0);
+
+    this.tweens.add({
+      targets: modal,
+      scaleX: 1.0,
+      scaleY: 1.0,
+      y: 530,
+      alpha: 1.0,
+      duration: 320,
+      ease: 'Back.easeOut',
+    });
+
+    this.createVictorySparks(this.GAME_WIDTH / 2, 530);
+  }
+
+  private createVictorySparks(x: number, y: number): void {
+    for (let i = 0; i < 18; i++) {
+      const spark = this.add.circle(
+        x + Phaser.Math.Between(-320, 320),
+        y + Phaser.Math.Between(-180, 180),
+        Phaser.Math.Between(2, 5),
+        0xffd700,
+        1
+      );
+      spark.setDepth(205);
+
+      this.tweens.add({
+        targets: spark,
+        y: spark.y - Phaser.Math.Between(30, 75),
+        alpha: 0,
+        scale: 0.2,
+        duration: Phaser.Math.Between(550, 950),
+        ease: 'Quad.easeOut',
+        onComplete: () => spark.destroy(),
+      });
+    }
+  }
+
   private createCornerBackButton(): void {
-    const btn = this.add.container(65, 55);
+    const btn = this.add.container(65, 47);
+    btn.setDepth(100);
 
     const bg = this.add.graphics();
-    bg.fillStyle(0x0a1128, 0.9);
-    bg.fillCircle(0, 0, 28);
-    bg.lineStyle(2, 0xe67e22, 0.8);
-    bg.strokeCircle(0, 0, 28);
+    bg.fillStyle(0x181008, 0.9);
+    bg.fillCircle(0, 0, 26);
+    bg.lineStyle(2, 0xf59e0b, 0.85);
+    bg.strokeCircle(0, 0, 26);
 
     const iconText = this.add.text(0, 0, '◄', {
       fontFamily: this.SYSTEM_FONT,
-      fontSize: '22px',
-      color: '#E67E22',
+      fontSize: '20px',
+      color: '#FDE68A',
     });
     iconText.setOrigin(0.5);
 
     btn.add([bg, iconText]);
 
-    const hitArea = new Phaser.Geom.Circle(0, 0, 28);
+    const hitArea = new Phaser.Geom.Circle(0, 0, 26);
     btn.setInteractive(hitArea, Phaser.Geom.Circle.Contains, true);
 
     btn.on('pointerdown', () => {

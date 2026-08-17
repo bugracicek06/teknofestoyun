@@ -4,8 +4,6 @@ import { SoundFx } from '../utils/audio';
 
 export interface StonePieceConfig {
   id: string;
-  pieceType: string;
-  phase: number;
   svgKey: string;
   title: string;
   targetZoneId: string;
@@ -13,14 +11,19 @@ export interface StonePieceConfig {
   origY: number;
   width: number;
   height: number;
+  trayScale?: number;
+  motifType: 'fox' | 'boar' | 'crane';
+  side: 'left' | 'right';
 }
 
 export class DraggableStone extends Phaser.GameObjects.Container {
   public readonly config: StonePieceConfig;
   public isPlaced = false;
-  private selectionGlow: Phaser.GameObjects.Graphics;
   private contactShadow: Phaser.GameObjects.Graphics;
+  private stoneImage?: Phaser.GameObjects.Image;
+  private labelText?: Phaser.GameObjects.Text;
   public isSelected = false;
+  private readonly defaultTrayScale: number;
   private SYSTEM_FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 
   constructor(
@@ -32,76 +35,71 @@ export class DraggableStone extends Phaser.GameObjects.Container {
   ) {
     super(scene, config.origX, config.origY);
     this.config = config;
+    this.defaultTrayScale = config.trayScale ?? 0.85;
 
     const touchW = Math.max(config.width, 100);
-    const touchH = Math.max(config.height + 35, 100);
+    const touchH = Math.max(config.height + 30, 90);
     this.setSize(touchW, touchH);
+    this.setScale(this.defaultTrayScale);
+    this.setDepth(10);
 
-    // 1. Realistic Elliptical Contact Drop Shadow underneath the stone
+    // 1. Elliptical Drop Shadow for Tray / Drag state
     this.contactShadow = scene.add.graphics();
-    this.contactShadow.fillStyle(0x1a0f05, 0.55);
-    this.contactShadow.fillEllipse(0, config.height / 2 + 5, config.width * 0.9, 22);
+    this.contactShadow.fillStyle(0x180c03, 0.65);
+    this.contactShadow.fillEllipse(0, config.height / 2 + 4, config.width * 0.9, 18);
     this.add(this.contactShadow);
 
-    // 2. Selection Glow Graphics (Shown when tapped/selected)
-    this.selectionGlow = scene.add.graphics();
-    this.selectionGlow.fillStyle(0xffd700, 0.35);
-    this.selectionGlow.fillRoundedRect(-config.width / 2 - 8, -config.height / 2 - 8, config.width + 16, config.height + 16, 14);
-    this.selectionGlow.lineStyle(3, 0xffd700, 0.9);
-    this.selectionGlow.strokeRoundedRect(-config.width / 2 - 8, -config.height / 2 - 8, config.width + 16, config.height + 16, 14);
-    this.selectionGlow.setVisible(false);
-    this.add(this.selectionGlow);
-
-    // 3. Render Textured Megalith SVG Image
+    // 2. Render Textured Megalith Relief SVG Image
     if (scene.textures.exists(config.svgKey)) {
-      const img = scene.add.image(0, 0, config.svgKey);
-      img.setDisplaySize(config.width, config.height);
-      this.add(img);
+      this.stoneImage = scene.add.image(0, 0, config.svgKey);
+      this.stoneImage.setDisplaySize(config.width, config.height);
+      this.add(this.stoneImage);
     } else {
-      // Fallback procedural limestone block
+      // Fallback
       const shapeBg = scene.add.graphics();
-      shapeBg.fillStyle(0xd97706, 1);
-      shapeBg.fillRoundedRect(-config.width / 2, -config.height / 2, config.width, config.height, 10);
-      shapeBg.lineStyle(2, 0xffd700, 1);
-      shapeBg.strokeRoundedRect(-config.width / 2, -config.height / 2, config.width, config.height, 10);
+      shapeBg.fillStyle(0xc2945d, 1);
+      shapeBg.fillRoundedRect(-config.width / 2, -config.height / 2, config.width, config.height, 8);
       this.add(shapeBg);
     }
 
-    // 4. Label Text on Tray (Clean warm limestone gold)
-    const labelText = scene.add.text(0, config.height / 2 + 14, config.title, {
+    // 3. Label Text on Tray (Warm sandstone gold)
+    this.labelText = scene.add.text(0, config.height / 2 + 16, config.title, {
       fontFamily: this.SYSTEM_FONT,
-      fontSize: '14px',
+      fontSize: '13px',
       fontStyle: 'bold',
       color: '#FEF3C7',
       align: 'center',
       resolution: 2,
     });
-    labelText.setOrigin(0.5);
-    this.add(labelText);
+    this.labelText.setOrigin(0.5);
+    this.add(this.labelText);
 
-    // 5. Touch Hit Area (>= 100px touch target)
+    // 4. Touch Hit Area
     this.setInteractive({ useHandCursor: true });
     scene.input.setDraggable(this);
 
-    // 6. Drag Events with Contact Shadow Dynamics
+    // 5. Drag Events with Contact Shadow Dynamics & Audio
     this.on('dragstart', () => {
       if (this.isPlaced) return;
-      this.setDepth(100);
+      this.setDepth(20);
+      SoundFx.playStoneDrag();
+
+      // Lift up: grow by 8% (1.08)
       scene.tweens.add({
         targets: this,
-        scaleX: 1.15,
-        scaleY: 1.15,
-        duration: 100,
-        ease: 'Power1',
+        scaleX: 1.08,
+        scaleY: 1.08,
+        duration: 120,
+        ease: 'Back.easeOut',
       });
-      // Elongate and soften shadow when lifted
+      // Elongate shadow when lifted
       scene.tweens.add({
         targets: this.contactShadow,
         scaleX: 1.3,
         scaleY: 1.4,
         alpha: 0.35,
-        y: 18,
-        duration: 100,
+        y: 24,
+        duration: 120,
       });
     });
 
@@ -120,8 +118,8 @@ export class DraggableStone extends Phaser.GameObjects.Container {
       if (targetZone && !targetZone.isOccupied) {
         const dist = Phaser.Math.Distance.Between(this.x, this.y, targetZone.x, targetZone.y);
 
-        // Generous 160px snap threshold
-        if (dist <= 160) {
+        // Magnetic snap threshold (< 65px)
+        if (dist <= 65) {
           this.snapToZone(targetZone, onCorrectPlacement);
           return;
         }
@@ -131,7 +129,7 @@ export class DraggableStone extends Phaser.GameObjects.Container {
       if (targetZone) {
         targetZone.registerFailedAttempt();
       }
-      SoundFx.playErrorTone();
+      SoundFx.playSandSlide();
       onIncorrectPlacement(this, targetZone);
       this.returnToTray();
     });
@@ -142,55 +140,64 @@ export class DraggableStone extends Phaser.GameObjects.Container {
       this.setSelected(!this.isSelected);
     });
 
-    // Phase 2 items initial visibility
-    if (config.phase === 2) {
-      this.setVisible(false);
-      this.setActive(false);
-    }
-
     scene.add.existing(this);
   }
 
   public setSelected(selected: boolean): void {
     this.isSelected = selected;
-    this.selectionGlow.setVisible(selected);
     if (selected) {
-      this.setDepth(90);
+      this.setDepth(20);
+      this.scene.tweens.add({
+        targets: this,
+        scaleX: 1.08,
+        scaleY: 1.08,
+        duration: 120,
+      });
     } else {
       this.setDepth(10);
+      this.scene.tweens.add({
+        targets: this,
+        scaleX: this.defaultTrayScale,
+        scaleY: this.defaultTrayScale,
+        duration: 120,
+      });
     }
   }
 
   public snapToZone(targetZone: StoneDropZone, onCorrectPlacement: (piece: DraggableStone, zone: StoneDropZone) => void): void {
     this.isPlaced = true;
-    this.setSelected(false);
+    this.isSelected = false;
     this.disableInteractive();
     targetZone.markOccupied();
-    SoundFx.playSuccessTone();
 
-    // Reset shadow position
+    if (this.labelText) {
+      this.labelText.setVisible(false);
+    }
+
+    // Hide contact shadow on stone surface
     this.scene.tweens.add({
       targets: this.contactShadow,
-      scaleX: 1.0,
-      scaleY: 1.0,
-      alpha: 0.6,
-      y: this.config.height / 2 + 5,
+      alpha: 0,
       duration: 150,
     });
 
-    // Heavy thud landing snap animation + camera micro-shake + stone dust puff
+    // Play crisp stone chisel strike sound
+    SoundFx.playChiselStrike();
+
+    // Lock seamlessly into the exact X, Y, scale: 1.0, angle: 0 at Depth 10
     this.scene.tweens.add({
       targets: this,
       x: targetZone.x,
       y: targetZone.y,
       scaleX: 1.0,
       scaleY: 1.0,
-      duration: 200,
+      angle: 0,
+      duration: 160,
       ease: 'Back.easeOut',
       onComplete: () => {
-        this.setDepth(20);
-        // Camera subtle tactile landing shake
-        this.scene.cameras.main.shake(120, 0.0035);
+        this.setDepth(10);
+        // Camera subtle tactile shake (100ms)
+        this.scene.cameras.main.shake(100, 0.003);
         // Stone dust puff particles
         this.createStoneDustPuff(targetZone.x, targetZone.y);
         onCorrectPlacement(this, targetZone);
@@ -199,47 +206,47 @@ export class DraggableStone extends Phaser.GameObjects.Container {
   }
 
   private createStoneDustPuff(x: number, y: number): void {
-    for (let i = 0; i < 16; i++) {
+    for (let i = 0; i < 14; i++) {
       const dust = this.scene.add.circle(
-        x + Phaser.Math.Between(-30, 30),
-        y + this.config.height / 2 - 10,
-        Phaser.Math.Between(3, 7),
+        x + Phaser.Math.Between(-20, 20),
+        y + this.config.height / 2 - 4,
+        Phaser.Math.Between(2, 5),
         0xd97706,
         0.8
       );
-      dust.setDepth(25);
+      dust.setDepth(26);
 
-      const angle = (Math.PI * 2 * i) / 16;
-      const dist = Phaser.Math.Between(25, 60);
+      const angle = (Math.PI * 2 * i) / 14;
+      const dist = Phaser.Math.Between(20, 45);
 
       this.scene.tweens.add({
         targets: dust,
         x: dust.x + Math.cos(angle) * dist,
-        y: dust.y + Math.sin(angle) * dist * 0.5 - 15,
+        y: dust.y + Math.sin(angle) * dist * 0.5 - 10,
         alpha: 0,
-        scale: 0.3,
-        duration: Phaser.Math.Between(350, 600),
+        scale: 0.2,
+        duration: Phaser.Math.Between(300, 500),
         onComplete: () => dust.destroy(),
       });
     }
   }
 
   public returnToTray(): void {
-    this.setSelected(false);
+    this.isSelected = false;
     this.scene.tweens.add({
       targets: this.contactShadow,
       scaleX: 1.0,
       scaleY: 1.0,
-      alpha: 0.55,
-      y: this.config.height / 2 + 5,
+      alpha: 0.65,
+      y: this.config.height / 2 + 4,
       duration: 200,
     });
 
-    // Wiggle animation + Smooth return tween to original tray slot
+    // Spring elastic return to original tray slot
     this.scene.tweens.add({
       targets: this,
-      angle: { from: -8, to: 8 },
-      duration: 70,
+      angle: { from: -5, to: 5 },
+      duration: 60,
       yoyo: true,
       repeat: 2,
       onComplete: () => {
@@ -248,28 +255,13 @@ export class DraggableStone extends Phaser.GameObjects.Container {
           targets: this,
           x: this.config.origX,
           y: this.config.origY,
-          scaleX: 1.0,
-          scaleY: 1.0,
-          duration: 250,
-          ease: 'Quad.easeOut',
+          scaleX: this.defaultTrayScale,
+          scaleY: this.defaultTrayScale,
+          duration: 260,
+          ease: 'Back.easeOut',
           onComplete: () => this.setDepth(10),
         });
       },
     });
-  }
-
-  public enablePhase2(): void {
-    if (this.config.phase === 2 && !this.isPlaced) {
-      this.setVisible(true);
-      this.setActive(true);
-      this.setInteractive({ useHandCursor: true });
-      this.scene.input.setDraggable(this);
-      this.setAlpha(0);
-      this.scene.tweens.add({
-        targets: this,
-        alpha: 1.0,
-        duration: 400,
-      });
-    }
   }
 }

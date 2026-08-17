@@ -2,13 +2,14 @@ import Phaser from 'phaser';
 
 export interface DropZoneConfig {
   id: string;
-  pieceType: string;
-  phase: number;
+  socketKey: string;
   x: number;
   y: number;
   width: number;
   height: number;
   label: string;
+  motifType: 'fox' | 'boar' | 'crane';
+  side: 'left' | 'right';
 }
 
 export class StoneDropZone extends Phaser.GameObjects.Container {
@@ -16,7 +17,7 @@ export class StoneDropZone extends Phaser.GameObjects.Container {
   public isOccupied = false;
   public failedAttempts = 0;
 
-  private zoneGraphics: Phaser.GameObjects.Graphics;
+  private socketImage?: Phaser.GameObjects.Image;
   private hintGlow: Phaser.GameObjects.Graphics;
 
   constructor(scene: Phaser.Scene, config: DropZoneConfig, onClick?: (zone: StoneDropZone) => void) {
@@ -24,18 +25,17 @@ export class StoneDropZone extends Phaser.GameObjects.Container {
     this.config = config;
 
     this.setSize(config.width, config.height);
+    this.setDepth(5);
 
-    // 1. Subtle Architectural Stone Excavation Socket Graphics
-    this.zoneGraphics = scene.add.graphics();
-    this.renderSocketGraphics();
-    this.add(this.zoneGraphics);
+    // 1. Organic Dark Chiseled Groove & Fine Golden/Beige Outline Silhouette
+    if (scene.textures.exists(config.socketKey)) {
+      this.socketImage = scene.add.image(0, 0, config.socketKey);
+      this.socketImage.setDisplaySize(config.width, config.height);
+      this.add(this.socketImage);
+    }
 
-    // 2. Hint Beacon Glow Graphics (Shown ONLY after 2 failed attempts)
+    // 2. Hint Beacon Glow Graphics (Shown only on 2 failed attempts)
     this.hintGlow = scene.add.graphics();
-    this.hintGlow.fillStyle(0xffd700, 0.4);
-    this.hintGlow.fillRoundedRect(-config.width / 2 - 12, -config.height / 2 - 12, config.width + 24, config.height + 24, 14);
-    this.hintGlow.lineStyle(3, 0xffd700, 1);
-    this.hintGlow.strokeRoundedRect(-config.width / 2 - 12, -config.height / 2 - 12, config.width + 24, config.height + 24, 14);
     this.hintGlow.setVisible(false);
     this.add(this.hintGlow);
 
@@ -49,25 +49,7 @@ export class StoneDropZone extends Phaser.GameObjects.Container {
       });
     }
 
-    // Phase 2 initial visibility
-    if (config.phase === 2) {
-      this.setVisible(false);
-      this.setActive(false);
-    }
-
     scene.add.existing(this);
-  }
-
-  private renderSocketGraphics(): void {
-    this.zoneGraphics.clear();
-
-    // Subtle dark amber excavation depression
-    this.zoneGraphics.fillStyle(0x2d1708, 0.45);
-    this.zoneGraphics.fillRoundedRect(-this.config.width / 2, -this.config.height / 2, this.config.width, this.config.height, 10);
-
-    // Soft warm limestone dashed edge highlight
-    this.zoneGraphics.lineStyle(2.5, 0xfde68a, 0.7);
-    this.zoneGraphics.strokeRoundedRect(-this.config.width / 2, -this.config.height / 2, this.config.width, this.config.height, 10);
   }
 
   public registerFailedAttempt(): void {
@@ -78,15 +60,30 @@ export class StoneDropZone extends Phaser.GameObjects.Container {
   }
 
   public showHintPulse(): void {
+    this.hintGlow.clear();
+    const w = this.config.width;
+    const h = this.config.height;
+
+    // Soft warm golden dust aura beacon
+    this.hintGlow.fillStyle(0xd97706, 0.35);
+    this.hintGlow.fillEllipse(0, 0, w * 1.25, h * 1.25);
+    this.hintGlow.lineStyle(2.5, 0xfde68a, 0.95);
+    this.hintGlow.strokeEllipse(0, 0, w * 1.25, h * 1.25);
+
     this.hintGlow.setVisible(true);
+    this.hintGlow.setAlpha(0.2);
+
     this.scene.tweens.add({
       targets: this.hintGlow,
-      alpha: { from: 0.2, to: 0.9 },
-      duration: 500,
+      alpha: { from: 0.2, to: 0.95 },
+      scaleX: { from: 0.95, to: 1.15 },
+      scaleY: { from: 0.95, to: 1.15 },
+      duration: 400,
       yoyo: true,
       repeat: 3,
       onComplete: () => {
         this.hintGlow.setVisible(false);
+        this.hintGlow.setScale(1);
       },
     });
   }
@@ -94,27 +91,6 @@ export class StoneDropZone extends Phaser.GameObjects.Container {
   public markOccupied(): void {
     this.isOccupied = true;
     this.disableInteractive();
-    this.scene.tweens.add({
-      targets: this.zoneGraphics,
-      alpha: 0,
-      duration: 300,
-      onComplete: () => {
-        this.zoneGraphics.setVisible(false);
-      },
-    });
-  }
-
-  public enablePhase2(): void {
-    if (this.config.phase === 2) {
-      this.setVisible(true);
-      this.setActive(true);
-      this.setInteractive({ useHandCursor: true });
-      this.setAlpha(0);
-      this.scene.tweens.add({
-        targets: this,
-        alpha: 1.0,
-        duration: 400,
-      });
-    }
+    this.hintGlow.setVisible(false);
   }
 }
