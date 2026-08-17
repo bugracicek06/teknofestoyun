@@ -3,7 +3,7 @@ import Phaser from 'phaser';
 export abstract class BaseScene extends Phaser.Scene {
   protected readonly GAME_WIDTH = 1920;
   protected readonly GAME_HEIGHT = 1080;
-  protected readonly SYSTEM_FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+  protected readonly SYSTEM_FONT = "'Outfit', 'Rajdhani', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
   constructor(key: string) {
     super({ key });

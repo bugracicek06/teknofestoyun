@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { BaseScene } from './BaseScene';
 import { SceneKeys } from '../../types/game';
 import { EventBus } from '../state/EventBus';
+import { SoundFx } from '../utils/audio';
 
 // Safe TypeScript Asset Imports for Vite production bundler
 import pauLogoUrl from '../../assets/logos/pau_logo.png';
@@ -54,6 +55,7 @@ import smithHammerUrl from '../../assets/svg/smith_hammer.svg';
 
 export class StartScene extends BaseScene {
   private bgImage?: Phaser.GameObjects.Image;
+  private fsBtnText?: Phaser.GameObjects.Text;
 
   constructor() {
     super(SceneKeys.START);
@@ -125,141 +127,277 @@ export class StartScene extends BaseScene {
   }
 
   create(): void {
-    // 1. High-Resolution Pure Minimalist Background (1920x1080)
-    this.createCleanBackground();
+    // 1. 16:9 Sinematik Arka Plan (Antik Göbeklitepe & Futuristik Uzay Laboratuvarı)
+    this.createStaticBackground();
 
-    // 2. Ultra-clean Minimalist Floating Header
-    this.createCorporateKioskHeader();
+    // 2. Sağ Üst Şık "TAM EKRAN" Butonu
+    this.createFullscreenButton();
 
-    // 3. Subtle & Elegant Minimalist Typography (Centered in High Negative Space)
-    this.createMinimalistTitle();
+    // 3. Merkezde Güçlü AAA Oyun Başlığı & Alt Başlık (Dengeli ve hafif aşağıda)
+    this.createCinematicTitle();
 
-    // 4. Minimalist Glass Pill Button: "ZAMAN YOLCULUĞUNA BAŞLA ➔"
-    this.createMinimalistStartButton();
+    // 4. Profesyonel Oyun Menüsü Başlat Butonu (Başlığa yakın ve dengeli dikey boşlukta)
+    this.createCinematicCTAButton();
 
     EventBus.emit('current-scene-ready', SceneKeys.START);
   }
 
-  private createCleanBackground(): void {
-    // Base Canvas Background
+  /**
+   * 16:9 Tam Ekran Sinematik Arka Plan
+   */
+  private createStaticBackground(): void {
     const bgFill = this.add.graphics();
-    bgFill.fillStyle(0x0a0f1d, 1);
+    bgFill.fillStyle(0x070b19, 1);
     bgFill.fillRect(0, 0, this.GAME_WIDTH, this.GAME_HEIGHT);
     bgFill.setDepth(0);
 
-    // Pure 16:9 Landing Hero Background Artwork
     this.bgImage = this.add.image(this.GAME_WIDTH / 2, this.GAME_HEIGHT / 2, 'landing_hero_bg');
     this.bgImage.setDisplaySize(this.GAME_WIDTH, this.GAME_HEIGHT);
-    this.bgImage.setDepth(0);
+    this.bgImage.setDepth(1);
   }
 
-  private createMinimalistTitle(): void {
-    const titleGroup = this.add.container(this.GAME_WIDTH / 2, 280);
-    titleGroup.setDepth(100);
+  /**
+   * Sağ Üst Köşe: Küçük ve şık "⛶ TAM EKRAN" Butonu
+   */
+  private createFullscreenButton(): void {
+    const fsX = 1800;
+    const fsY = 45;
+    const fsW = 146;
+    const fsH = 38;
 
-    // Elegant, Subtle Main Title (No heavy boxes, pure modern typography)
-    const titleText = this.add.text(0, 0, 'MEDENİYETTEN MİLLÎ TEKNOLOJİYE', {
-      fontFamily: this.SYSTEM_FONT,
-      fontSize: '36px',
-      fontStyle: '800',
-      color: '#FFFFFF',
-      letterSpacing: 2,
-    });
-    titleText.setOrigin(0.5, 0.5);
-    titleText.setShadow(0, 3, 'rgba(0, 0, 0, 0.65)', 8, true, true);
-    titleGroup.add(titleText);
+    const fsContainer = this.add.container(fsX, fsY);
+    fsContainer.setDepth(30);
 
-    // Clean Subtitle
-    const subtitleText = this.add.text(0, 48, "Göbeklitepe'den Türkiye Yüzyılı'na Zaman Yolculuğu", {
+    const fsBg = this.add.graphics();
+    const drawFsBg = (hover: boolean) => {
+      fsBg.clear();
+      if (hover) {
+        fsBg.fillStyle(0x0284c7, 0.85);
+        fsBg.fillRoundedRect(-fsW / 2, -fsH / 2, fsW, fsH, 8);
+        fsBg.lineStyle(1.5, 0x00f2fe, 1.0);
+        fsBg.strokeRoundedRect(-fsW / 2, -fsH / 2, fsW, fsH, 8);
+      } else {
+        fsBg.fillStyle(0x081329, 0.7);
+        fsBg.fillRoundedRect(-fsW / 2, -fsH / 2, fsW, fsH, 8);
+        fsBg.lineStyle(1, 0x38bdf8, 0.6);
+        fsBg.strokeRoundedRect(-fsW / 2, -fsH / 2, fsW, fsH, 8);
+      }
+    };
+    drawFsBg(false);
+
+    this.fsBtnText = this.add.text(0, 0, '⛶ TAM EKRAN', {
       fontFamily: this.SYSTEM_FONT,
-      fontSize: '18px',
-      fontStyle: '500',
-      color: '#CBD5E1',
+      fontSize: '13px',
+      fontStyle: '700',
+      color: '#E2E8F0',
       letterSpacing: 1,
+      align: 'center',
+    });
+    this.fsBtnText.setOrigin(0.5, 0.5);
+
+    fsContainer.add([fsBg, this.fsBtnText]);
+    fsContainer.setSize(fsW, fsH);
+    fsContainer.setInteractive({ useHandCursor: true });
+
+    fsContainer.on('pointerover', () => drawFsBg(true));
+    fsContainer.on('pointerout', () => drawFsBg(false));
+
+    fsContainer.on('pointerdown', () => {
+      if (this.scale.isFullscreen) {
+        this.scale.stopFullscreen();
+        if (this.fsBtnText) this.fsBtnText.setText('⛶ TAM EKRAN');
+      } else {
+        this.scale.startFullscreen();
+        if (this.fsBtnText) this.fsBtnText.setText('↙ ÇIKIŞ');
+      }
+    });
+
+    this.scale.on('fullscreenunsupported', () => {
+      // Fallback for HTML Fullscreen if scale manager not supported
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+        if (this.fsBtnText) this.fsBtnText.setText('↙ ÇIKIŞ');
+      } else {
+        document.exitFullscreen().catch(() => {});
+        if (this.fsBtnText) this.fsBtnText.setText('⛶ TAM EKRAN');
+      }
+    });
+  }
+
+  /**
+   * Merkezde Güçlü AAA Oyun Başlığı & Alt Başlık
+   * Dengeli ve hafif aşağıda konumlandırılmış
+   */
+  private createCinematicTitle(): void {
+    const titleGroup = this.add.container(this.GAME_WIDTH / 2, 400);
+    titleGroup.setDepth(20);
+
+    // Üst Dekoratif Çizgi & Elmas İkonu
+    const topDivider = this.add.graphics();
+    topDivider.lineStyle(1.5, 0xd4af37, 0.65);
+    topDivider.lineBetween(-170, -84, -20, -84);
+    topDivider.lineBetween(20, -84, 170, -84);
+
+    // Küçük elmas noktası
+    topDivider.fillStyle(0xffd700, 0.9);
+    topDivider.beginPath();
+    topDivider.moveTo(0, -90);
+    topDivider.lineTo(6, -84);
+    topDivider.lineTo(0, -78);
+    topDivider.lineTo(-6, -84);
+    topDivider.closePath();
+    topDivider.fillPath();
+    titleGroup.add(topDivider);
+
+    // 1. Satır: "MEDENİYETTEN" (Gümüş-Beyaz Metalik)
+    const titleLine1 = this.add.text(0, -44, 'MEDENİYETTEN', {
+      fontFamily: `'Montserrat', 'Cinzel', 'Outfit', ${this.SYSTEM_FONT}`,
+      fontSize: '50px',
+      fontStyle: '900',
+      color: '#FFFFFF',
+      letterSpacing: 6,
+      align: 'center',
+    });
+    titleLine1.setOrigin(0.5, 0.5);
+    titleLine1.setShadow(0, 4, 'rgba(0, 0, 0, 0.9)', 14, true, true);
+    titleGroup.add(titleLine1);
+
+    // 2. Satır: "MİLLİ TEKNOLOJİYE" (Altın-Amber Metalik Vurgu)
+    const titleLine2 = this.add.text(0, 20, 'MİLLİ TEKNOLOJİYE', {
+      fontFamily: `'Montserrat', 'Cinzel', 'Outfit', ${this.SYSTEM_FONT}`,
+      fontSize: '56px',
+      fontStyle: '900',
+      color: '#F59E0B',
+      letterSpacing: 5,
+      align: 'center',
+    });
+    titleLine2.setOrigin(0.5, 0.5);
+    titleLine2.setShadow(0, 5, 'rgba(0, 0, 0, 0.95)', 16, true, true);
+    titleGroup.add(titleLine2);
+
+    // Alt Dekoratif İnce Çizgi
+    const bottomDivider = this.add.graphics();
+    bottomDivider.lineStyle(1, 0xffd700, 0.45);
+    bottomDivider.lineBetween(-130, 62, 130, 62);
+    titleGroup.add(bottomDivider);
+
+    // Alt Başlık: "Göbeklitepe’den Türkiye Yüzyılı’na Zaman Yolculuğu"
+    const subtitleText = this.add.text(0, 92, "Göbeklitepe'den Türkiye Yüzyılı'na Zaman Yolculuğu", {
+      fontFamily: `'Outfit', 'Rajdhani', ${this.SYSTEM_FONT}`,
+      fontSize: '19.5px',
+      fontStyle: '600',
+      color: '#E2E8F0',
+      letterSpacing: 2.5,
+      align: 'center',
     });
     subtitleText.setOrigin(0.5, 0.5);
-    subtitleText.setShadow(0, 2, 'rgba(0, 0, 0, 0.55)', 6, true, true);
+    subtitleText.setShadow(0, 2, 'rgba(0, 0, 0, 0.85)', 10, true, true);
     titleGroup.add(subtitleText);
-
-    // Subtle floating breathing tween
-    this.tweens.add({
-      targets: titleGroup,
-      y: 275,
-      duration: 2600,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
   }
 
-  private createMinimalistStartButton(): void {
-    const btnW = 340;
-    const btnH = 58;
+  /**
+   * Profesyonel Oyun Menüsü Başlat Butonu: "ZAMAN YOLCULUĞUNA BAŞLA →"
+   * Başlık grubuyla dengeli aralıkta yukarı alınmış
+   */
+  private createCinematicCTAButton(): void {
+    const btnW = 430;
+    const btnH = 66;
     const btnX = this.GAME_WIDTH / 2;
-    const btnY = 640;
+    const btnY = 675;
 
     const btnContainer = this.add.container(btnX, btnY);
-    btnContainer.setDepth(120);
+    btnContainer.setDepth(25);
 
-    // Subtle Ambient Glow
-    const glow = this.add.graphics();
-    glow.fillStyle(0xe11d48, 0.25);
-    glow.fillRoundedRect(-btnW / 2 - 6, -btnH / 2 - 6, btnW + 12, btnH + 12, 32);
-
-    // Minimalist Pill Glass Button (#E11D48 with subtle 1.5px white outline)
+    // Kesik köşeli (chamfered) profesyonel oyun menüsü butonu çizimi
     const btnBg = this.add.graphics();
-    btnBg.fillStyle(0xe11d48, 0.95);
-    btnBg.fillRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 29);
-    btnBg.lineStyle(1.5, 0xffffff, 0.85);
-    btnBg.strokeRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 29);
 
-    const btnText = this.add.text(0, 0, 'ZAMAN YOLCULUĞUNA BAŞLA ➔', {
-      fontFamily: this.SYSTEM_FONT,
-      fontSize: '17px',
-      fontStyle: 'bold',
-      color: '#FFFFFF',
+    const drawGameButton = (isHover: boolean) => {
+      btnBg.clear();
+      const cut = 14;
+      const hw = btnW / 2;
+      const hh = btnH / 2;
+
+      const drawButtonPolygon = () => {
+        btnBg.beginPath();
+        btnBg.moveTo(-hw + cut, -hh);
+        btnBg.lineTo(hw - cut, -hh);
+        btnBg.lineTo(hw, -hh + cut);
+        btnBg.lineTo(hw, hh - cut);
+        btnBg.lineTo(hw - cut, hh);
+        btnBg.lineTo(-hw + cut, hh);
+        btnBg.lineTo(-hw, hh - cut);
+        btnBg.lineTo(-hw, -hh + cut);
+        btnBg.closePath();
+      };
+
+      if (isHover) {
+        // Hover: Canlı derin mavi/cyan çekirdek & altın/cyan ışık çerçevesi
+        btnBg.fillStyle(0x0369a1, 0.95);
+        drawButtonPolygon();
+        btnBg.fillPath();
+
+        // İnce üst parlama
+        btnBg.fillStyle(0xffffff, 0.2);
+        btnBg.fillRect(-hw + cut + 10, -hh + 3, btnW - 2 * (cut + 10), hh - 6);
+
+        // Canlı altın/cyan vurgulu çift kenarlık
+        btnBg.lineStyle(2.5, 0x00f2fe, 1.0);
+        drawButtonPolygon();
+        btnBg.strokePath();
+      } else {
+        // Normal: Koyu obsidyen cam çekirdek & altın-cyan zarif metalik çerçeve
+        btnBg.fillStyle(0x081329, 0.88);
+        drawButtonPolygon();
+        btnBg.fillPath();
+
+        // İnce üst cam parıltısı
+        btnBg.fillStyle(0xffffff, 0.08);
+        btnBg.fillRect(-hw + cut + 10, -hh + 3, btnW - 2 * (cut + 10), hh - 8);
+
+        // Zarif altın & cyan geçişli kenarlık
+        btnBg.lineStyle(2, 0xd4af37, 0.85);
+        drawButtonPolygon();
+        btnBg.strokePath();
+      }
+    };
+
+    drawGameButton(false);
+
+    // Buton Metni: "ZAMAN YOLCULUĞUNA BAŞLA →"
+    const btnText = this.add.text(0, 0, 'ZAMAN YOLCULUĞUNA BAŞLA →', {
+      fontFamily: `'Montserrat', 'Outfit', ${this.SYSTEM_FONT}`,
+      fontSize: '18px',
+      fontStyle: '800',
+      color: '#F8FAFC',
+      letterSpacing: 2.5,
+      align: 'center',
     });
     btnText.setOrigin(0.5, 0.5);
-    btnText.setShadow(0, 2, 'rgba(0,0,0,0.5)', 4, true, true);
+    btnText.setShadow(0, 2, 'rgba(0, 0, 0, 0.8)', 8, true, true);
 
-    btnContainer.add([glow, btnBg, btnText]);
+    btnContainer.add([btnBg, btnText]);
     btnContainer.setSize(btnW, btnH);
     btnContainer.setInteractive({ useHandCursor: true });
 
+    // Hover Etkileşimi
     btnContainer.on('pointerover', () => {
-      this.tweens.add({
-        targets: btnContainer,
-        scaleX: 1.04,
-        scaleY: 1.04,
-        duration: 120,
-      });
-      btnBg.clear();
-      btnBg.fillStyle(0xf43f5e, 1.0);
-      btnBg.fillRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 29);
-      btnBg.lineStyle(2, 0xffffff, 1.0);
-      btnBg.strokeRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 29);
+      drawGameButton(true);
+      btnText.setColor('#FBBF24');
     });
 
     btnContainer.on('pointerout', () => {
-      this.tweens.add({
-        targets: btnContainer,
-        scaleX: 1.0,
-        scaleY: 1.0,
-        duration: 120,
-      });
-      btnBg.clear();
-      btnBg.fillStyle(0xe11d48, 0.95);
-      btnBg.fillRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 29);
-      btnBg.lineStyle(1.5, 0xffffff, 0.85);
-      btnBg.strokeRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 29);
+      drawGameButton(false);
+      btnText.setColor('#F8FAFC');
     });
 
+    // Tıklama Etkileşimi
     btnContainer.on('pointerdown', () => {
-      this.cameras.main.zoomTo(1.08, 320, 'Quad.easeIn');
-      this.cameras.main.fadeOut(320, 10, 15, 29);
+      SoundFx.playTelemetryBeep();
+      this.cameras.main.fadeOut(300, 7, 11, 25);
       this.cameras.main.once('camerafadeoutcomplete', () => {
         this.scene.start(SceneKeys.WORLD_MAP);
       });
     });
   }
 }
+

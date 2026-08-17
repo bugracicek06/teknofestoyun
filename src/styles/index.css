@@ -14,7 +14,7 @@
   --color-text-light: #F8FAFC;
   --color-text-muted: #94A3B8;
 
-  --font-family-main: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-family-main: 'Outfit', 'Rajdhani', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
 * {
