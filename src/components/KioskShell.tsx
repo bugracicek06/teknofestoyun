@@ -23,7 +23,6 @@ import {
   MODULE_DISPLAY_INFO,
   REQUIRED_MODULE_IDS,
   certificateRepository,
-  LocalCertificateRepository,
 } from '../game/systems/certificate.ts';
 import { generateCertificateQr } from '../game/systems/qr';
 import hero from '../assets/landing_hero_bg.jpg';
@@ -191,20 +190,14 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
 
       draftRecordRef.current = record;
 
-      let createdRecord: CertificateRecord;
-      try {
-        createdRecord = await certificateRepository.create(record);
-      } catch (apiErr) {
-        console.warn('[Kiosk] Remote API create failed, using local fallback:', apiErr);
-        const localRepo = new LocalCertificateRepository();
-        createdRecord = await localRepo.create(record);
-      }
+      // Persist certificate on authoritative server API
+      const createdRecord = await certificateRepository.create(record);
 
-      // Update central store
+      // Update central store with server-confirmed certificate data
       GameStore.setCertificateData(createdRecord.certificateId, createdRecord.certificateNumber);
       setCertNumber(createdRecord.certificateNumber);
 
-      // Generate QR Code
+      // Generate QR Code with server-confirmed certificateId
       const qrRes = await generateCertificateQr(createdRecord.certificateId);
       if (qrRes.success && qrRes.dataUrl) {
         setQrDataUrl(qrRes.dataUrl);
@@ -212,12 +205,12 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
         setCreationStatus('created');
       } else {
         setCreationStatus('error');
-        setCreationError(qrRes.error || 'Sertifika bağlantısı şu anda oluşturulamıyor.');
+        setCreationError(qrRes.error || 'Sertifika bağlantısı oluşturulamadı.');
       }
     } catch (err: any) {
       console.error('[Kiosk] Certificate creation error:', err);
       setCreationStatus('error');
-      setCreationError('Sertifika bağlantısı şu anda oluşturulamıyor.');
+      setCreationError('Sertifika bağlantısı oluşturulamadı.');
     } finally {
       creatingLockRef.current = false;
     }
@@ -826,7 +819,7 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
                     {creationStatus === 'creating' && (
                       <div className="final-cert-qr-placeholder">
                         <div className="cert-spinner" />
-                        <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Sertifikanız hazırlanıyor…</span>
+                        <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Sertifikan hazırlanıyor…</span>
                       </div>
                     )}
 
@@ -852,7 +845,7 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
 
                     {creationStatus === 'error' && (
                       <div className="final-cert-error-box">
-                        <p>{creationError || 'Sertifika bağlantısı şu anda oluşturulamıyor.'}</p>
+                        <p>{creationError || 'Sertifika bağlantısı oluşturulamadı.'}</p>
                         <button
                           type="button"
                           className="btn-retry-cert"

@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import crypto from 'node:crypto';
+
 // In-memory + local dev JSON store for testing cross-device access on local network / dev mode
 const devCertStore = new Map<string, any>();
 const devStoreFile = path.resolve(process.cwd(), 'data', 'dev_certificates.json');
@@ -80,16 +82,33 @@ function devCertificateApiPlugin(): Plugin {
             });
             req.on('end', () => {
               try {
-                const data = JSON.parse(body);
-                if (!data.certificateId || !data.fullName) {
+                const data = JSON.parse(body || '{}');
+                const fullName = (typeof data.fullName === 'string' ? data.fullName : '').trim();
+                if (!fullName || fullName.length < 2) {
                   res.statusCode = 400;
                   res.end(JSON.stringify({ error: 'Invalid certificate payload' }));
                   return;
                 }
-                devCertStore.set(data.certificateId, data);
+                const completedAt = data.completedAt || new Date().toISOString();
+                const certId = data.certificateId || crypto.randomUUID();
+                const year = new Date(completedAt).getFullYear();
+                const code = crypto.randomBytes(3).toString('hex').toUpperCase();
+                const cNumber = data.certificateNumber || `PAU-TKF-${year}-${code}`;
+
+                const record = {
+                  ...data,
+                  certificateId: certId,
+                  certificateNumber: cNumber,
+                  fullName,
+                  completedAt,
+                  completedModules: Array.isArray(data.completedModules) ? data.completedModules : [],
+                  projectName: data.projectName || 'Medeniyetten Millî Teknolojiye',
+                };
+
+                devCertStore.set(record.certificateId, record);
                 saveDevStore();
                 res.statusCode = 201;
-                res.end(JSON.stringify(data));
+                res.end(JSON.stringify(record));
               } catch (err: any) {
                 res.statusCode = 400;
                 res.end(JSON.stringify({ error: 'Malformed JSON', details: err?.message }));

@@ -137,31 +137,88 @@ export function areAllModulesCompleted(completedModuleIds: string[]): boolean {
 }
 
 /**
- * Returns public URL for the certificate QR code.
- * Rejects invalid or missing configuration in production.
+ * Resolves and validates the public URL for the certificate QR code.
+ * Priority:
+ * 1. import.meta.env.VITE_PUBLIC_BASE_URL (trimmed)
+ * 2. window.location.origin (safe browser runtime fallback)
+ *
+ * In production (import.meta.env.PROD):
+ * - Validates absolute URL
+ * - Must be HTTPS protocol
+ * - Strictly rejects localhost, 127.0.0.1, 0.0.0.0, ::1, .local, .internal, and private IP ranges
  */
 export function getCertificatePublicUrl(certificateId: string): { url: string | null; error?: string } {
-  const envUrl = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_PUBLIC_BASE_URL : undefined;
-  const isDev = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.DEV : false;
+  if (!certificateId || typeof certificateId !== 'string' || !certificateId.trim()) {
+    return { url: null, error: 'Geçersiz sertifika kimliği.' };
+  }
 
-  if (envUrl && typeof envUrl === 'string' && envUrl.trim().length > 0) {
-    const trimmed = envUrl.trim().replace(/\/+$/, '');
-    try {
-      const parsed = new URL(trimmed);
-      return { url: `${parsed.origin}/certificate/${certificateId}` };
-    } catch {
-      return { url: null, error: `Geçersiz VITE_PUBLIC_BASE_URL: ${envUrl}` };
+  const cleanId = encodeURIComponent(certificateId.trim());
+  const configuredBaseUrl = typeof import.meta !== 'undefined' && import.meta.env
+    ? (import.meta.env.VITE_PUBLIC_BASE_URL as string | undefined)?.trim()
+    : undefined;
+
+  const runtimeBaseUrl = typeof window !== 'undefined' && window.location && window.location.origin
+    ? window.location.origin.trim()
+    : '';
+
+  const publicBaseUrl = (configuredBaseUrl && configuredBaseUrl.length > 0)
+    ? configuredBaseUrl
+    : runtimeBaseUrl;
+
+  if (!publicBaseUrl) {
+    return {
+      url: null,
+      error: 'Sertifika genel web adresi (Base URL) tespit edilemedi.',
+    };
+  }
+
+  let finalUrl: URL;
+  try {
+    finalUrl = new URL(`/certificate/${cleanId}`, publicBaseUrl);
+  } catch (err: any) {
+    return {
+      url: null,
+      error: `Geçersiz sertifika web adresi oluşturuldu: ${err?.message || publicBaseUrl}`,
+    };
+  }
+
+  const isProd = typeof import.meta !== 'undefined' && import.meta.env
+    ? Boolean(import.meta.env.PROD)
+    : false;
+
+  if (isProd) {
+    // 1. Production QR URL must be HTTPS
+    if (finalUrl.protocol !== 'https:') {
+      return {
+        url: null,
+        error: `Production QR adresi güvenli HTTPS olmalıdır (Alınan: ${finalUrl.protocol}).`,
+      };
+    }
+
+    // 2. Reject localhost, loopback, and private development hostnames
+    const hostname = finalUrl.hostname.toLowerCase();
+    const isLocalhost =
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '0.0.0.0' ||
+      hostname === '::1' ||
+      hostname.endsWith('.local') ||
+      hostname.endsWith('.internal');
+
+    const isPrivateIp =
+      /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname) ||
+      /^192\.168\.\d{1,3}\.\d{1,3}$/.test(hostname) ||
+      /^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(hostname);
+
+    if (isLocalhost || isPrivateIp) {
+      return {
+        url: null,
+        error: `Production QR adresinde yerel geliştirme adresi kullanılamaz: ${hostname}`,
+      };
     }
   }
 
-  if (isDev && typeof window !== 'undefined' && window.location) {
-    return { url: `${window.location.origin}/certificate/${certificateId}` };
-  }
-
-  return {
-    url: null,
-    error: 'VITE_PUBLIC_BASE_URL tanımlanmamış. Production QR kodu oluşturulamaz.',
-  };
+  return { url: finalUrl.toString() };
 }
 
 // ----------------------------------------------------

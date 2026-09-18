@@ -1,0 +1,3 @@
+/api/certificates     /.netlify/functions/certificates    200
+/api/certificates/*   /.netlify/functions/certificates    200
+/*                    /index.html                         200

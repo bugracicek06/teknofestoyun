@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   type CertificateRecord,
   formatCertificateDate,
   MODULE_DISPLAY_INFO,
   REQUIRED_MODULE_IDS,
 } from '../game/systems/certificate';
-import { ApiCertificateRepository, LocalCertificateRepository } from '../game/systems/certificate';
+import { ApiCertificateRepository } from '../game/systems/certificate';
 import { exportCertificateAsPdf, exportCertificateAsImage, renderCertificateToCanvas } from '../game/systems/certificateRenderer';
 import pauLogo from '../assets/logos/pau_logo.png';
 import teknofestLogo from '../assets/logos/teknofest_logo.png';
@@ -14,72 +14,63 @@ interface CertificateViewPageProps {
   certificateId: string;
 }
 
+type PageErrorType = 'notFound' | 'network' | 'invalidId' | null;
+
 export const CertificateViewPage: React.FC<CertificateViewPageProps> = ({ certificateId }) => {
   const [cert, setCert] = useState<CertificateRecord | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [errorType, setErrorType] = useState<PageErrorType>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadingImg, setDownloadingImg] = useState(false);
   const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
 
-  useEffect(() => {
-    let active = true;
-
-    async function fetchCertificate() {
-      setLoading(true);
-      setError(null);
-
-      try {
-        // First attempt: API repository
-        const apiRepo = new ApiCertificateRepository();
-        let record = await apiRepo.getById(certificateId).catch(() => null);
-
-        // Fallback for local testing if API isn't reached
-        if (!record) {
-          const localRepo = new LocalCertificateRepository();
-          record = await localRepo.getById(certificateId);
-        }
-
-        if (!active) return;
-
-        if (!record) {
-          setError('Sertifika bulunamadı veya bağlantı geçersiz.');
-          setLoading(false);
-          return;
-        }
-
-        setCert(record);
-
-        // Generate high quality preview
-        try {
-          const canvas = await renderCertificateToCanvas(record);
-          if (active) {
-            setPreviewDataUrl(canvas.toDataURL('image/jpeg', 0.9));
-          }
-        } catch (renderErr) {
-          console.warn('[CertificateView] Could not generate preview canvas:', renderErr);
-        }
-
-        setLoading(false);
-      } catch (err: any) {
-        if (!active) return;
-        console.error('[CertificateView] Fetch error:', err);
-        setError('Sertifika yüklenirken bir sorun oluştu. Lütfen bağlantınızı kontrol edin.');
-        setLoading(false);
-      }
+  const fetchCertificate = useCallback(async () => {
+    if (!certificateId || !certificateId.trim()) {
+      setErrorType('invalidId');
+      setErrorMessage('Geçersiz veya eksik sertifika bağlantısı.');
+      setLoading(false);
+      return;
     }
 
-    if (certificateId) {
-      fetchCertificate();
-    } else {
-      setError('Geçersiz sertifika kimliği.');
+    setLoading(true);
+    setErrorType(null);
+    setErrorMessage(null);
+
+    try {
+      // Authoritative remote API fetch (no localStorage dependency)
+      const apiRepo = new ApiCertificateRepository();
+      const record = await apiRepo.getById(certificateId.trim());
+
+      if (!record) {
+        setErrorType('notFound');
+        setErrorMessage('Sertifika bulunamadı. QR kodun doğruluğundan emin olunuz.');
+        setLoading(false);
+        return;
+      }
+
+      setCert(record);
+
+      // Generate high quality preview canvas
+      try {
+        const canvas = await renderCertificateToCanvas(record);
+        setPreviewDataUrl(canvas.toDataURL('image/jpeg', 0.9));
+      } catch (renderErr) {
+        console.warn('[CertificateView] Could not generate preview canvas:', renderErr);
+      }
+
+      setLoading(false);
+    } catch (err: any) {
+      console.error('[CertificateView] Network or server error:', err);
+      setErrorType('network');
+      setErrorMessage('Sunucuya erişilemedi. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.');
       setLoading(false);
     }
-
-    return () => {
-      active = false;
-    };
   }, [certificateId]);
+
+  useEffect(() => {
+    fetchCertificate();
+  }, [fetchCertificate]);
 
   const handleDownloadPdf = async () => {
     if (!cert || downloadingPdf) return;
@@ -119,16 +110,30 @@ export const CertificateViewPage: React.FC<CertificateViewPageProps> = ({ certif
     );
   }
 
-  if (error || !cert) {
+  if (errorType || errorMessage || !cert) {
     return (
       <div className="cert-page-container">
         <div className="cert-card cert-status-card cert-error-card">
           <div className="cert-status-icon" aria-hidden="true">⚠️</div>
-          <h2>Bağlantı Geçersiz</h2>
-          <p>{error || 'Sertifika bulunamadı veya bağlantı geçersiz.'}</p>
+          <h2>{errorType === 'notFound' ? 'Sertifika Bulunamadı' : errorType === 'network' ? 'Bağlantı Hatası' : 'Bağlantı Geçersiz'}</h2>
+          <p>{errorMessage || 'Sertifika bulunamadı veya bağlantı geçersiz.'}</p>
           <p className="cert-help-text">
-            Kiosk ekranındaki QR kodun doğru okutulduğundan emin olunuz.
+            {errorType === 'notFound'
+              ? 'Kiosk ekranındaki QR kodun eksiksiz okutulduğundan veya sertifika kimliğinizin doğru olduğundan emin olunuz.'
+              : errorType === 'network'
+              ? 'İnternet bağlantınızı kontrol edip aşağıdaki butondan sayfayı yenileyebilirsiniz.'
+              : 'Kiosk ekranındaki QR kodun doğru okutulduğundan emin olunuz.'}
           </p>
+          {errorType === 'network' && (
+            <button
+              type="button"
+              className="cert-btn-primary"
+              style={{ marginTop: '1rem', width: 'auto', alignSelf: 'center' }}
+              onClick={() => fetchCertificate()}
+            >
+              Yeniden Dene
+            </button>
+          )}
         </div>
       </div>
     );

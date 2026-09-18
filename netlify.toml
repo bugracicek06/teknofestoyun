@@ -1,0 +1,31 @@
+[build]
+  publish = "dist"
+  command = "npm run build"
+  functions = "netlify/functions"
+
+[build.environment]
+  VITE_PUBLIC_BASE_URL = "https://pauteknofest.netlify.app"
+
+# 1. API Route: Direct /api/certificates to serverless function
+[[redirects]]
+  from = "/api/certificates"
+  to = "/.netlify/functions/certificates"
+  status = 200
+
+[[redirects]]
+  from = "/api/certificates/*"
+  to = "/.netlify/functions/certificates"
+  status = 200
+
+# 2. SPA Route: Direct all frontend routes (e.g. /certificate/:id) to index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

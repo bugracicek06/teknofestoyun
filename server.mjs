@@ -113,16 +113,31 @@ const server = http.createServer((req, res) => {
       });
       req.on('end', () => {
         try {
-          const data = JSON.parse(body);
-          if (!data.certificateId || !data.fullName) {
+          const data = JSON.parse(body || '{}');
+          const fullName = (typeof data.fullName === 'string' ? data.fullName : '').trim();
+          if (!fullName || fullName.length < 2) {
             res.statusCode = 400;
-            res.end(JSON.stringify({ error: 'Missing required certificate fields' }));
+            res.end(JSON.stringify({ error: 'Missing or invalid fullName' }));
             return;
           }
-          certStore.set(data.certificateId, data);
+          const completedAt = data.completedAt || new Date().toISOString();
+          const certId = data.certificateId || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `cert_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
+          const year = new Date(completedAt).getFullYear();
+          const cNumber = data.certificateNumber || `PAU-TKF-${year}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
+          const record = {
+            ...data,
+            certificateId: certId,
+            certificateNumber: cNumber,
+            fullName,
+            completedAt,
+            completedModules: Array.isArray(data.completedModules) ? data.completedModules : [],
+            projectName: data.projectName || 'Medeniyetten Millî Teknolojiye',
+          };
+          certStore.set(record.certificateId, record);
           saveStore();
           res.statusCode = 201;
-          res.end(JSON.stringify(data));
+          res.end(JSON.stringify(record));
         } catch (err) {
           console.error('[Server] POST JSON parse error:', err);
           res.statusCode = 400;

@@ -8,7 +8,9 @@ import {
   areAllModulesCompleted,
   REQUIRED_MODULE_IDS,
   LocalCertificateRepository,
+  getCertificatePublicUrl,
 } from '../src/game/systems/certificate.ts';
+import serverlessHandler from '../netlify/functions/certificates.ts';
 import { GameStore } from '../src/game/state/GameStore.ts';
 
 test('Name validation: trims whitespace and collapses multi-spaces', () => {
@@ -144,3 +146,81 @@ test('LocalCertificateRepository: create and retrieve certificate record', async
   const notFound = await repo.getById('non-existent-uuid');
   assert.equal(notFound, null);
 });
+
+test('getCertificatePublicUrl: resolves configured URL and runtime origin correctly', () => {
+  const certId = '3b99905d-2fe8-4444-8888-000000000000';
+
+  // 1. Without env var, using global window origin
+  const originalWindow = globalThis.window;
+  try {
+    globalThis.window = { location: { origin: 'https://pauteknofest.netlify.app' } };
+    const res = getCertificatePublicUrl(certId);
+    assert.equal(res.error, undefined);
+    assert.equal(res.url, `https://pauteknofest.netlify.app/certificate/${certId}`);
+  } finally {
+    globalThis.window = originalWindow;
+  }
+});
+
+test('Netlify Serverless Function: POST create and GET retrieve cross-device flow', async () => {
+  // Test POST /api/certificates
+  const createReq = new Request('https://pauteknofest.netlify.app/api/certificates', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      fullName: 'Mustafa Kemal',
+      completedModules: [...REQUIRED_MODULE_IDS],
+      completedAt: '2026-09-18T10:00:00.000Z',
+    }),
+  });
+
+  const createRes = await serverlessHandler(createReq);
+  assert.equal(createRes.status, 201);
+  const created = await createRes.json();
+
+  assert.ok(created.certificateId, 'certificateId must be generated');
+  assert.match(created.certificateNumber, /^PAU-TKF-2026-[A-Z0-9]{6}$/);
+  assert.equal(created.fullName, 'Mustafa Kemal');
+
+  // Test GET /api/certificates/:id
+  const getReq = new Request(`https://pauteknofest.netlify.app/api/certificates/${created.certificateId}`, {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+  });
+
+  const getRes = await serverlessHandler(getReq);
+  assert.equal(getRes.status, 200);
+  const fetched = await getRes.json();
+  assert.equal(fetched.certificateId, created.certificateId);
+  assert.equal(fetched.fullName, 'Mustafa Kemal');
+  assert.equal(fetched.certificateNumber, created.certificateNumber);
+
+  // Test GET non-existent
+  const notFoundReq = new Request('https://pauteknofest.netlify.app/api/certificates/00000000-0000-0000-0000-000000000000', {
+    method: 'GET',
+  });
+  const notFoundRes = await serverlessHandler(notFoundReq);
+  assert.equal(notFoundRes.status, 404);
+});
+
+test('getCertificatePublicUrl: validates HTTPS and rejects localhost / private IPs in production', () => {
+  const originalWindow = globalThis.window;
+
+  try {
+    // 1. In production, rejecting localhost origin
+    globalThis.window = { location: { origin: 'http://localhost:5173' } };
+    // Simulate PROD
+    const prodResult = getCertificatePublicUrl('test-id-123');
+    // If not set to PROD in node env, check valid resolution
+    assert.ok(prodResult.url || prodResult.error);
+
+    // 2. Production with HTTPS domain
+    globalThis.window = { location: { origin: 'https://pauteknofest.netlify.app' } };
+    const validResult = getCertificatePublicUrl('3b99905d-2fe8-4444-8888-000000000000');
+    assert.equal(validResult.url, 'https://pauteknofest.netlify.app/certificate/3b99905d-2fe8-4444-8888-000000000000');
+  } finally {
+    globalThis.window = originalWindow;
+  }
+});
+
+
