@@ -29,9 +29,9 @@ import reliefCraneRightUrl from '../../assets/svg/relief_scorpion.svg';
 import socketFoxLeftUrl from '../../assets/svg/socket_fox_left.svg';
 import socketBoarLeftUrl from '../../assets/svg/socket_boar_left.svg';
 import socketCraneLeftUrl from '../../assets/svg/socket_crane_left.svg';
-import socketFoxRightUrl from '../../assets/svg/relief_snake.svg';
-import socketBoarRightUrl from '../../assets/svg/relief_bull.svg';
-import socketCraneRightUrl from '../../assets/svg/relief_scorpion.svg';
+import socketFoxRightUrl from '../../assets/svg/socket_fox_right.svg';
+import socketBoarRightUrl from '../../assets/svg/socket_boar_right.svg';
+import socketCraneRightUrl from '../../assets/svg/socket_crane_right.svg';
 
 // Preload Landing Hero & World Map Background Images
 import landingHeroBgUrl from '../../assets/landing_hero_bg.webp';
@@ -53,7 +53,6 @@ import serinhisarSheathUrl from '../../assets/svg/serinhisar_sheath.svg';
 import smithHammerUrl from '../../assets/svg/smith_hammer.svg';
 
 export class StartScene extends BaseScene {
-
   constructor() {
     super(SceneKeys.START);
   }

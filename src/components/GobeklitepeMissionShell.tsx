@@ -1,29 +1,16 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { EventBus } from '../game/state/EventBus';
 import { MODULE_NARRATIONS } from '../data/narrations';
 import { stopNarration } from '../game/systems/narration';
-import foxSvg from '../assets/svg/relief_fox_left.svg';
-import boarSvg from '../assets/svg/relief_boar_left.svg';
-import craneSvg from '../assets/svg/relief_crane_left.svg';
-import snakeSvg from '../assets/svg/relief_snake.svg';
-import bullSvg from '../assets/svg/relief_bull.svg';
-import scorpionSvg from '../assets/svg/relief_scorpion.svg';
 import stageBg from '../assets/gobeklitepe_cinematic_stage.jpg';
+import {
+  GOBEKLITEPE_ANIMALS,
+  shuffleAnimals,
+  type AnimalItem,
+} from '../data/gobeklitepeAnimals';
 
-export interface AnimalItem {
-  id: string;
-  name: string;
-  icon: string;
-}
-
-export const GOBEKLITEPE_ANIMALS: AnimalItem[] = [
-  { id: 'p_fox_left', name: 'Tilki', icon: foxSvg },
-  { id: 'p_boar_left', name: 'Domuz', icon: boarSvg },
-  { id: 'p_crane_left', name: 'Turna', icon: craneSvg },
-  { id: 'p_fox_right', name: 'Yılan', icon: snakeSvg },
-  { id: 'p_boar_right', name: 'Boğa', icon: bullSvg },
-  { id: 'p_crane_right', name: 'Akrep', icon: scorpionSvg },
-];
+export type { AnimalItem };
+export { GOBEKLITEPE_ANIMALS };
 
 interface GobeklitepeMissionShellProps {
   placedCount: number;
@@ -62,6 +49,20 @@ export const GobeklitepeMissionShell: React.FC<GobeklitepeMissionShellProps> = (
   onToggleFullscreen,
   onSelectAnimal,
 }) => {
+  // Fisher-Yates shuffle initialized once per session start
+  const [shuffledAnimals, setShuffledAnimals] = useState<AnimalItem[]>(() =>
+    shuffleAnimals(GOBEKLITEPE_ANIMALS)
+  );
+
+  // When session resets (placedCount drops back to 0), re-shuffle
+  const prevPlacedCountRef = useRef(placedCount);
+  useEffect(() => {
+    if (prevPlacedCountRef.current > 0 && placedCount === 0) {
+      setShuffledAnimals(shuffleAnimals(GOBEKLITEPE_ANIMALS));
+    }
+    prevPlacedCountRef.current = placedCount;
+  }, [placedCount]);
+
   useEffect(() => {
     return () => {
       stopNarration();
@@ -369,7 +370,7 @@ export const GobeklitepeMissionShell: React.FC<GobeklitepeMissionShellProps> = (
       {/* 3. BOTTOM ANIMAL SELECTION TRAY */}
       <footer className="gobeklitepe-bottom-tray">
         <div className="animal-tiles-row" role="region" aria-label="Hayvan Seçim Tepsisi">
-          {GOBEKLITEPE_ANIMALS.map((animal) => {
+          {shuffledAnimals.map((animal) => {
             const isPlaced = placedIds.includes(animal.id);
             const isSelected = selectedId === animal.id;
 

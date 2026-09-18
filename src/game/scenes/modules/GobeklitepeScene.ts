@@ -23,9 +23,9 @@ import reliefCraneRightUrl from '../../../assets/svg/relief_scorpion.svg';
 import socketFoxLeftUrl from '../../../assets/svg/socket_fox_left.svg';
 import socketBoarLeftUrl from '../../../assets/svg/socket_boar_left.svg';
 import socketCraneLeftUrl from '../../../assets/svg/socket_crane_left.svg';
-import socketFoxRightUrl from '../../../assets/svg/relief_snake.svg';
-import socketBoarRightUrl from '../../../assets/svg/relief_bull.svg';
-import socketCraneRightUrl from '../../../assets/svg/relief_scorpion.svg';
+import socketFoxRightUrl from '../../../assets/svg/socket_fox_right.svg';
+import socketBoarRightUrl from '../../../assets/svg/socket_boar_right.svg';
+import socketCraneRightUrl from '../../../assets/svg/socket_crane_right.svg';
 
 import passportStampUrl from '../../../assets/svg/passport_stamp.svg';
 
