@@ -1,3 +1,4 @@
+import { calculateResult } from '../../systems/scoring';
 import Phaser from 'phaser';
 import { BaseScene } from '../BaseScene';
 import { SceneKeys } from '../../../types/game';
@@ -192,7 +193,7 @@ export class MilliTeknolojiScene extends BaseScene {
     this.routeCardContainers.clear();
 
     // Select random humanitarian mission
-    const randomIndex = Phaser.Math.Between(0, this.MISSIONS.length - 1);
+    const randomIndex = Math.max(0, this.MISSIONS.findIndex(m => m.id === this.registry.get('civilMission')));
     this.currentMission = this.MISSIONS[randomIndex];
 
     this.cameras.main.fadeIn(350, 7, 11, 25);
@@ -237,6 +238,7 @@ export class MilliTeknolojiScene extends BaseScene {
   }
 
   private cleanUpScene(): void {
+    this.events.off(Phaser.Scenes.Events.DESTROY, this.cleanUpScene, this);
     if (this.timerEvent) {
       this.timerEvent.remove();
       this.timerEvent = undefined;
@@ -1643,129 +1645,8 @@ export class MilliTeknolojiScene extends BaseScene {
   // =========================================================================
 
   private createCommandCenterVictoryModal(): void {
-    const modal = this.add.container(this.GAME_WIDTH / 2, this.GAME_HEIGHT / 2);
-    modal.setDepth(200);
-
-    // 1. Dark Backdrop Overlay
-    const backdrop = this.add.graphics();
-    backdrop.fillStyle(0x070b19, 0.88);
-    backdrop.fillRect(-this.GAME_WIDTH / 2, -this.GAME_HEIGHT / 2, this.GAME_WIDTH, this.GAME_HEIGHT);
-
-    // 2. Main Glassmorphism Frame
-    const width = 840;
-    const height = 620;
-
-    const modalBg = this.add.graphics();
-    modalBg.fillStyle(0x0a1128, 0.98);
-    modalBg.fillRoundedRect(-width / 2, -height / 2, width, height, 24);
-    modalBg.lineStyle(3, 0x00f2fe, 0.9);
-    modalBg.strokeRoundedRect(-width / 2, -height / 2, width, height, 24);
-
-    // Outer Aura Glow
-    const outerAura = this.add.graphics();
-    outerAura.fillStyle(0x00f2fe, 0.15);
-    outerAura.fillRoundedRect(-width / 2 - 12, -height / 2 - 12, width + 24, height + 24, 30);
-
-    // 3. Header Banner: "GÖREV BAŞARIYLA TAMAMLANDI! ✈️"
-    const headerText = this.createText(0, -height / 2 + 55, 'GÖREV BAŞARIYLA TAMAMLANDI! ✈️', {
-      fontSize: '36px',
-      fontStyle: '900',
-      color: '#00F2FE',
-      shadow: { color: '#00F2FE', blur: 15, fill: true },
-    });
-    headerText.setOrigin(0.5);
-
-    const subText = this.createText(0, -height / 2 + 105, 'Millî Teknoloji Görev Rozetini Kazandın!', {
-      fontSize: '22px',
-      fontStyle: 'bold',
-      color: '#FFD700',
-    });
-    subText.setOrigin(0.5);
-
-    // 4. Mission Specific Badge & Stamp
-    if (this.textures.exists('passport_stamp')) {
-      const stampImg = this.add.image(0, -height / 2 + 190, 'passport_stamp');
-      stampImg.setDisplaySize(95, 95);
-      modal.add(stampImg);
-    }
-
-    // 5. 3 Assessment Skill Meters (Gözlem, Ustalık, Mühendislik)
-    const skillsContainer = this.add.container(0, 30);
-    const skills = [
-      { name: 'Gözlem', stars: '⭐⭐⭐' },
-      { name: 'Ustalık', stars: '⭐⭐⭐' },
-      { name: 'Mühendislik', stars: '⭐⭐⭐' },
-    ];
-
-    skills.forEach((skill, idx) => {
-      const x = (idx - 1) * 240;
-      const box = this.add.graphics();
-      box.fillStyle(0x0f172a, 0.9);
-      box.fillRoundedRect(x - 105, -35, 210, 70, 14);
-      box.lineStyle(1.5, 0x38bdf8, 0.7);
-      box.strokeRoundedRect(x - 105, -35, 210, 70, 14);
-
-      const label = this.createText(x, -14, skill.name, {
-        fontSize: '15px',
-        fontStyle: 'bold',
-        color: '#94A3B8',
-      });
-      label.setOrigin(0.5);
-
-      const stars = this.createText(x, 14, skill.stars, {
-        fontSize: '22px',
-      });
-      stars.setOrigin(0.5);
-
-      skillsContainer.add([box, label, stars]);
-    });
-
-    // 6. Mission Telemetry Stats
-    const statsText = this.createText(
-      0,
-      130,
-      `Görev Süresi: ${this.elapsedSeconds} sn   •   Enerji Verimliliği: %98   •   Tespit Doğruluğu: %100\nHata: ${this.errorCount}`,
-      {
-        fontSize: '18px',
-        fontStyle: 'bold',
-        color: '#E2E8F0',
-        align: 'center',
-        lineSpacing: 6,
-      }
-    );
-    statsText.setOrigin(0.5);
-
-    // 7. Large Return Button: "HARİTAYA DÖN  ➔" (Unlocks Module 6 Uzay Teknolojileri)
-    const returnBtn = new GameButton(
-      this,
-      0,
-      215,
-      420,
-      90,
-      'HARİTAYA DÖN  ➔',
-      () => {
-        GameStore.completeModule('milli_teknoloji');
-        this.cameras.main.fadeOut(350, 7, 11, 25);
-        this.cameras.main.once('camerafadeoutcomplete', () => {
-          this.scene.start(SceneKeys.WORLD_MAP);
-        });
-      },
-      0x00f2fe,
-      '#070B19'
-    );
-
-    modal.add([backdrop, outerAura, modalBg, headerText, subText, skillsContainer, statsText, returnBtn]);
-
-    // Modal Entrance Scale Animation
-    modal.setScale(0.7);
-    modal.setAlpha(0);
-    this.tweens.add({
-      targets: modal,
-      scaleX: 1.0,
-      scaleY: 1.0,
-      alpha: 1.0,
-      duration: 350,
-      ease: 'Back.easeOut',
-    });
+    const result = calculateResult(this.elapsedSeconds, this.errorCount, { Görev: this.currentMission.title, Sensör: this.SENSORS.find(s => s.id === this.currentMission.requiredSensorId)?.name || '', Rota: this.selectedRouteId || '' });
+    GameStore.saveResult('milli_teknoloji', result);
+    EventBus.emit('mission-result', 'milli_teknoloji');
   }
 }

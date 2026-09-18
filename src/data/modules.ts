@@ -5,9 +5,9 @@ export const GAME_MODULES: GameModuleInfo[] = [
   {
     id: 'gobeklitepe',
     sceneKey: SceneKeys.GOBEKLITEPE,
-    title: 'Göbeklitepe',
+    title: 'Göbeklitepe – Taşın Hafızası',
     era: 'Tarihin Sıfır Noktası (M.Ö. 9600)',
-    description: 'İlk tapınak yapıları, taş işçiliği ve insanlığın mimari ile ilk büyük buluşması.',
+    description: 'Hayvan motiflerini taşlara yerleştir; ayrıntıları keşfet.',
     icon: '🏛️',
     accentColor: 0xd4af37, // Altın sarısı
     hexColor: '#D4AF37',
@@ -15,7 +15,7 @@ export const GAME_MODULES: GameModuleInfo[] = [
   {
     id: 'demir_cagi',
     sceneKey: SceneKeys.DEMIR_CAGI,
-    title: 'Demir Çağı',
+    title: 'Demir Çağı – Ateşe Hükmet',
     era: 'Madencilik ve Metalurji Devrimi',
     description: 'Anadolu topraklarında demirin ergitilmesi, örs ve çekiçle form kazanması.',
     icon: '⚒️',
@@ -25,7 +25,7 @@ export const GAME_MODULES: GameModuleInfo[] = [
   {
     id: 'anadolu_ustaligi',
     sceneKey: SceneKeys.ANADOLU_USTALIGI,
-    title: 'Anadolu Ustalığı',
+    title: 'Anadolu Ustalığı – Ustalığın İzleri',
     era: 'Selçuklu ve Osmanlı Zanaat Kültürü',
     description: 'Ahilik gelenekleri, çini, bakırcılık ve mekanik saatler.',
     icon: '🕌',
@@ -35,7 +35,7 @@ export const GAME_MODULES: GameModuleInfo[] = [
   {
     id: 'sanayilesme',
     sceneKey: SceneKeys.SANAYILESME,
-    title: 'Bilim ve Sanayileşme',
+    title: 'Mühendislik – Mekanizmayı Kur',
     era: 'Mekanik Güç & Dişli Aktarımı',
     description: 'Büyükten küçüğe dişli aktarımı, tork dönüşümü ve modern sanayileşme.',
     icon: '⚙️',
@@ -45,9 +45,9 @@ export const GAME_MODULES: GameModuleInfo[] = [
   {
     id: 'milli_teknoloji',
     sceneKey: SceneKeys.MILLI_TEKNOLOJI,
-    title: 'Millî Teknoloji',
-    era: 'Yerli Mühendislik & İHA/SİHA Çağı',
-    description: 'Yüksek teknoloji, havacılık, savunma ve yerli mühendislik hamlesi.',
+    title: 'Millî Teknoloji – Gökyüzüne Yüksel',
+    era: 'Sivil Havacılık ve Toplumsal Fayda',
+    description: 'Afet gözlemi, yangın tespiti ve tarım için güvenli uçuş.',
     icon: '✈️',
     accentColor: 0x3498db, // Gökyüzü mavisi
     hexColor: '#3498DB',
@@ -55,7 +55,7 @@ export const GAME_MODULES: GameModuleInfo[] = [
   {
     id: 'uzay_teknolojileri',
     sceneKey: SceneKeys.UZAY_TEKNOLOJILERI,
-    title: 'Uzay Teknolojileri',
+    title: 'Uzay Teknolojileri – Sıra Sende',
     era: 'Geleceğin Ufukları & Derin Uzay',
     description: 'Milli uydu sistemleri, uzay gözlem ve geleceğin teknoloji vizyonu.',
     icon: '🚀',

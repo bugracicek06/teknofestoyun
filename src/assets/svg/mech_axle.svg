@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" width="200" height="60">
+  <defs>
+    <linearGradient id="axleSteel" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ECEFF1"/>
+      <stop offset="30%" stop-color="#90A4AE"/>
+      <stop offset="70%" stop-color="#546E7A"/>
+      <stop offset="100%" stop-color="#263238"/>
+    </linearGradient>
+    <linearGradient id="axleBronzeRing" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFE082"/>
+      <stop offset="50%" stop-color="#FFB300"/>
+      <stop offset="100%" stop-color="#FF6F00"/>
+    </linearGradient>
+  </defs>
+  <!-- Steel Axle Body -->
+  <rect x="15" y="18" width="170" height="24" rx="4" fill="url(#axleSteel)" stroke="#37474F" stroke-width="2"/>
+  <!-- Light reflection highlight -->
+  <line x1="20" y1="24" x2="180" y2="24" stroke="#FFFFFF" stroke-width="2" opacity="0.65"/>
+  <!-- Keyway notch in center -->
+  <rect x="85" y="16" width="30" height="28" rx="2" fill="url(#axleBronzeRing)" stroke="#D97706" stroke-width="2"/>
+  <!-- Left/Right Flange Collars -->
+  <rect x="12" y="14" width="10" height="32" rx="3" fill="url(#axleBronzeRing)" stroke="#B45309" stroke-width="1.5"/>
+  <rect x="178" y="14" width="10" height="32" rx="3" fill="url(#axleBronzeRing)" stroke="#B45309" stroke-width="1.5"/>
+</svg>

@@ -3,7 +3,7 @@ import { StartScene } from './scenes/StartScene';
 import { WorldMapScene } from './scenes/WorldMapScene';
 import { GobeklitepeScene } from './scenes/modules/GobeklitepeScene';
 import { DemirCagiScene } from './scenes/modules/DemirCagiScene';
-import { AnadoluUstaligiScene } from './scenes/modules/AnadoluUstaligiScene';
+import { CraftDesignScene } from './scenes/modules/CraftDesignScene';
 import { SanayilesmeScene } from './scenes/modules/SanayilesmeScene';
 import { MilliTeknolojiScene } from './scenes/modules/MilliTeknolojiScene';
 import { UzayTeknolojileriScene } from './scenes/modules/UzayTeknolojileriScene';
@@ -36,7 +36,7 @@ export const createGameConfig = (parentContainerId: string): Phaser.Types.Core.G
     WorldMapScene,
     GobeklitepeScene,
     DemirCagiScene,
-    AnadoluUstaligiScene,
+    CraftDesignScene,
     SanayilesmeScene,
     MilliTeknolojiScene,
     UzayTeknolojileriScene,

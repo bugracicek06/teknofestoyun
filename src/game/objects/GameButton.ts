@@ -56,6 +56,7 @@ export class GameButton extends Phaser.GameObjects.Container {
     const hitArea = new Phaser.Geom.Rectangle(-width / 2, -touchHeight / 2, width, touchHeight);
     this.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains, true);
 
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
     // Pulsing Idle Tween
     scene.tweens.add({
       targets: this.outerGlow,
@@ -75,6 +76,8 @@ export class GameButton extends Phaser.GameObjects.Container {
       repeat: -1,
       ease: 'Quad.easeInOut',
     });
+
+    }
 
     // Touch & Pointer Feedback
     this.on('pointerover', () => {

@@ -18,6 +18,7 @@ export class TracePath extends Phaser.GameObjects.Container {
   private isTracing = false;
   private activeGraphics: Phaser.GameObjects.Graphics;
   private guideGraphics: Phaser.GameObjects.Graphics;
+  private pointerDownListener?: (pointer: Phaser.Input.Pointer) => void;
   private pointerMoveListener?: (pointer: Phaser.Input.Pointer) => void;
   private pointerUpListener?: () => void;
 
@@ -41,7 +42,7 @@ export class TracePath extends Phaser.GameObjects.Container {
     this.add([this.guideGraphics, this.activeGraphics]);
 
     // Touch pointer listeners
-    scene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+    this.pointerDownListener = (pointer: Phaser.Input.Pointer) => {
       if (this.currentSegmentIndex >= this.segments.length) return;
       const seg = this.segments[this.currentSegmentIndex];
       const distToStart = Phaser.Math.Distance.Between(pointer.x, pointer.y, seg.startX, seg.startY);
@@ -51,7 +52,8 @@ export class TracePath extends Phaser.GameObjects.Container {
         this.isTracing = true;
         SoundFx.playSuccessTone();
       }
-    });
+    };
+    scene.input.on('pointerdown', this.pointerDownListener);
 
     this.pointerMoveListener = (pointer: Phaser.Input.Pointer) => {
       if (!this.isTracing || this.currentSegmentIndex >= this.segments.length) return;
@@ -123,6 +125,9 @@ export class TracePath extends Phaser.GameObjects.Container {
   }
 
   public destroy(fromScene?: boolean): void {
+    if (this.pointerDownListener) {
+      this.scene?.input?.off('pointerdown', this.pointerDownListener);
+    }
     if (this.pointerMoveListener) {
       this.scene?.input?.off('pointermove', this.pointerMoveListener);
     }

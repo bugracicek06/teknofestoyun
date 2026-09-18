@@ -12,7 +12,7 @@ import { GearNode } from '../../objects/GearNode';
 import type { GearConfig } from '../../objects/GearNode';
 import { MechanismController } from '../../objects/MechanismController';
 import type { AxleConfig } from '../../objects/MechanismController';
-import { VictoryModal } from '../../objects/VictoryModal';
+import { calculateResult } from '../../systems/scoring';
 import { EventBus } from '../../state/EventBus';
 import Phaser from 'phaser';
 
@@ -127,6 +127,7 @@ export class AnadoluUstaligiScene extends BaseScene {
   }
 
   private cleanUpScene(): void {
+    this.events.off(Phaser.Scenes.Events.DESTROY, this.cleanUpScene, this);
     if (this.timerEvent) {
       this.timerEvent.remove();
       this.timerEvent = undefined;
@@ -306,9 +307,15 @@ export class AnadoluUstaligiScene extends BaseScene {
       this.phaseTitleText.setText('AŞAMA 2: BAKIRA İZ BIRAK (ÇİZGİLERİ SIRAYLA TAKİP ET)');
     }
 
-    // Hide Phase 1 pattern objects
-    this.patternPieces.forEach((p) => p.setVisible(false));
-    this.patternDropZones.forEach((z) => z.setVisible(false));
+    // Disable interactivity and hide Phase 1 pattern objects
+    this.patternPieces.forEach((p) => {
+      p.disableInteractive();
+      p.setVisible(false);
+    });
+    this.patternDropZones.forEach((z) => {
+      z.disableInteractive();
+      z.setVisible(false);
+    });
 
     // Render Polished Copper Plate in Center
     if (this.textures.exists('copper_plate')) {
@@ -357,7 +364,10 @@ export class AnadoluUstaligiScene extends BaseScene {
     }
 
     if (this.copperPlateImage) this.copperPlateImage.setVisible(false);
-    if (this.tracePathObj) this.tracePathObj.setVisible(false);
+    if (this.tracePathObj) {
+      this.tracePathObj.destroy();
+      this.tracePathObj = undefined;
+    }
 
     // 3 Axle Configurations on Mechanism Board (Physically aligned for tooth mesh: 640 -> 765 -> 945)
     const axleConfigs: AxleConfig[] = [
@@ -421,15 +431,12 @@ export class AnadoluUstaligiScene extends BaseScene {
     GameStore.completeModule('anadolu_ustaligi');
 
     // Calculate Victory Stats
-    const stats = VictoryModal.calculateStats(this.elapsedSeconds, this.totalErrors);
+    const stats = calculateResult(this.elapsedSeconds, this.totalErrors);
 
     this.time.delayedCall(1200, () => {
-      new VictoryModal(this, stats, () => {
-        this.cameras.main.fadeOut(350, 7, 11, 25);
-        this.cameras.main.once('camerafadeoutcomplete', () => {
-          this.scene.start(SceneKeys.WORLD_MAP);
-        });
-      });
+      GameStore.saveResult('anadolu_ustaligi', stats);
+      EventBus.emit('mission-result', 'anadolu_ustaligi');
+
     });
   }
 

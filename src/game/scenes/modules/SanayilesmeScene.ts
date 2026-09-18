@@ -1,9 +1,9 @@
+import { calculateResult } from '../../systems/scoring';
 import Phaser from 'phaser';
 import { BaseScene } from '../BaseScene';
 import { SceneKeys } from '../../../types/game';
 import { GameStore } from '../../state/GameStore';
 import { PusulaCharacter } from '../../objects/PusulaCharacter';
-import { GameButton } from '../../objects/GameButton';
 import { SoundFx } from '../../utils/audio';
 import { EventBus } from '../../state/EventBus';
 
@@ -159,6 +159,7 @@ export class SanayilesmeScene extends BaseScene {
   }
 
   private cleanUpScene(): void {
+    this.events.off(Phaser.Scenes.Events.DESTROY, this.cleanUpScene, this);
     if (this.timerEvent) {
       this.timerEvent.remove();
       this.timerEvent = undefined;
@@ -689,12 +690,12 @@ export class SanayilesmeScene extends BaseScene {
     // Check distance to target socket
     const distToTarget = Phaser.Math.Distance.Between(container.x, container.y, targetSocket.x, targetSocket.y);
 
-    // Check if dropped near any wrong socket (< 80px)
+    // Check if dropped near any wrong socket (< 115px)
     const droppedOnWrongSocket = this.socketConfigs.find(
-      (s) => s.id !== cfg.targetSocketId && Phaser.Math.Distance.Between(container.x, container.y, s.x, s.y) < 90
+      (s) => s.id !== cfg.targetSocketId && Phaser.Math.Distance.Between(container.x, container.y, s.x, s.y) < 115
     );
 
-    if (distToTarget < 90) {
+    if (distToTarget < 115) {
       // ✅ SUCCESSFUL SNAP TO CORRECT SOCKET
       this.handleGearSnapped(cfg, targetSocket, container);
     } else {
@@ -1083,131 +1084,9 @@ export class SanayilesmeScene extends BaseScene {
   }
 
   private createEngineeringVictoryModal(): void {
-    const modalCont = this.add.container(this.GAME_WIDTH / 2, this.GAME_HEIGHT / 2);
-    modalCont.setDepth(200);
-
-    // 1. Dark Backdrop Overlay
-    const backdrop = this.add.graphics();
-    backdrop.fillStyle(0x070b19, 0.88);
-    backdrop.fillRect(-this.GAME_WIDTH / 2, -this.GAME_HEIGHT / 2, this.GAME_WIDTH, this.GAME_HEIGHT);
-
-    // 2. Modal Frame
-    const width = 760;
-    const height = 560;
-
-    const modalBg = this.add.graphics();
-    modalBg.fillStyle(0x0a1128, 0.97);
-    modalBg.fillRoundedRect(-width / 2, -height / 2, width, height, 24);
-    modalBg.lineStyle(3, 0x00f2fe, 0.9);
-    modalBg.strokeRoundedRect(-width / 2, -height / 2, width, height, 24);
-
-    // Outer Aura Glow
-    const outerAura = this.add.graphics();
-    outerAura.fillStyle(0x00f2fe, 0.15);
-    outerAura.fillRoundedRect(-width / 2 - 12, -height / 2 - 12, width + 24, height + 24, 30);
-
-    // 3. Header: "MEKANİK ENERJİ AKTARILDI! ⚙️"
-    const headerText = this.createText(0, -height / 2 + 55, '⚙️ MEKANİK ENERJİ AKTARILDI!', {
-      fontSize: '36px',
-      fontStyle: '900',
-      color: '#FFD700',
-      align: 'center',
-      shadow: { color: '#00F2FE', blur: 15, fill: true },
-    });
-    headerText.setOrigin(0.5);
-
-    // Subtitle: "Mühendislik Damgasını Kazandın!"
-    const subText = this.createText(0, -height / 2 + 105, 'Mühendislik Damgasını Kazandın!', {
-      fontSize: '22px',
-      fontStyle: 'bold',
-      color: '#00F2FE',
-      align: 'center',
-    });
-    subText.setOrigin(0.5);
-
-    // 4. Metric Ratings Display (Gözlem, Ustalık, Mühendislik)
-    const metricsCont = this.add.container(0, -height / 2 + 200);
-
-    const metrics = [
-      { label: 'GÖZLEM', stars: '⭐⭐⭐', color: '#38BDF8' },
-      { label: 'USTALIK', stars: '⭐⭐⭐', color: '#FFD700' },
-      { label: 'MÜHENDİSLİK', stars: '⭐⭐⭐', color: '#00F2FE' },
-    ];
-
-    metrics.forEach((m, idx) => {
-      const itemX = (idx - 1) * 220;
-
-      // Card frame
-      const card = this.add.graphics();
-      card.fillStyle(0x0f172a, 0.9);
-      card.fillRoundedRect(itemX - 95, -45, 190, 90, 14);
-      card.lineStyle(1.5, Phaser.Display.Color.HexStringToColor(m.color).color, 0.8);
-      card.strokeRoundedRect(itemX - 95, -45, 190, 90, 14);
-
-      const label = this.createText(itemX, -22, m.label, {
-        fontSize: '15px',
-        fontStyle: '900',
-        color: m.color,
-      });
-      label.setOrigin(0.5);
-
-      const starText = this.createText(itemX, 15, m.stars, {
-        fontSize: '22px',
-      });
-      starText.setOrigin(0.5);
-
-      metricsCont.add([card, label, starText]);
-    });
-
-    // 5. Score & Stats Summary
-    const finalScore = Math.max(500, 1000 - this.elapsedSeconds * 4 - this.errorCount * 30);
-    const detailsText = this.createText(
-      0,
-      130,
-      `Süre: ${this.elapsedSeconds}sn   •   Hatalı Deneme: ${this.errorCount}   •   Mühendislik Puanı: ${finalScore}`,
-      {
-        fontSize: '19px',
-        fontStyle: 'bold',
-        color: '#E2E8F0',
-        align: 'center',
-      }
-    );
-    detailsText.setOrigin(0.5);
-
-    // 6. Action Button: "HARİTAYA DÖN"
-    const returnBtn = new GameButton(
-      this,
-      0,
-      205,
-      380,
-      86,
-      'HARİTAYA DÖN  ➔',
-      () => {
-        // Update GameStore: Complete Sanayilesme and auto-unlock Milli Teknoloji
-        GameStore.completeModule('sanayilesme');
-
-        this.cameras.main.fadeOut(350, 7, 11, 25);
-        this.cameras.main.once('camerafadeoutcomplete', () => {
-          this.scene.start(SceneKeys.WORLD_MAP);
-        });
-      },
-      0x00f2fe,
-      '#070B19'
-    );
-
-    modalCont.add([backdrop, outerAura, modalBg, headerText, subText, metricsCont, detailsText, returnBtn]);
-
-    // Scale pop-in entrance animation
-    modalCont.setScale(0.7);
-    modalCont.setAlpha(0);
-    this.tweens.add({
-      targets: modalCont,
-      scaleX: 1.0,
-      scaleY: 1.0,
-      alpha: 1.0,
-      duration: 350,
-      ease: 'Back.easeOut',
-    });
+    const result = calculateResult(this.elapsedSeconds, this.errorCount);
+    GameStore.saveResult('sanayilesme', result);
+    EventBus.emit('mission-result', 'sanayilesme');
   }
 
   // =========================================================================

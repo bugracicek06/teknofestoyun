@@ -1,12 +1,37 @@
 import Phaser from 'phaser';
+import { THEME } from '../systems/theme';
+import { EventBus } from '../state/EventBus';
 
 export abstract class BaseScene extends Phaser.Scene {
   protected readonly GAME_WIDTH = 1920;
   protected readonly GAME_HEIGHT = 1080;
-  protected readonly SYSTEM_FONT = "'Outfit', 'Rajdhani', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+  protected readonly SYSTEM_FONT = THEME.font;
 
   constructor(key: string) {
     super({ key });
+  }
+
+  init(): void {
+    this.input.dragDistanceThreshold = 12;
+    const progress = (value: number) => EventBus.emit('asset-progress', value);
+    const failed = (file: Phaser.Loader.File) => {
+      if (!this.textures.exists(file.key)) {
+        const canvas = this.textures.createCanvas(file.key, 256, 160);
+        if (canvas) {
+          const context = canvas.context;
+          context.fillStyle = '#142339'; context.fillRect(0, 0, 256, 160);
+          context.fillStyle = '#f6c76b'; context.font = '22px Arial';
+          context.textAlign = 'center'; context.fillText('Görsel yüklenemedi', 128, 85);
+          canvas.refresh();
+        }
+      }
+      EventBus.emit('asset-fallback', file.key);
+    };
+    this.load.on('progress', progress);
+    this.load.on('loaderror', failed);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.load.off('progress', progress); this.load.off('loaderror', failed);
+    });
   }
 
   /**
@@ -134,6 +159,8 @@ export abstract class BaseScene extends Phaser.Scene {
     });
 
     container.on('pointerdown', () => {
+      if (container.getData('pressed')) return;
+      container.setData('pressed', true);
       this.tweens.add({
         targets: container,
         scaleX: 0.95,
@@ -142,6 +169,7 @@ export abstract class BaseScene extends Phaser.Scene {
         yoyo: true,
         onComplete: () => {
           callback();
+          if (container.active) container.setData('pressed', false);
         },
       });
     });

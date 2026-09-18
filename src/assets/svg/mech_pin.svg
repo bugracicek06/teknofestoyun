@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <defs>
+    <linearGradient id="bracketBronze" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFD54F"/>
+      <stop offset="50%" stop-color="#D97706"/>
+      <stop offset="100%" stop-color="#78350F"/>
+    </linearGradient>
+    <linearGradient id="pinIron" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#CFD8DC"/>
+      <stop offset="100%" stop-color="#37474F"/>
+    </linearGradient>
+  </defs>
+  <!-- Outer U-bracket base -->
+  <path d="M 25 25 L 75 25 L 75 75 L 25 75 Z" rx="8" fill="url(#bracketBronze)" stroke="#B45309" stroke-width="2.5"/>
+  <!-- Center bore hole -->
+  <circle cx="50" cy="50" r="24" fill="#180D04" stroke="#D97706" stroke-width="2"/>
+  <!-- Cylindrical locking wedge pin -->
+  <rect x="42" y="10" width="16" height="80" rx="4" fill="url(#pinIron)" stroke="#ECEFF1" stroke-width="1.5"/>
+  <circle cx="50" cy="18" r="7" fill="#F59E0B" stroke="#78350F" stroke-width="1"/>
+</svg>

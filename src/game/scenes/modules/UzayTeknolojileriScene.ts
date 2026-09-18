@@ -1,3 +1,5 @@
+import { calculateResult } from '../../systems/scoring';
+import { validateSpaceDesign } from '../../systems/spaceDesign';
 import Phaser from 'phaser';
 import { BaseScene } from '../BaseScene';
 import { SceneKeys } from '../../../types/game';
@@ -38,6 +40,7 @@ export class UzayTeknolojileriScene extends BaseScene {
 
   // Spacecraft Configuration State
   private selectedHull = 'shuttle';
+  private designErrors = 0;
   private selectedEnergy = 'solar';
   private selectedSensor = 'telescope';
   private selectedLivery = 'turquoise_gold';
@@ -52,7 +55,7 @@ export class UzayTeknolojileriScene extends BaseScene {
       options: [
         {
           id: 'shuttle',
-          name: 'Keşif Mekiği (Gökbey)',
+          name: 'Keşif Mekiği',
           subTitle: 'Aerodinamik Atmosfer & Yörünge Mekiği',
           icon: '🚀',
           accentColor: 0x9b59b6,
@@ -61,7 +64,7 @@ export class UzayTeknolojileriScene extends BaseScene {
         },
         {
           id: 'probe',
-          name: 'Derin Uzay Sondası (Türksat)',
+          name: 'Derin Uzay Sondası',
           subTitle: 'Uzak Gezegen & Asteroit Gözlemcisi',
           icon: '🛰️',
           accentColor: 0x00f2fe,
@@ -91,25 +94,25 @@ export class UzayTeknolojileriScene extends BaseScene {
           icon: '☀️',
           accentColor: 0x38bdf8,
           hexColor: '#38BDF8',
-          specText: 'Sonsuz Güneş Işığı ile %99.2 Enerji Verimi',
+          specText: 'Güneş ışığından elektrik üretir',
         },
         {
           id: 'ion',
-          name: 'İyon Çekirdeği',
-          subTitle: 'Mavi Plazma & İyon İtkisi',
+          name: 'Güneş Paneli ve Batarya',
+          subTitle: 'Gündüz üretim, gölgede depolama',
           icon: '⚡',
           accentColor: 0x00f2fe,
           hexColor: '#00F2FE',
-          specText: 'Aşırı Düşük Yakıt Tüketimi & Sürekli İvme',
+          specText: 'Gölgede kullanılmak üzere enerji depolar',
         },
         {
           id: 'fusion',
-          name: 'Füzyon Bataryası',
-          subTitle: 'Kompakt Nükleer-Füzyon Tüpü',
+          name: 'Radyoizotop Güç Kaynağı',
+          subTitle: 'Uzak görevler için enerji',
           icon: '⚛️',
           accentColor: 0xf59e0b,
           hexColor: '#FCD34D',
-          specText: 'Derin Uzayda 50 Yıl Kesintisiz Yüksek Güç',
+          specText: 'Güneş ışığının az olduğu görevler için',
         },
       ],
     },
@@ -125,7 +128,7 @@ export class UzayTeknolojileriScene extends BaseScene {
           icon: '🔭',
           accentColor: 0xa855f7,
           hexColor: '#C084FC',
-          specText: 'Milyonlarca Işık Yılı Uzaklığı Netleme',
+          specText: 'Uzaktaki gök cisimlerini gözlemler',
         },
         {
           id: 'lidar',
@@ -134,7 +137,7 @@ export class UzayTeknolojileriScene extends BaseScene {
           icon: '📡',
           accentColor: 0x00f2fe,
           hexColor: '#00F2FE',
-          specText: '0.01 mm Hassasiyetle Yüzey 3D Modelleme',
+          specText: 'Yüzey biçimini haritalandırır',
         },
         {
           id: 'spectrometer',
@@ -177,7 +180,7 @@ export class UzayTeknolojileriScene extends BaseScene {
           icon: '🌌',
           accentColor: 0x3b82f6,
           hexColor: '#60A5FA',
-          specText: 'Kozmik Radyasyonu Yansıtan Titanyum Zırh',
+          specText: 'Mavi ve gümüş renkli dış tasarım',
         },
       ],
     },
@@ -215,6 +218,7 @@ export class UzayTeknolojileriScene extends BaseScene {
   }
 
   create(): void {
+    this.designErrors = 0;
     // Reset state
     this.currentPhaseNumber = 1;
     this.elapsedSeconds = 0;
@@ -266,6 +270,7 @@ export class UzayTeknolojileriScene extends BaseScene {
   }
 
   private cleanUpScene(): void {
+    this.events.off(Phaser.Scenes.Events.DESTROY, this.cleanUpScene, this);
     if (this.timerEvent) {
       this.timerEvent.remove();
       this.timerEvent = undefined;
@@ -966,6 +971,9 @@ export class UzayTeknolojileriScene extends BaseScene {
   }
 
   private onReadyToLaunchClicked(): void {
+    if (this.currentPhaseNumber !== 1) return;
+    const hint = validateSpaceDesign(this.registry.get('spaceMission') || 'mapping', this.selectedHull, this.selectedEnergy, this.selectedSensor);
+    if (hint) { this.designErrors++; this.pusula?.setMessage(hint); SoundFx.playErrorTone(); return; }
     SoundFx.playSuccessTone();
 
     this.pusula?.setMessage('Tüm sistemler yeşil! Geri sayım başlatılıyor. 3, 2, 1... Ateşleme!');
@@ -1111,14 +1119,12 @@ export class UzayTeknolojileriScene extends BaseScene {
     this.cameras.main.shake(1600, 0.008);
 
     // Animate Thruster Flames & Particles
-    let flameCounter = 0;
     const flameTimer = this.time.addEvent({
       delay: 50,
       callback: () => {
         if (!this.launchThrusterGraphics || !this.flyingCraftContainer) return;
         this.launchThrusterGraphics.clear();
 
-        flameCounter++;
         const cx = this.flyingCraftContainer.x;
         const cy = this.flyingCraftContainer.y + 110;
         const flameHeight = Phaser.Math.Between(90, 160);
@@ -1305,203 +1311,11 @@ export class UzayTeknolojileriScene extends BaseScene {
   // =========================================================================
 
   private showFinalCertificateScreen(): void {
-    this.currentPhaseNumber = 3;
-    SoundFx.playVictoryFanfare();
-
-    // Mark Module 6 Completed in GameStore!
-    GameStore.completeModule('uzay_teknolojileri');
-
-    const modal = this.add.container(this.GAME_WIDTH / 2, this.GAME_HEIGHT / 2);
-    modal.setDepth(200);
-
-    // 1. Dark Cosmic Backdrop
-    const backdrop = this.add.graphics();
-    backdrop.fillStyle(0x060814, 0.92);
-    backdrop.fillRect(-this.GAME_WIDTH / 2, -this.GAME_HEIGHT / 2, this.GAME_WIDTH, this.GAME_HEIGHT);
-
-    // 2. Grand Certificate Frame
-    const width = 1000;
-    const height = 720;
-
-    const modalBg = this.add.graphics();
-    modalBg.fillStyle(0x0a1128, 0.98);
-    modalBg.fillRoundedRect(-width / 2, -height / 2, width, height, 26);
-    modalBg.lineStyle(3.5, 0xffd700, 0.95);
-    modalBg.strokeRoundedRect(-width / 2, -height / 2, width, height, 26);
-
-    // Outer Aura Glow
-    const outerAura = this.add.graphics();
-    outerAura.fillStyle(0x9b59b6, 0.2);
-    outerAura.fillRoundedRect(-width / 2 - 12, -height / 2 - 12, width + 24, height + 24, 32);
-
-    // Certificate Inner Border
-    const innerBorder = this.add.graphics();
-    innerBorder.lineStyle(1.5, 0x00f2fe, 0.6);
-    innerBorder.strokeRoundedRect(-width / 2 + 16, -height / 2 + 16, width - 32, height - 32, 20);
-
-    // 3. Header Banner: "MİLLÎ TEKNOLOJİ ELÇİSİ 🚀"
-    const headerText = this.createText(0, -height / 2 + 65, 'MİLLÎ TEKNOLOJİ ELÇİSİ 🚀', {
-      fontSize: '40px',
-      fontStyle: '900',
-      color: '#FFD700',
-      shadow: { color: '#00F2FE', blur: 20, fill: true },
-    });
-    headerText.setOrigin(0.5);
-
-    const subText = this.createText(0, -height / 2 + 120, 'Geleceğin Uzay Kâşifi Başarı Sertifikası', {
-      fontSize: '22px',
-      fontStyle: 'bold',
-      color: '#00F2FE',
-    });
-    subText.setOrigin(0.5);
-
-    // 4. Passport / TEKNOFEST Gold Stamp
-    if (this.textures.exists('passport_stamp')) {
-      const stampImg = this.add.image(-width / 2 + 110, -height / 2 + 115, 'passport_stamp');
-      stampImg.setDisplaySize(95, 95);
-      modal.add(stampImg);
-    }
-
-    // 5. Epic Accomplishment Text
-    const summaryText = this.createText(
-      0,
-      -height / 2 + 195,
-      'Tebrikler Genç Mühendis!\nGöbeklitepe’nin kadim taşlarından gökyüzüne, demir çağından uzay çağına uzanan\n6 modüllük medeniyet ve millî teknoloji yolculuğunu başarıyla tamamladın.\nTasarladığın araç, geleceğin uzay keşiflerine öncülük edecek!',
-      {
-        fontSize: '18px',
-        color: '#F8FAFC',
-        align: 'center',
-        lineSpacing: 8,
-      }
-    );
-    summaryText.setOrigin(0.5);
-
-    // 6. Custom Spacecraft Spec Sheet Box
-    const specBox = this.add.graphics();
-    specBox.fillStyle(0x0f172a, 0.95);
-    specBox.fillRoundedRect(-width / 2 + 60, -35, width - 120, 130, 16);
-    specBox.lineStyle(1.5, 0x9b59b6, 0.8);
-    specBox.strokeRoundedRect(-width / 2 + 60, -35, width - 120, 130, 16);
-
-    const hullOpt = this.CATEGORIES[0].options.find((o) => o.id === this.selectedHull);
-    const energyOpt = this.CATEGORIES[1].options.find((o) => o.id === this.selectedEnergy);
-    const sensorOpt = this.CATEGORIES[2].options.find((o) => o.id === this.selectedSensor);
-    const liveryOpt = this.CATEGORIES[3].options.find((o) => o.id === this.selectedLivery);
-
-    const specTitle = this.createText(0, -15, '🛰️ ÖZEL TASARIM UZAY ARACI KÜNYESİ', {
-      fontSize: '16px',
-      fontStyle: '900',
-      color: '#FFD700',
-    });
-    specTitle.setOrigin(0.5);
-
-    const specDetails = this.createText(
-      0,
-      40,
-      `Gövde: ${hullOpt?.name || ''}   •   Enerji: ${energyOpt?.name || ''}\nSensör: ${sensorOpt?.name || ''}   •   Kaplama: ${liveryOpt?.name || ''}`,
-      {
-        fontSize: '16px',
-        fontStyle: 'bold',
-        color: '#38BDF8',
-        align: 'center',
-        lineSpacing: 8,
-      }
-    );
-    specDetails.setOrigin(0.5);
-
-    // 7. 3 Assessment Star Categories (Gözlem, Ustalık, Mühendislik)
-    const skillsContainer = this.add.container(0, 160);
-    const skills = [
-      { name: 'Gözlem', stars: '⭐⭐⭐' },
-      { name: 'Ustalık', stars: '⭐⭐⭐' },
-      { name: 'Mühendislik', stars: '⭐⭐⭐' },
-    ];
-
-    skills.forEach((skill, idx) => {
-      const x = (idx - 1) * 260;
-      const sBox = this.add.graphics();
-      sBox.fillStyle(0x0f172a, 0.9);
-      sBox.fillRoundedRect(x - 110, -32, 220, 64, 12);
-      sBox.lineStyle(1.5, 0x38bdf8, 0.7);
-      sBox.strokeRoundedRect(x - 110, -32, 220, 64, 12);
-
-      const label = this.createText(x, -12, skill.name, {
-        fontSize: '14px',
-        fontStyle: 'bold',
-        color: '#94A3B8',
-      });
-      label.setOrigin(0.5);
-
-      const stars = this.createText(x, 14, skill.stars, {
-        fontSize: '20px',
-      });
-      stars.setOrigin(0.5);
-
-      skillsContainer.add([sBox, label, stars]);
-    });
-
-    // 8. Dual Action Buttons: "HARİTAYA DÖN" & "BAŞA DÖN (YENİ OYUNCU)"
-    const returnMapBtn = new GameButton(
-      this,
-      240,
-      275,
-      420,
-      90,
-      'HARİTAYA DÖN  ➔',
-      () => {
-        this.cameras.main.fadeOut(350, 7, 11, 25);
-        this.cameras.main.once('camerafadeoutcomplete', () => {
-          this.scene.start(SceneKeys.WORLD_MAP);
-        });
-      },
-      0x00f2fe,
-      '#070B19'
-    );
-
-    const restartBtn = new GameButton(
-      this,
-      -240,
-      275,
-      420,
-      90,
-      'BAŞA DÖN (YENİ OYUNCU)  🔄',
-      () => {
-        GameStore.resetProgress();
-        this.cameras.main.fadeOut(350, 7, 11, 25);
-        this.cameras.main.once('camerafadeoutcomplete', () => {
-          this.scene.start(SceneKeys.START);
-        });
-      },
-      0x9b59b6,
-      '#FFFFFF'
-    );
-
-    modal.add([
-      backdrop,
-      outerAura,
-      modalBg,
-      innerBorder,
-      headerText,
-      subText,
-      summaryText,
-      specBox,
-      specTitle,
-      specDetails,
-      skillsContainer,
-      returnMapBtn,
-      restartBtn,
-    ]);
-
-    // Modal Entrance Scale Animation
-    modal.setScale(0.7);
-    modal.setAlpha(0);
-    this.tweens.add({
-      targets: modal,
-      scaleX: 1.0,
-      scaleY: 1.0,
-      alpha: 1.0,
-      duration: 350,
-      ease: 'Back.easeOut',
-    });
+    this.timerEvent?.remove();
+    const selections = [this.selectedHull, this.selectedEnergy, this.selectedSensor, this.selectedLivery];
+    const choices = Object.fromEntries(this.CATEGORIES.map((category, i) => [category.title, category.options.find(o => o.id === selections[i])?.name || selections[i]]));
+    choices['Görev'] = ({mapping:'Yüzey haritalama',surface:'Gezegen yüzeyi',deep_space:'Uzak keşif'} as Record<string,string>)[this.registry.get('spaceMission') || 'mapping'];
+    GameStore.saveResult('uzay_teknolojileri', calculateResult(this.elapsedSeconds, this.designErrors, choices));
+    EventBus.emit('mission-result', 'uzay_teknolojileri');
   }
 }

@@ -29,16 +29,16 @@ export class DraggableStone extends Phaser.GameObjects.Container {
   constructor(
     scene: Phaser.Scene,
     config: StonePieceConfig,
-    dropZones: StoneDropZone[],
-    onCorrectPlacement: (piece: DraggableStone, zone: StoneDropZone) => void,
-    onIncorrectPlacement: (piece: DraggableStone, zone?: StoneDropZone) => void
+    _dropZones?: StoneDropZone[],
+    _onCorrectPlacement?: (piece: DraggableStone, zone: StoneDropZone) => void,
+    _onIncorrectPlacement?: (piece: DraggableStone, zone?: StoneDropZone) => void
   ) {
     super(scene, config.origX, config.origY);
     this.config = config;
     this.defaultTrayScale = config.trayScale ?? 0.85;
 
-    const touchW = Math.max(config.width, 100);
-    const touchH = Math.max(config.height + 30, 90);
+    const touchW = Math.max(config.width, 150);
+    const touchH = Math.max(config.height + 30, 140);
     this.setSize(touchW, touchH);
     this.setScale(this.defaultTrayScale);
     this.setDepth(10);
@@ -65,86 +65,25 @@ export class DraggableStone extends Phaser.GameObjects.Container {
     // 3. Label Text on Tray (Warm sandstone gold)
     this.labelText = scene.add.text(0, config.height / 2 + 16, config.title, {
       fontFamily: this.SYSTEM_FONT,
-      fontSize: '13px',
+      fontSize: '24px',
       fontStyle: 'bold',
       color: '#FEF3C7',
       align: 'center',
       resolution: 2,
     });
     this.labelText.setOrigin(0.5);
+    this.labelText.setVisible(false);
     this.add(this.labelText);
 
-    // 4. Touch Hit Area
-    this.setInteractive({ useHandCursor: true });
-    scene.input.setDraggable(this);
-
-    // 5. Drag Events with Contact Shadow Dynamics & Audio
-    this.on('dragstart', () => {
-      if (this.isPlaced) return;
-      this.setDepth(20);
-      SoundFx.playStoneDrag();
-
-      // Lift up: grow by 8% (1.08)
-      scene.tweens.add({
-        targets: this,
-        scaleX: 1.08,
-        scaleY: 1.08,
-        duration: 120,
-        ease: 'Back.easeOut',
-      });
-      // Elongate shadow when lifted
-      scene.tweens.add({
-        targets: this.contactShadow,
-        scaleX: 1.3,
-        scaleY: 1.4,
-        alpha: 0.35,
-        y: 24,
-        duration: 120,
-      });
-    });
-
-    this.on('drag', (_pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
-      if (this.isPlaced) return;
-      this.x = dragX;
-      this.y = dragY;
-    });
-
-    this.on('dragend', () => {
-      if (this.isPlaced) return;
-
-      // Find matching drop zone
-      const targetZone = dropZones.find((z) => z.config.id === config.targetZoneId);
-
-      if (targetZone && !targetZone.isOccupied) {
-        const dist = Phaser.Math.Distance.Between(this.x, this.y, targetZone.x, targetZone.y);
-
-        // Magnetic snap threshold (< 65px)
-        if (dist <= 65) {
-          this.snapToZone(targetZone, onCorrectPlacement);
-          return;
-        }
-      }
-
-      // Incorrect Placement / Dropped out of bounds
-      if (targetZone) {
-        targetZone.registerFailedAttempt();
-      }
-      SoundFx.playSandSlide();
-      onIncorrectPlacement(this, targetZone);
-      this.returnToTray();
-    });
-
-    // Tap/Click to Select
-    this.on('pointerdown', () => {
-      if (this.isPlaced) return;
-      this.setSelected(!this.isSelected);
-    });
+    // Initially hidden while in tray to avoid duplicate presentation layers
+    this.setVisible(false);
 
     scene.add.existing(this);
   }
 
   public setSelected(selected: boolean): void {
     this.isSelected = selected;
+    this.scene.events.emit('gobeklitepe-stone-selection-changed');
     if (selected) {
       this.setDepth(20);
       this.scene.tweens.add({
@@ -164,11 +103,34 @@ export class DraggableStone extends Phaser.GameObjects.Container {
     }
   }
 
+  public startExternalDrag(x: number, y: number): void {
+    if (this.isPlaced) return;
+    this.scene.tweens.killTweensOf(this);
+    this.scene.tweens.killTweensOf(this.contactShadow);
+    this.angle = 0;
+    this.setVisible(true);
+    this.setDepth(30);
+    this.x = x;
+    this.y = y;
+    this.setScale(1.08);
+    SoundFx.playStoneDrag();
+  }
+
+  public updateExternalDrag(x: number, y: number): void {
+    if (this.isPlaced) return;
+    this.x = x;
+    this.y = y;
+  }
+
   public snapToZone(targetZone: StoneDropZone, onCorrectPlacement: (piece: DraggableStone, zone: StoneDropZone) => void): void {
+    if (this.isPlaced || targetZone.isOccupied) return;
+    this.scene.tweens.killTweensOf(this);
+    this.scene.tweens.killTweensOf(this.contactShadow);
+    this.setVisible(true);
     this.isPlaced = true;
     this.isSelected = false;
-    this.disableInteractive();
     targetZone.markOccupied();
+    this.scene.events.emit('gobeklitepe-stone-selection-changed');
 
     if (this.labelText) {
       this.labelText.setVisible(false);
@@ -197,7 +159,7 @@ export class DraggableStone extends Phaser.GameObjects.Container {
       onComplete: () => {
         this.setDepth(10);
         // Camera subtle tactile shake (100ms)
-        this.scene.cameras.main.shake(100, 0.003);
+        if (!matchMedia('(prefers-reduced-motion: reduce)').matches) this.scene.cameras.main.shake(100, 0.003);
         // Stone dust puff particles
         this.createStoneDustPuff(targetZone.x, targetZone.y);
         onCorrectPlacement(this, targetZone);
@@ -232,7 +194,10 @@ export class DraggableStone extends Phaser.GameObjects.Container {
   }
 
   public returnToTray(): void {
+    if (this.isPlaced) return;
     this.isSelected = false;
+    this.scene.tweens.killTweensOf(this);
+    this.scene.tweens.killTweensOf(this.contactShadow);
     this.scene.tweens.add({
       targets: this.contactShadow,
       scaleX: 1.0,
@@ -259,7 +224,12 @@ export class DraggableStone extends Phaser.GameObjects.Container {
           scaleY: this.defaultTrayScale,
           duration: 260,
           ease: 'Back.easeOut',
-          onComplete: () => this.setDepth(10),
+          onComplete: () => {
+            this.setDepth(10);
+            if (!this.isPlaced) {
+              this.setVisible(false);
+            }
+          },
         });
       },
     });
