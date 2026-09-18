@@ -1,3 +1,14 @@
+/**
+ * DemirCagiScene - Demir Çağı (Bölüm 2 / 6)
+ *
+ * Comprehensive Iron Age module featuring:
+ * - Stage 1: Furnace bellows & temperature balance control
+ * - Stage 2: Precision hammer forging timing on glowing billet
+ * - Stage 3: Water quench cooling & hardening
+ * - Stage 4: Authentic Ottoman sword assembly (Kılıcı Tamamla) with robust drag & drop
+ *
+ * Build & Gameplay Version: 2.1.0 (Improved drag & drop hitboxes, top-level drag layer, dual-check drop)
+ */
 import { calculateResult } from '../../systems/scoring';
 import Phaser from 'phaser';
 import { BaseScene } from '../BaseScene';
