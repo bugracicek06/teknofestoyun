@@ -33,6 +33,7 @@ export const GameContainer: React.FC<GameContainerProps> = ({ onGameReady }) => 
     const config = createGameConfig(containerId);
     const phaserGame = new Phaser.Game(config);
     gameRef.current = phaserGame;
+    (window as any).__PHASER_GAME__ = phaserGame;
 
     if (onGameReady) {
       onGameReady(phaserGame);

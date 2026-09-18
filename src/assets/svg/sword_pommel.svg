@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 136 104" width="136" height="104">
+  <defs>
+    <!-- Rich Engraved Brass / Gilt Bronze Pommel Gradient -->
+    <linearGradient id="pommelBrassGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FEF08A"/>
+      <stop offset="25%" stop-color="#F59E0B"/>
+      <stop offset="55%" stop-color="#D97706"/>
+      <stop offset="80%" stop-color="#92400E"/>
+      <stop offset="100%" stop-color="#451A03"/>
+    </linearGradient>
+
+    <!-- Metallic Specular Bevel -->
+    <linearGradient id="pommelHighlight" x1="0%" y1="0%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.9"/>
+      <stop offset="40%" stop-color="#FEF08A" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#78350F" stop-opacity="0.3"/>
+    </linearGradient>
+
+    <filter id="pommelDropShadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="3" flood-color="#000000" flood-opacity="0.65"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#pommelDropShadow)">
+    <!-- 1. Left Collar Ring: Seamless connection with grip (height: 44px, matching grip's 44px) -->
+    <rect x="1" y="1" width="14" height="44" rx="2" fill="url(#pommelBrassGrad)" stroke="#78350F" stroke-width="1.5"/>
+    <line x1="5" y1="3" x2="5" y2="43" stroke="#FEF08A" stroke-width="1.2" opacity="0.85"/>
+    <line x1="10" y1="3" x2="10" y2="43" stroke="#451A03" stroke-width="1.2" opacity="0.75"/>
+
+    <!-- 2. Master Pistol-Grip Curved Pommel Body (Kabza Başı) -->
+    <!-- Top crest runs from (14, 1) -> (55, 3) -> (90, 16) -> rounds over beak (125, 45) -> (128, 72) -> (105, 96) -->
+    <!-- Inner throat curves from (105, 96) -> (75, 90) -> (72, 70) -> (88, 55) -> (55, 42) -> (14, 45) -->
+    <path d="M 14 1 
+             C 45 2, 75 10, 96 22 
+             C 118 35, 130 55, 126 76 
+             C 122 92, 108 99, 92 98 
+             C 76 96, 68 85, 74 72 
+             C 80 60, 92 56, 88 46 
+             C 82 36, 50 38, 14 45 
+             Z" 
+          fill="url(#pommelBrassGrad)" 
+          stroke="#78350F" 
+          stroke-width="2" 
+          stroke-linejoin="round"/>
+
+    <!-- 3. Raised Outer Bevel Rim Line -->
+    <path d="M 18 5 
+             C 46 6, 73 14, 93 25 
+             C 113 37, 124 54, 120 73 
+             C 116 88, 104 94, 91 93 
+             C 79 91, 74 82, 78 73" 
+          stroke="#FEF08A" 
+          stroke-width="1.5" 
+          stroke-linecap="round" 
+          fill="none" 
+          opacity="0.85"/>
+
+    <!-- 4. Ottoman Seljuk / Rumi Arabesque Filigree Engravings -->
+    <!-- Central Flowing Spiral Vine -->
+    <path d="M 32 20 
+             C 52 18, 70 26, 84 36 
+             C 98 46, 106 62, 102 75 
+             C 98 84, 88 84, 86 76" 
+          stroke="#451A03" 
+          stroke-width="2" 
+          stroke-linecap="round" 
+          fill="none"/>
+
+    <path d="M 32 21 
+             C 52 19, 70 27, 84 37 
+             C 98 47, 106 63, 102 76 
+             C 98 85, 88 85, 86 77" 
+          stroke="#FEF08A" 
+          stroke-width="1" 
+          stroke-linecap="round" 
+          fill="none"/>
+
+    <!-- Engraved Floral Medallion near the curve apex -->
+    <circle cx="68" cy="28" r="9" fill="#78350F" stroke="#FDE68A" stroke-width="1.2"/>
+    <circle cx="68" cy="28" r="6" fill="#D97706"/>
+    <circle cx="68" cy="28" r="2.5" fill="#FFFFFF"/>
+
+    <!-- Lanyard Eyelet / Rivet Stud (Askı/Püskül Halkası Perçini) -->
+    <circle cx="98" cy="74" r="8" fill="#451A03" stroke="#FDE68A" stroke-width="1.5"/>
+    <circle cx="98" cy="74" r="5" fill="url(#pommelHighlight)"/>
+    <circle cx="98" cy="74" r="2.5" fill="#140602"/>
+
+    <!-- Specular Highlight Curve on Outer Crest -->
+    <path d="M 25 7 C 50 8, 75 16, 92 27" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.9" fill="none"/>
+  </g>
+</svg>

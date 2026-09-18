@@ -5,6 +5,7 @@ export class PusulaCharacter extends Phaser.GameObjects.Container {
   private fallbackGraphics?: Phaser.GameObjects.Graphics;
   private bubbleContainer?: Phaser.GameObjects.Container;
   private bubbleText?: Phaser.GameObjects.Text;
+  private idleTween?: Phaser.Tweens.Tween;
   private SYSTEM_FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 
   constructor(scene: Phaser.Scene, x: number, y: number, initialMessage?: string) {
@@ -20,14 +21,7 @@ export class PusulaCharacter extends Phaser.GameObjects.Container {
     }
 
     // 2. Floating Bobbing Idle Animation
-    scene.tweens.add({
-      targets: this,
-      y: y - 14,
-      duration: 1800,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
+    this.startBobbing(y);
 
     // 3. Speech Bubble setup
     this.setupSpeechBubble(scene);
@@ -107,6 +101,63 @@ export class PusulaCharacter extends Phaser.GameObjects.Container {
 
     this.bubbleContainer.add([bg, this.bubbleText]);
     this.add(this.bubbleContainer);
+  }
+
+  public setCompactLayout(offsetX = 70, offsetY = -75, width = 260, height = 80, fontSize = '13px'): void {
+    if (!this.bubbleContainer) return;
+    const prevText = this.bubbleText ? this.bubbleText.text : '';
+    this.bubbleContainer.removeAll(true);
+    this.bubbleContainer.setPosition(offsetX, offsetY);
+
+    const bg = this.scene.add.graphics();
+    bg.fillStyle(0x0f172a, 0.94);
+    bg.fillRoundedRect(0, 0, width, height, 14);
+    bg.lineStyle(2, 0x38bdf8, 0.9);
+    bg.strokeRoundedRect(0, 0, width, height, 14);
+
+    // Pointer tail
+    bg.fillStyle(0x0f172a, 0.94);
+    bg.fillTriangle(-12, height / 2 + 5, 0, height / 2 - 8, 0, height / 2 + 18);
+
+    this.bubbleText = this.scene.add.text(12, 10, prevText, {
+      fontFamily: this.SYSTEM_FONT,
+      fontSize,
+      fontStyle: 'bold',
+      color: '#FFFFFF',
+      wordWrap: { width: width - 24 },
+      lineSpacing: 3,
+      resolution: 2,
+      shadow: {
+        offsetX: 1,
+        offsetY: 1,
+        color: 'rgba(0, 0, 0, 0.9)',
+        blur: 4,
+        fill: true,
+      },
+    });
+
+    this.bubbleContainer.add([bg, this.bubbleText]);
+  }
+
+  private startBobbing(baseY: number): void {
+    if (this.idleTween) {
+      this.idleTween.stop();
+      this.idleTween = undefined;
+    }
+    this.y = baseY;
+    this.idleTween = this.scene.tweens.add({
+      targets: this,
+      y: baseY - 14,
+      duration: 1800,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+  }
+
+  public relocate(newX: number, newY: number): void {
+    this.x = newX;
+    this.startBobbing(newY);
   }
 
   public setMessage(text: string): void {
