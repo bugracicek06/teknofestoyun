@@ -57,7 +57,7 @@ export const MODULE_NARRATIONS: Record<string, NarrationItem> = {
     sceneKey: SceneKeys.MILLI_TEKNOLOJI,
     title: 'Millî Teknoloji – Gökyüzüne Yüksel',
     audioPath: '/audio/narration/milli-teknoloji.mp3',
-    displayInstruction: 'Sivil görev için sensörü seç ve güvenli rotayı belirle.',
+    displayInstruction: 'Sensörünü seç, güvenli rotanı oluştur ve görevi tamamla.',
     narrationText:
       'Millî Teknoloji Hamlesi ile gökyüzüne yükseliyoruz! Sivil görevine en uygun sensörü seç, rotanı çiz ve insansız hava aracını güvenle yönlendir.',
   },

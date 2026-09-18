@@ -31,6 +31,8 @@ import teknofest from '../assets/logos/teknofest_logo.png';
 import { MissionCard } from './MissionCard';
 import { MISSION_CARD_IMAGES } from '../data/cardImages';
 import { GobeklitepeMissionShell } from './GobeklitepeMissionShell';
+import { ModuleIntroScreen } from './ModuleIntroScreen';
+import { getModuleIntroConfig } from '../data/moduleIntros';
 
 type Panel = 'intro' | 'help' | 'pause' | 'idle' | 'result' | null;
 
@@ -74,6 +76,7 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
   const current = GAME_MODULES[moduleIndex];
   const currentNarration = current ? getNarrationByModuleId(current.id) : undefined;
   const isCurrentNarrating = narrationState.isPlaying && narrationState.currentId === current?.id;
+  const introConfig = current ? getModuleIntroConfig(current.id) : undefined;
   const menu = sceneKey === SceneKeys.START || sceneKey === SceneKeys.WORLD_MAP;
   const allComplete = GameStore.isAllModulesCompleted();
   const next = GAME_MODULES.find(m => !state.completedModuleIds.includes(m.id));
@@ -329,14 +332,14 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
 
   // Dialog management
   useEffect(() => {
-    const isGobeklitepeIntro = sceneKey === SceneKeys.GOBEKLITEPE && panel === 'intro';
-    if (panel && !isGobeklitepeIntro && dialogRef.current && !dialogRef.current.open) {
+    const isModuleIntro = panel === 'intro';
+    if (panel && !isModuleIntro && dialogRef.current && !dialogRef.current.open) {
       dialogRef.current.showModal();
     }
-    if (!panel || isGobeklitepeIntro) {
+    if (!panel || isModuleIntro) {
       dialogRef.current?.close();
     }
-  }, [panel, sceneKey]);
+  }, [panel]);
 
   // Trigger certificate creation once when final screen opens with all 6 modules completed
   useEffect(() => {
@@ -677,6 +680,17 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
           onPause={() => pause('pause')}
           onToggleFullscreen={toggleFullscreen}
           onSelectAnimal={animalId => EventBus.emit('gobeklitepe-select-piece', animalId)}
+        />
+      )}
+
+      {/* Cinematic Module Intro Screen for modules 2 through 6 */}
+      {panel === 'intro' && sceneKey !== SceneKeys.GOBEKLITEPE && introConfig && (
+        <ModuleIntroScreen
+          config={introConfig}
+          isNarrating={isCurrentNarrating}
+          onListenInstruction={() => current && toggleNarration(current.id)}
+          onHazirim={resume}
+          onHome={() => navigate(SceneKeys.START, false)}
         />
       )}
 
