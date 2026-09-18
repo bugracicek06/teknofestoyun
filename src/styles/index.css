@@ -2530,10 +2530,50 @@ button:disabled {
 /* ==========================================================
    STANDALONE MOBILE CERTIFICATE PAGE (/certificate/:id)
    ========================================================== */
+html.cert-route-active,
+body.cert-route-active {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  touch-action: pan-y !important;
+  -webkit-overflow-scrolling: touch !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  height: auto !important;
+  min-height: 100% !important;
+  min-height: 100dvh !important;
+}
+
+body.cert-route-active #root,
+#root:has(.certificate-page-route),
+#root:has(.cert-page-container) {
+  display: block !important;
+  width: 100% !important;
+  min-height: 100% !important;
+  min-height: 100dvh !important;
+  height: auto !important;
+  overflow: visible !important;
+  touch-action: auto !important;
+}
+
+.certificate-page-route {
+  width: 100%;
+  min-height: 100%;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-x: hidden;
+  overflow-y: visible;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
 .cert-page-container {
   width: 100%;
+  max-width: 100%;
   min-height: 100vh;
   min-height: 100dvh;
+  height: auto;
   background: #06111f;
   background-image: 
     radial-gradient(ellipse at 50% 0%, rgba(20, 50, 85, 0.5) 0%, transparent 60%),
@@ -2542,11 +2582,14 @@ button:disabled {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 28px 16px 40px;
-  overflow-y: auto;
+  padding: 28px 16px max(48px, env(safe-area-inset-bottom, 48px));
+  box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: visible;
   user-select: text;
   -webkit-user-select: text;
   touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
 }
 
 .cert-header {
@@ -2631,6 +2674,7 @@ button:disabled {
 
 .cert-preview-frame {
   width: 100%;
+  max-width: 100%;
   background: #0b1c2e;
   border: 1px solid rgba(242, 198, 109, 0.3);
   border-radius: 16px;
@@ -2639,11 +2683,13 @@ button:disabled {
   display: flex;
   justify-content: center;
   align-items: center;
+  aspect-ratio: 2048 / 1448;
 }
 
 .cert-preview-image {
   width: 100%;
-  height: auto;
+  max-width: 100%;
+  height: 100%;
   display: block;
   object-fit: contain;
 }
@@ -2768,55 +2814,82 @@ button:disabled {
   font-size: 16px;
 }
 
-/* Download Actions */
+/* Download Actions - Directly beneath Certificate Preview */
 .cert-actions-section {
   display: flex;
-  gap: 16px;
+  gap: 14px;
   width: 100%;
   flex-wrap: wrap;
   justify-content: center;
+  align-items: center;
+  margin-top: -6px;
+  margin-bottom: 4px;
 }
 
 .cert-btn-primary, .cert-btn-secondary {
-  flex: 1 1 240px;
-  min-height: 56px;
+  flex: 0 1 260px;
+  min-height: 48px;
+  height: 48px;
+  padding: 0 22px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  border-radius: 14px;
-  font-size: 17px;
+  border-radius: 12px;
+  font-size: 15px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
+  white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .cert-btn-primary {
   background: linear-gradient(135deg, #f2c66d 0%, #d9aa4e 100%);
   color: #07111f;
-  border: none;
-  box-shadow: 0 8px 24px rgba(242, 198, 109, 0.3);
+  border: 1px solid rgba(242, 198, 109, 0.5);
+  box-shadow: 0 6px 20px rgba(242, 198, 109, 0.25);
 }
 
 .cert-btn-primary:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(242, 198, 109, 0.45);
+  box-shadow: 0 10px 24px rgba(242, 198, 109, 0.38);
 }
 
 .cert-btn-secondary {
-  background: rgba(14, 28, 48, 0.8);
+  background: rgba(14, 28, 48, 0.85);
   border: 1px solid var(--accent-cyan);
   color: var(--accent-cyan);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
 }
 
 .cert-btn-secondary:hover:not(:disabled) {
   background: rgba(83, 213, 205, 0.15);
   transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(83, 213, 205, 0.2);
 }
 
 .cert-btn-primary:disabled, .cert-btn-secondary:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  transform: none !important;
+}
+
+@media (max-width: 600px) {
+  .cert-actions-section {
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+
+  .cert-btn-primary, .cert-btn-secondary {
+    flex: 1 1 100%;
+    width: 100%;
+    min-height: 48px;
+    height: 48px;
+    font-size: 15px;
+  }
 }
 
 /* Card Status & Spinner */

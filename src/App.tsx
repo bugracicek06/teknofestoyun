@@ -1,4 +1,4 @@
-import React, { useState, lazy, Suspense } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import type Phaser from 'phaser';
 import { KioskShell } from './components/KioskShell';
 import { GameContainer } from './components/GameContainer';
@@ -15,20 +15,36 @@ export const App: React.FC = () => {
   const certMatch = pathname.match(/^\/certificate\/([^/?#]+)/);
   const certificateId = certMatch ? decodeURIComponent(certMatch[1]) : null;
 
+  useEffect(() => {
+    if (certificateId) {
+      document.documentElement.classList.add('cert-route-active');
+      document.body.classList.add('cert-route-active');
+    } else {
+      document.documentElement.classList.remove('cert-route-active');
+      document.body.classList.remove('cert-route-active');
+    }
+    return () => {
+      document.documentElement.classList.remove('cert-route-active');
+      document.body.classList.remove('cert-route-active');
+    };
+  }, [certificateId]);
+
   if (certificateId) {
     return (
-      <Suspense
-        fallback={
-          <div className="cert-page-container">
-            <div className="cert-card cert-status-card">
-              <div className="cert-spinner" aria-hidden="true" />
-              <h2>Sertifika Yükleniyor…</h2>
+      <div className="certificate-page-route">
+        <Suspense
+          fallback={
+            <div className="cert-page-container">
+              <div className="cert-card cert-status-card">
+                <div className="cert-spinner" aria-hidden="true" />
+                <h2>Sertifika Yükleniyor…</h2>
+              </div>
             </div>
-          </div>
-        }
-      >
-        <CertificateViewPage certificateId={certificateId} />
-      </Suspense>
+          }
+        >
+          <CertificateViewPage certificateId={certificateId} />
+        </Suspense>
+      </div>
     );
   }
 
