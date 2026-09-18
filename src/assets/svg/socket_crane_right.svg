@@ -5,9 +5,9 @@
     </filter>
   </defs>
   <g filter="url(#socketScorpionGlowR)">
-    <!-- Archaic Göbeklitepe Scorpion (Pillar 43 Style) -->
+    <!-- Hollow archaeological stone contour - Akrep Target Socket -->
     <!-- Segmented Oval Carapace -->
-    <path d="M 55 48 C 43 48 41 62 41 71 C 41 81 47 87 55 87 C 63 87 69 81 69 71 C 69 62 67 48 55 48 Z" fill="rgba(0,0,0,0.12)" stroke="#FDE68A" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity="0.95"/>
+    <path d="M 55 48 C 43 48 41 62 41 71 C 41 81 47 87 55 87 C 63 87 69 81 69 71 C 69 62 67 48 55 48 Z" fill="none" stroke="#FDE68A" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity="0.95"/>
 
     <!-- Transverse Segment Lines -->
     <path d="M 43 58 L 67 58 M 42 67 L 68 67 M 44 76 L 66 76" stroke="#FDE68A" stroke-width="1.8" stroke-linecap="round" opacity="0.9"/>

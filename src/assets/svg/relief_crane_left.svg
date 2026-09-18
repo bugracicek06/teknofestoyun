@@ -1,18 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 135" width="110" height="135">
   <defs>
-    <filter id="reliefCraneGlowL" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#000000" flood-opacity="0.6"/>
+    <filter id="filledCraneShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="1.5" flood-color="#000000" flood-opacity="0.5"/>
     </filter>
   </defs>
-  <g filter="url(#reliefCraneGlowL)">
-    <path d="M 62 16 L 90 18 L 68 24 Z" fill="rgba(0,0,0,0.12)"/>
-    <path d="M 58 18 Q 54 8 64 12 Q 72 14 68 24 Q 58 34 60 56 Q 60 62 48 62 Q 38 50 60 56 Q 74 64 72 84 Q 64 98 44 96 Q 24 94 24 76 Q 24 68 26 60 Q 46 38 58 18 Z" fill="rgba(0,0,0,0.12)"/>
-    <path d="M 26 80 L 14 100 L 22 104 L 34 90 Z" fill="rgba(0,0,0,0.12)"/>
+  <g filter="url(#filledCraneShadow)">
+    <!-- Head & Sharp Beak Solid -->
+    <path d="M 62 16 L 90 18 L 68 24 Z" fill="#D4A259"/>
 
-    <path d="M 62 16 L 90 18 L 68 24 Z" fill="none" stroke="#FDE68A" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity="0.95"/>
-    <path d="M 58 18 Q 54 8 64 12 Q 72 14 68 24 Q 58 34 60 56 Q 60 62 48 62 Q 38 50 60 56 Q 74 64 72 84 Q 64 98 44 96 Q 24 94 24 76 Q 24 68 26 60 Q 46 38 58 18 Z" fill="none" stroke="#FDE68A" stroke-width="2" stroke-linecap="round" opacity="0.95"/>
-    <path d="M 26 80 L 14 100 L 22 104 L 34 90 Z" fill="none" stroke="#FDE68A" stroke-width="2" stroke-linecap="round" opacity="0.95"/>
-    <path d="M 52 94 L 54 128 L 66 131 M 54 128 L 46 131" stroke="#FDE68A" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.95"/>
-    <path d="M 40 96 L 40 126 L 50 129 M 40 126 L 32 129" stroke="#FDE68A" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.95"/>
+    <!-- Slender Neck & Plump Body Solid -->
+    <path d="M 58 18 Q 54 8 64 12 Q 72 14 68 24 Q 58 34 60 56 Q 60 62 48 62 Q 38 50 60 56 Q 74 64 72 84 Q 64 98 44 96 Q 24 94 24 76 Q 24 68 26 60 Q 46 38 58 18 Z" fill="#D4A259"/>
+
+    <!-- Tail Feathers Solid -->
+    <path d="M 26 80 L 14 100 L 22 104 L 34 90 Z" fill="#D4A259"/>
+
+    <!-- Slender Crane Legs -->
+    <path d="M 52 94 L 54 128 L 66 131 M 54 128 L 46 131" stroke="#D4A259" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+    <path d="M 40 96 L 40 126 L 50 129 M 40 126 L 32 129" stroke="#D4A259" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+
+    <!-- Controlled Internal Negative Space Cuts -->
+    <circle cx="66" cy="18" r="1.8" fill="#060f1a"/>
+    <path d="M 38 66 L 60 74 M 40 75 L 58 81 M 42 83 L 54 88" stroke="#060f1a" stroke-width="2" stroke-linecap="round"/>
   </g>
 </svg>

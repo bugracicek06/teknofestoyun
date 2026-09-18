@@ -1,9 +1,9 @@
-import foxSvg from '../assets/svg/socket_fox_left.svg';
-import boarSvg from '../assets/svg/socket_boar_left.svg';
-import craneSvg from '../assets/svg/socket_crane_left.svg';
-import snakeSvg from '../assets/svg/socket_fox_right.svg';
-import bullSvg from '../assets/svg/socket_boar_right.svg';
-import scorpionSvg from '../assets/svg/socket_crane_right.svg';
+import foxSvg from '../assets/svg/relief_fox_left.svg';
+import boarSvg from '../assets/svg/relief_boar_left.svg';
+import craneSvg from '../assets/svg/relief_crane_left.svg';
+import snakeSvg from '../assets/svg/relief_snake.svg';
+import bullSvg from '../assets/svg/relief_bull.svg';
+import scorpionSvg from '../assets/svg/relief_scorpion.svg';
 import { shuffleAnimals } from '../utils/shuffle';
 
 export interface AnimalItem {
