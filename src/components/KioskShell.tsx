@@ -31,8 +31,11 @@ import teknofest from '../assets/logos/teknofest_logo.png';
 import { MissionCard } from './MissionCard';
 import { MISSION_CARD_IMAGES } from '../data/cardImages';
 import { GobeklitepeMissionShell } from './GobeklitepeMissionShell';
+import { CiniSanatiMissionShell } from './CiniSanatiMissionShell';
+import { DevrimOtomobiliMissionShell } from './devrim/DevrimOtomobiliMissionShell';
 import { ModuleIntroScreen } from './ModuleIntroScreen';
 import { getModuleIntroConfig } from '../data/moduleIntros';
+import { DEV_UNLOCK_ALL_LEVELS } from '../config/devConfig';
 
 type Panel = 'intro' | 'help' | 'pause' | 'idle' | 'result' | null;
 
@@ -526,7 +529,8 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
               <div className="mission-grid-container" role="region" aria-label="Görev Seçimi">
                 {GAME_MODULES.map((m, i) => {
                   const completed = state.completedModuleIds.includes(m.id);
-                  const locked = !state.unlockedModuleIds.includes(m.id);
+                  const isUnlocked = DEV_UNLOCK_ALL_LEVELS || state.unlockedModuleIds.includes(m.id);
+                  const locked = !isUnlocked;
                   const status = locked
                     ? 'locked'
                     : selected === m.id
@@ -549,7 +553,18 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
                       status={status}
                       score={state.results[m.id]?.finalScore}
                       isSelected={isSelected}
-                      onSelect={() => setSelected(m.id)}
+                      onSelect={() => {
+                        if (selected === m.id) {
+                          if (isUnlocked) {
+                            if (DEV_UNLOCK_ALL_LEVELS && !state.unlockedModuleIds.includes(m.id)) {
+                              GameStore.unlockModule(m.id);
+                            }
+                            navigate(m.sceneKey);
+                          }
+                        } else {
+                          setSelected(m.id);
+                        }
+                      }}
                     />
                   );
                 })}
@@ -619,10 +634,13 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
                 <button
                   type="button"
                   className="primary action-btn-start"
-                  disabled={!GameStore.isModuleUnlocked(selected)}
+                  disabled={!DEV_UNLOCK_ALL_LEVELS && !GameStore.isModuleUnlocked(selected)}
                   onClick={() => {
                     const m = GAME_MODULES.find(m => m.id === selected);
-                    if (m && GameStore.isModuleUnlocked(m.id)) {
+                    if (m && (DEV_UNLOCK_ALL_LEVELS || GameStore.isModuleUnlocked(m.id))) {
+                      if (DEV_UNLOCK_ALL_LEVELS && !state.unlockedModuleIds.includes(m.id)) {
+                        GameStore.unlockModule(m.id);
+                      }
                       navigate(m.sceneKey);
                     }
                   }}
@@ -683,6 +701,38 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
         />
       )}
 
+      {sceneKey === SceneKeys.ANADOLU_USTALIGI && (
+        <CiniSanatiMissionShell
+          isAudioMuted={state.isAudioMuted}
+          fullscreen={fullscreen}
+          onHome={() => navigate(SceneKeys.START, false)}
+          onBack={() => navigate(SceneKeys.WORLD_MAP)}
+          onToggleAudio={() => {
+            GameStore.toggleAudioMuted();
+            stopNarration();
+          }}
+          onHelp={() => pause('help')}
+          onPause={() => pause('pause')}
+          onToggleFullscreen={toggleFullscreen}
+        />
+      )}
+
+      {sceneKey === SceneKeys.SANAYILESME && (
+        <DevrimOtomobiliMissionShell
+          isAudioMuted={state.isAudioMuted}
+          fullscreen={fullscreen}
+          onHome={() => navigate(SceneKeys.START, false)}
+          onBack={() => navigate(SceneKeys.WORLD_MAP)}
+          onToggleAudio={() => {
+            GameStore.toggleAudioMuted();
+            stopNarration();
+          }}
+          onHelp={() => pause('help')}
+          onPause={() => pause('pause')}
+          onToggleFullscreen={toggleFullscreen}
+        />
+      )}
+
       {/* Cinematic Module Intro Screen for modules 2 through 6 */}
       {panel === 'intro' && sceneKey !== SceneKeys.GOBEKLITEPE && introConfig && (
         <ModuleIntroScreen
@@ -694,7 +744,7 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
         />
       )}
 
-      {sceneKey !== SceneKeys.GOBEKLITEPE && (
+      {sceneKey !== SceneKeys.GOBEKLITEPE && sceneKey !== SceneKeys.ANADOLU_USTALIGI && sceneKey !== SceneKeys.SANAYILESME && (
         <nav
           className={`control-bar ${menu ? 'landing-controls' : 'in-game'}`}
           aria-label="Oyun kontrolleri"

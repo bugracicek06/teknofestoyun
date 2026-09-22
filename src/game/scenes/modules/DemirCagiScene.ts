@@ -188,13 +188,16 @@ export class DemirCagiScene extends BaseScene {
   private hammerStrikes = 0;
   private isHammerStriking = false;
 
-  // Stage 4: Eseri Tamamla (Osmanlı Kılıcı Montajı)
+  // Stage 4: Eseri Tamamla (Yatağan Kılıcı Montajı)
   private stage4Container?: Phaser.GameObjects.Container;
   private stage4DragLayer?: Phaser.GameObjects.Container;
   private swordParts: SwordPartItem[] = [];
   private swordSlots: SwordSlotItem[] = [];
   private swordAssembledCount = 0;
   private isSwordCompleted = false;
+  private swordGuideSilhouette?: Phaser.GameObjects.Graphics;
+  private standPlaqueText?: Phaser.GameObjects.Text;
+  private bladeEngravingContainer?: Phaser.GameObjects.Container;
 
 
   constructor() {
@@ -2592,6 +2595,7 @@ export class DemirCagiScene extends BaseScene {
     this.isSwordCompleted = false;
     this.swordParts = [];
     this.swordSlots = [];
+    this.input.dragDistanceThreshold = 4;
 
     if (this.phaseTitleText) this.phaseTitleText.setText('BÖLÜM 2 / 6');
     if (this.objectiveText) this.objectiveText.setText('GÖREV: Parçaları Doğru Yuvalara Yerleştirerek Eseri Tamamla');
@@ -2610,7 +2614,7 @@ export class DemirCagiScene extends BaseScene {
     // Reposition Pusula strictly to bottom-left corner with compact speech bubble (Clear of tray)
     this.pusula?.relocate(85, 915);
     this.pusula?.setCompactLayout(65, -75, 230, 80, '13px');
-    this.pusula?.setMessage('Parçaları doğru yuvalarına yerleştir ve Osmanlı kılıcını tamamla!');
+    this.pusula?.setMessage("Yatağan'ın parçalarını doğru yerlere yerleştir ve eseri tamamla!");
 
     // 1. Atmosphere: Warm Blacksmith Forge Hearth Ambient Glow in the background
     const forgeGlow = this.add.graphics();
@@ -2652,7 +2656,7 @@ export class DemirCagiScene extends BaseScene {
     plaqueTitle.setOrigin(0.5);
     this.stage4Container.add(plaqueTitle);
 
-    const plaqueSubtitle = this.createText(960 + 15, 150, 'Parçaları doğru yuvalara yerleştir ve Osmanlı kılıcını oluştur.', {
+    const plaqueSubtitle = this.createText(960 + 15, 150, 'Parçaları doğru yuvalara yerleştirerek Osmanlı kılıcını oluştur.', {
       fontSize: '13px',
       fontStyle: 'bold',
       color: '#FDE68A',
@@ -2660,7 +2664,7 @@ export class DemirCagiScene extends BaseScene {
     plaqueSubtitle.setOrigin(0.5);
     this.stage4Container.add(plaqueSubtitle);
 
-    // 3. Left Parchment Scroll: "OSMANLI KILICI" (X: 220, Y: 335)
+    // 3. Left Parchment Scroll: "YATAĞAN KILICI" (X: 215, Y: 395)
     this.createLeftParchmentScroll();
 
     // 4. Right Hanging Textile Banner (X: 1680, Y: 255)
@@ -2679,41 +2683,66 @@ export class DemirCagiScene extends BaseScene {
     this.createBottomPartsTray();
 
     // Initial Pusula Guidance
-    this.pusula?.setMessage('Parçaları doğru yuvalarına yerleştir ve Osmanlı kılıcını tamamla. Büyük ustalar detaylarda saklıdır!');
+    this.pusula?.setMessage("Yatağan'ın parçalarını doğru yerlere yerleştir ve eseri tamamla!");
   }
 
   /**
-   * Left Historical Educational Parchment Scroll
+   * Left Historical Educational Parchment Scroll (YATAĞAN KILICI / Denizli'nin Mirası)
    */
   private createLeftParchmentScroll(): void {
     if (!this.stage4Container) return;
 
-    const scrollContainer = this.add.container(215, 335);
+    const scrollContainer = this.add.container(215, 395);
     scrollContainer.setDepth(11);
 
     const scrollG = this.add.graphics();
-    // Aged parchment body
+    // Aged parchment shadow & body
     scrollG.fillStyle(0x0a0502, 0.4);
-    scrollG.fillRoundedRect(-165, -195, 330, 395, 8); // shadow
+    scrollG.fillRoundedRect(-165, -235, 330, 470, 8);
     scrollG.fillStyle(0xead8b5, 0.98);
-    scrollG.fillRoundedRect(-160, -190, 320, 380, 6);
+    scrollG.fillRoundedRect(-160, -230, 320, 460, 6);
     scrollG.lineStyle(2, 0x854d0e, 0.9);
-    scrollG.strokeRoundedRect(-160, -190, 320, 380, 6);
+    scrollG.strokeRoundedRect(-160, -230, 320, 460, 6);
     scrollG.lineStyle(1, 0xb45309, 0.4);
-    scrollG.strokeRoundedRect(-153, -183, 306, 366, 4);
+    scrollG.strokeRoundedRect(-153, -223, 306, 446, 4);
 
     // Rolled wooden rods with brass finials at top and bottom
     scrollG.fillStyle(0x381807, 1);
-    scrollG.fillRoundedRect(-170, -200, 340, 14, 4);
-    scrollG.fillRoundedRect(-170, 186, 340, 14, 4);
+    scrollG.fillRoundedRect(-170, -240, 340, 14, 4);
+    scrollG.fillRoundedRect(-170, 226, 340, 14, 4);
     scrollG.fillStyle(0xd97706, 1);
-    scrollG.fillCircle(-172, -193, 7);
-    scrollG.fillCircle(172, -193, 7);
-    scrollG.fillCircle(-172, 193, 7);
-    scrollG.fillCircle(172, 193, 7);
+    scrollG.fillCircle(-172, -233, 7);
+    scrollG.fillCircle(172, -233, 7);
+    scrollG.fillCircle(-172, 233, 7);
+    scrollG.fillCircle(172, 233, 7);
     scrollContainer.add(scrollG);
 
-    const title = this.createText(0, -145, 'OSMANLI KILICI', {
+    // Ottoman Tuğra / Calligraphy Monogram Motif
+    const tugraG = this.add.graphics();
+    tugraG.lineStyle(1.8, 0x854d0e, 0.9);
+    tugraG.beginPath();
+    tugraG.moveTo(-28, -195);
+    tugraG.lineTo(-18, -215);
+    tugraG.lineTo(0, -220);
+    tugraG.lineTo(16, -210);
+    tugraG.lineTo(24, -195);
+    tugraG.lineTo(12, -180);
+    tugraG.lineTo(-12, -182);
+    tugraG.lineTo(-28, -195);
+    tugraG.strokePath();
+
+    tugraG.beginPath();
+    tugraG.moveTo(-10, -210);
+    tugraG.lineTo(6, -222);
+    tugraG.lineTo(26, -212);
+    tugraG.lineTo(32, -190);
+    tugraG.strokePath();
+
+    tugraG.lineBetween(-36, -193, 36, -193);
+    tugraG.lineBetween(-22, -188, 26, -188);
+    scrollContainer.add(tugraG);
+
+    const title = this.createText(0, -162, 'YATAĞAN KILICI', {
       fontSize: '20px',
       fontStyle: 'bold',
       color: '#2A1605',
@@ -2721,7 +2750,7 @@ export class DemirCagiScene extends BaseScene {
     title.setOrigin(0.5);
     scrollContainer.add(title);
 
-    const subtitle = this.createText(0, -120, 'Zarafet ve Gücün Simgesi', {
+    const subtitle = this.createText(0, -137, "Denizli'nin Mirası", {
       fontSize: '13px',
       fontStyle: 'italic',
       color: '#78350F',
@@ -2729,29 +2758,8 @@ export class DemirCagiScene extends BaseScene {
     subtitle.setOrigin(0.5);
     scrollContainer.add(subtitle);
 
-    // Elegant Sword Line Drawing on Parchment
-    const swordSketch = this.add.graphics();
-    swordSketch.lineStyle(1.6, 0x854d0e, 0.85);
-    // curved blade
-    swordSketch.beginPath();
-    swordSketch.moveTo(-110, -78);
-    swordSketch.lineTo(-40, -72);
-    swordSketch.lineTo(20, -75);
-    swordSketch.lineTo(65, -82);
-    swordSketch.lineTo(20, -66);
-    swordSketch.lineTo(-40, -68);
-    swordSketch.closePath();
-    swordSketch.strokePath();
-    // crossguard
-    swordSketch.lineBetween(65, -94, 65, -56);
-    // grip & pommel
-    swordSketch.lineBetween(65, -75, 95, -75);
-    swordSketch.lineTo(105, -60);
-    swordSketch.strokePath();
-    scrollContainer.add(swordSketch);
-
     // Decorative Flourish divider
-    const divider = this.createText(0, -42, '— ❦ —', {
+    const divider = this.createText(0, -112, '— ❦ —', {
       fontSize: '14px',
       color: '#92400E',
     });
@@ -2761,26 +2769,49 @@ export class DemirCagiScene extends BaseScene {
     // Historical Educational Narrative Text
     const bodyText = this.createText(
       0,
-      40,
-      'Osmanlı kılıçları, ustalıkla\ndövülen demirin, estetikle\nbuluştuğu eşsiz eserlerdir.\n\nGücü korur, adaleti temsil eder.',
+      -35,
+      'Yatağan, Osmanlı döneminde\nAnadolu’da kullanılan karakteristik\neğri forma sahip geleneksel\nbir kılıçtır. Denizli’nin Yatağan\nyöresi de bıçakçılık ve metal\nişçiliği geleneğiyle tanınır.',
       {
-        fontSize: '14px',
+        fontSize: '13px',
         fontStyle: 'bold',
         color: '#3F250B',
         align: 'center',
-        lineSpacing: 8,
+        lineSpacing: 6,
       }
     );
     bodyText.setOrigin(0.5);
     scrollContainer.add(bodyText);
 
-    // Bottom Seljuk seal
-    const seal = this.createText(0, 150, '❖', {
-      fontSize: '18px',
-      color: '#B45309',
+    // Seljuk Star / Traditional Emblem Divider
+    const emblem = this.createText(0, 48, '۞', {
+      fontSize: '20px',
+      color: '#1E40AF',
     });
-    seal.setOrigin(0.5);
-    scrollContainer.add(seal);
+    emblem.setOrigin(0.5);
+    scrollContainer.add(emblem);
+
+    // Highlighted Inset Box at Bottom
+    const highlightBox = this.add.graphics();
+    highlightBox.fillStyle(0xdfcca6, 0.75);
+    highlightBox.fillRoundedRect(-145, 80, 290, 80, 8);
+    highlightBox.lineStyle(1.4, 0x854d0e, 0.7);
+    highlightBox.strokeRoundedRect(-145, 80, 290, 80, 8);
+    scrollContainer.add(highlightBox);
+
+    const highlightText = this.createText(
+      0,
+      120,
+      'Bugün sen de bu ustalık mirasının\nizlerini takip ederek kendi\nYatağan’ını tamamlıyorsun.',
+      {
+        fontSize: '12px',
+        fontStyle: 'bold italic',
+        color: '#451A03',
+        align: 'center',
+        lineSpacing: 5,
+      }
+    );
+    highlightText.setOrigin(0.5);
+    scrollContainer.add(highlightText);
 
     this.stage4Container.add(scrollContainer);
   }
@@ -2898,102 +2929,165 @@ export class DemirCagiScene extends BaseScene {
   }
 
   /**
-   * Central Carved Walnut Sword Display Rack / Workbench (Tezgâh / Stant)
+   * Central Master Carved Walnut Sword Display Rack / Workbench (Tezgâh / Stant)
+   * Matches authentic museum exhibition stand from reference design.
    */
   private createSwordDisplayRack(): void {
     if (!this.stage4Container) return;
 
     const rackG = this.add.graphics();
+    rackG.setDepth(8);
 
-    // 1. Backing Wall / Upper Rack Support (Center: 960, Y: 465)
-    rackG.fillStyle(0x0c0603, 0.7);
-    rackG.fillRoundedRect(960 - 540, 465 - 125, 1080, 250, 16); // shadow
+    // 1. Heavy Tiered Walnut Display Base Shelf (Y: 565 to 615)
+    // Soft under-shelf shadow
+    rackG.fillStyle(0x080402, 0.65);
+    rackG.fillRoundedRect(960 - 360, 582, 720, 42, 10);
 
-    rackG.fillStyle(0x1a0f07, 0.96);
-    rackG.fillRoundedRect(960 - 530, 465 - 118, 1060, 236, 14);
-    rackG.lineStyle(3, 0x854d0e, 0.95);
-    rackG.strokeRoundedRect(960 - 530, 465 - 118, 1060, 236, 14);
+    // Tier 1: Wide Lower Base Plinth (Dark Carved Walnut)
+    rackG.fillStyle(0x231107, 1);
+    rackG.fillRoundedRect(960 - 350, 574, 700, 38, 8);
+    rackG.lineStyle(2.5, 0x78350f, 0.95);
+    rackG.strokeRoundedRect(960 - 350, 574, 700, 38, 8);
 
-    // Carved Walnut Inner Inlay Trim
-    rackG.lineStyle(1.5, 0xd97706, 0.55);
-    rackG.strokeRoundedRect(960 - 518, 465 - 106, 1036, 212, 10);
+    // Tier 2: Beveled Upper Shelf Tier
+    rackG.fillStyle(0x351a0b, 1);
+    rackG.fillRoundedRect(960 - 320, 562, 640, 16, 5);
+    rackG.lineStyle(1.4, 0xd97706, 0.7);
+    rackG.strokeRoundedRect(960 - 320, 562, 640, 16, 5);
 
-    // 2. Left & Right Heavy Wooden Bracket Stanchions
+    // 2. Two Carved Upright Wooden Support Brackets (Cradles) holding the sword
+    // Left Support Cradle (around X: 690, holding the curved blade)
     rackG.fillStyle(0x2d170b, 1);
-    rackG.fillRoundedRect(960 - 520, 465 - 105, 38, 205, 6);
-    rackG.fillRoundedRect(960 + 482, 465 - 105, 38, 205, 6);
-    rackG.lineStyle(1.5, 0xd97706, 0.8);
-    rackG.strokeRoundedRect(960 - 520, 465 - 105, 38, 205, 6);
-    rackG.strokeRoundedRect(960 + 482, 465 - 105, 38, 205, 6);
+    // Foot
+    rackG.fillRoundedRect(690 - 28, 558, 56, 12, 3);
+    // Upright curved arm
+    rackG.fillRoundedRect(690 - 15, 480, 30, 84, 5);
+    // U-shaped Cradle rest at top
+    rackG.fillStyle(0x1a0d05, 1);
+    rackG.fillCircle(690, 484, 12);
+    rackG.lineStyle(1.8, 0xd97706, 0.85);
+    rackG.strokeRoundedRect(690 - 15, 480, 30, 84, 5);
 
-    // 3. Lower Tiered Heavy Display Base Shelf (Y: 575 to 625)
-    rackG.fillStyle(0x130a04, 1);
-    rackG.fillRoundedRect(960 - 555, 575, 1110, 42, 8);
-    rackG.lineStyle(2.5, 0x854d0e, 0.95);
-    rackG.strokeRoundedRect(960 - 555, 575, 1110, 42, 8);
-
-    rackG.fillStyle(0x27140a, 1);
-    rackG.fillRoundedRect(960 - 540, 582, 1080, 16, 4);
-    rackG.lineStyle(1.2, 0xd97706, 0.7);
-    rackG.strokeRoundedRect(960 - 540, 582, 1080, 16, 4);
-
-    // 4. Center Front Triangular Wooden Crest with Gilded Tulip Relief (Lale Motifi)
-    rackG.fillStyle(0x1f1006, 1);
-    rackG.beginPath();
-    rackG.moveTo(960 - 75, 580);
-    rackG.lineTo(960, 532);
-    rackG.lineTo(960 + 75, 580);
-    rackG.closePath();
-    rackG.fillPath();
-    rackG.lineStyle(2, 0xd97706, 0.9);
-    rackG.strokePath();
-
-    // Carved Tulip Relief
-    rackG.fillStyle(0xd97706, 0.9);
-    rackG.fillCircle(960, 558, 6);
-    rackG.lineStyle(1.5, 0xfde68a, 0.95);
-    rackG.lineBetween(960, 574, 960, 558);
-    rackG.beginPath();
-    rackG.moveTo(960, 570);
-    rackG.lineTo(960 - 12, 556);
-    rackG.lineTo(960 - 8, 546);
-    rackG.moveTo(960, 570);
-    rackG.lineTo(960 + 12, 556);
-    rackG.lineTo(960 + 8, 546);
-    rackG.strokePath();
+    // Right Support Cradle (around X: 1245, holding near the bolster)
+    rackG.fillStyle(0x2d170b, 1);
+    // Foot
+    rackG.fillRoundedRect(1245 - 28, 558, 56, 12, 3);
+    // Upright curved arm
+    rackG.fillRoundedRect(1245 - 15, 480, 30, 84, 5);
+    // U-shaped Cradle rest at top
+    rackG.fillStyle(0x1a0d05, 1);
+    rackG.fillCircle(1245, 484, 12);
+    rackG.lineStyle(1.8, 0xd97706, 0.85);
+    rackG.strokeRoundedRect(1245 - 15, 480, 30, 84, 5);
 
     this.stage4Container.add(rackG);
+
+    // 3. Central Gilded Brass Name Plaque on Stand Base (Center: X: 960, Y: 588)
+    const plaqueContainer = this.add.container(960, 588);
+    plaqueContainer.setDepth(9);
+
+    const plaqueG = this.add.graphics();
+    // Drop shadow
+    plaqueG.fillStyle(0x060301, 0.6);
+    plaqueG.fillRoundedRect(-112, -16, 224, 32, 5);
+    // Brass plate body
+    plaqueG.fillStyle(0xb45309, 0.95);
+    plaqueG.fillRoundedRect(-110, -15, 220, 30, 4);
+    plaqueG.lineStyle(1.8, 0xfde047, 0.95);
+    plaqueG.strokeRoundedRect(-110, -15, 220, 30, 4);
+    plaqueG.lineStyle(1.0, 0x78350f, 0.6);
+    plaqueG.strokeRoundedRect(-106, -11, 212, 22, 2);
+
+    // 4 Corner Screw Rivets
+    plaqueG.fillStyle(0x451a03, 1);
+    plaqueG.fillCircle(-103, -8, 2.5);
+    plaqueG.fillCircle(103, -8, 2.5);
+    plaqueG.fillCircle(-103, 8, 2.5);
+    plaqueG.fillCircle(103, 8, 2.5);
+    plaqueContainer.add(plaqueG);
+
+    // Explorer's Name on Display Stand Plaque
+    const session = GameStore.getPlayerSession();
+    const rawName = session?.fullName?.trim();
+    const displayName = (rawName && rawName.length > 0 ? rawName : 'KÂŞİF').toLocaleUpperCase('tr-TR');
+
+    this.standPlaqueText = this.createText(0, 0, `✦ ${displayName} ✦`, {
+      fontSize: '13px',
+      fontStyle: 'bold',
+      color: '#1E293B',
+      fontFamily: 'Cinzel, "Cinzel Decorative", Georgia, serif',
+    });
+    this.standPlaqueText.setOrigin(0.5);
+    plaqueContainer.add(this.standPlaqueText);
+
+    this.stage4Container.add(plaqueContainer);
   }
 
   /**
    * 4 Dedicated Sword Silhouette Slots on the Rack
+   * Shows subtle low-opacity guide silhouette of complete Yatağan and soft contoured snap zones.
    */
   private createSwordSlotsOnRack(): void {
     if (!this.stage4Container) return;
 
+    // 1. Subtle Low-Opacity Target Guide Silhouette of Complete Yatağan
+    this.swordGuideSilhouette = this.add.graphics();
+    this.swordGuideSilhouette.setDepth(10);
+    this.swordGuideSilhouette.lineStyle(1.8, 0xd97706, 0.28);
+    this.swordGuideSilhouette.fillStyle(0xfde68a, 0.04);
+
+    // Recurved Blade Silhouette
+    this.swordGuideSilhouette.beginPath();
+    this.swordGuideSilhouette.moveTo(1100, SWORD_BASELINE_Y - 11);
+    this.swordGuideSilhouette.lineTo(960, SWORD_BASELINE_Y - 7);
+    this.swordGuideSilhouette.lineTo(840, SWORD_BASELINE_Y - 1);
+    this.swordGuideSilhouette.lineTo(740, SWORD_BASELINE_Y - 7);
+    this.swordGuideSilhouette.lineTo(660, SWORD_BASELINE_Y - 13);
+    this.swordGuideSilhouette.lineTo(570, SWORD_BASELINE_Y - 23);
+    this.swordGuideSilhouette.lineTo(495, SWORD_BASELINE_Y - 35);
+    this.swordGuideSilhouette.lineTo(545, SWORD_BASELINE_Y - 5);
+    this.swordGuideSilhouette.lineTo(620, SWORD_BASELINE_Y + 15);
+    this.swordGuideSilhouette.lineTo(720, SWORD_BASELINE_Y + 21);
+    this.swordGuideSilhouette.lineTo(860, SWORD_BASELINE_Y + 27);
+    this.swordGuideSilhouette.lineTo(980, SWORD_BASELINE_Y + 23);
+    this.swordGuideSilhouette.lineTo(1100, SWORD_BASELINE_Y + 13);
+    this.swordGuideSilhouette.closePath();
+    this.swordGuideSilhouette.fillPath();
+    this.swordGuideSilhouette.strokePath();
+
+    // Guard Silhouette Guide
+    this.swordGuideSilhouette.strokeRoundedRect(1110 - 24, SWORD_BASELINE_Y - 82, 48, 164, 10);
+    // Grip Silhouette Guide
+    this.swordGuideSilhouette.strokeRoundedRect(1207 - 72, SWORD_BASELINE_Y - 23, 144, 46, 6);
+    // Pommel Silhouette Guide
+    this.swordGuideSilhouette.strokeRoundedRect(1347 - 68, SWORD_BASELINE_Y + 29 - 52, 136, 104, 10);
+
+    this.stage4Container.add(this.swordGuideSilhouette);
+
+    // 2. Individual Slot Placement Regions
     Object.values(SWORD_SLOT_DEFS).forEach((slotDef) => {
       const slotContainer = this.add.container(slotDef.x, slotDef.y);
       slotContainer.setDepth(11);
 
       const outline = this.add.graphics();
-      outline.fillStyle(0x0e0703, 0.65);
+      outline.fillStyle(0x0e0703, 0.35);
 
-      // Draw exact slot contour outline
+      // Draw soft contoured slot highlight
       if (slotDef.id === 'slot_blade') {
-        outline.fillRoundedRect(-slotDef.width / 2, -slotDef.height / 2 + 10, slotDef.width, slotDef.height - 20, 8);
-        outline.lineStyle(2, 0xd97706, 0.75);
-        outline.strokeRoundedRect(-slotDef.width / 2, -slotDef.height / 2 + 10, slotDef.width, slotDef.height - 20, 8);
+        outline.fillRoundedRect(-slotDef.width / 2, -slotDef.height / 2 + 10, slotDef.width, slotDef.height - 20, 10);
+        outline.lineStyle(1.8, 0xd97706, 0.55);
+        outline.strokeRoundedRect(-slotDef.width / 2, -slotDef.height / 2 + 10, slotDef.width, slotDef.height - 20, 10);
       } else if (slotDef.id === 'slot_guard') {
         outline.fillRoundedRect(-slotDef.width / 2, -slotDef.height / 2, slotDef.width, slotDef.height, 10);
-        outline.lineStyle(2, 0xd97706, 0.75);
+        outline.lineStyle(1.8, 0xd97706, 0.55);
         outline.strokeRoundedRect(-slotDef.width / 2, -slotDef.height / 2, slotDef.width, slotDef.height, 10);
       } else if (slotDef.id === 'slot_grip') {
         outline.fillRoundedRect(-slotDef.width / 2, -slotDef.height / 2, slotDef.width, slotDef.height, 6);
-        outline.lineStyle(2, 0xd97706, 0.75);
+        outline.lineStyle(1.8, 0xd97706, 0.55);
         outline.strokeRoundedRect(-slotDef.width / 2, -slotDef.height / 2, slotDef.width, slotDef.height, 6);
       } else if (slotDef.id === 'slot_pommel') {
         outline.fillRoundedRect(-slotDef.width / 2, -slotDef.height / 2, slotDef.width, slotDef.height, 10);
-        outline.lineStyle(2, 0xd97706, 0.75);
+        outline.lineStyle(1.8, 0xd97706, 0.55);
         outline.strokeRoundedRect(-slotDef.width / 2, -slotDef.height / 2, slotDef.width, slotDef.height, 10);
       }
       slotContainer.add(outline);
@@ -3001,8 +3095,8 @@ export class DemirCagiScene extends BaseScene {
       // Subtle breathing pulse on empty slot outline
       this.tweens.add({
         targets: outline,
-        alpha: { from: 0.65, to: 0.95 },
-        duration: 850,
+        alpha: { from: 0.5, to: 0.85 },
+        duration: 900,
         yoyo: true,
         repeat: -1,
       });
@@ -3082,7 +3176,7 @@ export class DemirCagiScene extends BaseScene {
       cardBg.strokeRect(cardSlot.x + 109, cardSlot.y + 74, 12, 12);
       this.stage4Container?.add(cardBg);
 
-      // B. Title Tag Pill at Bottom of Card (e.g. "Kılıç Ucu", "Kabza Koruması" - NO numbers!)
+      // B. Title Tag Pill at Bottom of Card (e.g. "Namlu", "Kabza Başlığı", "Kabza", "Sap Ucu")
       const tagBg = this.add.graphics();
       tagBg.fillStyle(0x1f1107, 0.92);
       tagBg.fillRoundedRect(cardSlot.x - 90, cardSlot.y + 55, 180, 26, 6);
@@ -3098,20 +3192,20 @@ export class DemirCagiScene extends BaseScene {
       tagText.setOrigin(0.5);
       this.stage4Container?.add(tagText);
 
-      // C. Placed Badge ("✓ Yerleştirildi") - Hidden until placed
-      const placedBadge = this.add.container(cardSlot.x, cardSlot.y);
+      // C. Placed Badge ("✓ Yerleştirildi") - Positioned at top of card, hidden until placed
+      const placedBadge = this.add.container(cardSlot.x, cardSlot.y - 58);
       placedBadge.setDepth(15);
       placedBadge.setVisible(false);
 
       const pbG = this.add.graphics();
-      pbG.fillStyle(0x064e3b, 0.85);
-      pbG.fillRoundedRect(-75, -16, 150, 32, 8);
-      pbG.lineStyle(1.5, 0x34d399, 0.9);
-      pbG.strokeRoundedRect(-75, -16, 150, 32, 8);
+      pbG.fillStyle(0x064e3b, 0.92);
+      pbG.fillRoundedRect(-68, -13, 136, 26, 7);
+      pbG.lineStyle(1.4, 0x34d399, 0.95);
+      pbG.strokeRoundedRect(-68, -13, 136, 26, 7);
       placedBadge.add(pbG);
 
       const pbText = this.createText(0, 0, '✓ Yerleştirildi', {
-        fontSize: '13px',
+        fontSize: '12px',
         fontStyle: 'bold',
         color: '#A7F3D0',
       });
@@ -3119,8 +3213,8 @@ export class DemirCagiScene extends BaseScene {
       placedBadge.add(pbText);
       this.stage4Container?.add(placedBadge);
 
-      // D. Draggable Piece Container (Positioned at center of card, slightly raised for label)
-      const pContainer = this.add.container(cardSlot.x, cardSlot.y - 12);
+      // D. Draggable Piece Container (Positioned at center of card)
+      const pContainer = this.add.container(cardSlot.x, cardSlot.y - 4);
       pContainer.setSize(250, 180);
       pContainer.setDepth(25);
 
@@ -3133,8 +3227,8 @@ export class DemirCagiScene extends BaseScene {
       sprite.setDisplaySize(partDef.trayW, partDef.trayH);
       pContainer.add(sprite);
 
-      // Card-sized Hit Area: covers the entire card (-125 to +125 in X, -90 to +90 in Y)
-      const cardHitArea = new Phaser.Geom.Rectangle(-125, -90, 250, 180);
+      // Card-sized Hit Area: covers the entire card bounds taking into account container displayOrigin (125, 90)
+      const cardHitArea = new Phaser.Geom.Rectangle(0, 12, 250, 180);
       pContainer.setInteractive(cardHitArea, Phaser.Geom.Rectangle.Contains, true);
       this.input.setDraggable(pContainer);
 
@@ -3181,7 +3275,7 @@ export class DemirCagiScene extends BaseScene {
         // Expand hitArea to cover the full physical scale of the piece (+ 40px padding)
         const activeHitW = Math.max(260, partDef.width + 40);
         const activeHitH = Math.max(160, partDef.height + 40);
-        pContainer.input?.hitArea?.setTo(-activeHitW / 2, -activeHitH / 2, activeHitW, activeHitH);
+        pContainer.input?.hitArea?.setTo(125 - activeHitW / 2, 90 - activeHitH / 2, activeHitW, activeHitH);
 
         SoundFx.playStoneDrag();
 
@@ -3317,8 +3411,6 @@ export class DemirCagiScene extends BaseScene {
 
       // In the bottom tray: mark the source card as placed
       part.cardBg.setAlpha(0.4);
-      part.titleTag.setVisible(false);
-      part.titleText.setVisible(false);
       part.placedBadge.setVisible(true);
 
       this.swordAssembledCount++;
@@ -3328,11 +3420,11 @@ export class DemirCagiScene extends BaseScene {
 
       // Responsive Pusula narrative guidance
       if (this.swordAssembledCount === 1) {
-        this.pusula?.setMessage('Kılıç ucu tezgâha oturdu! Şimdi namlu ile sapı koruyan siperi yerleştir.');
+        this.pusula?.setMessage("Namlu tezgâha oturdu! Şimdi kılıcın siperliği olan kabza başlığını yerleştir.");
       } else if (this.swordAssembledCount === 2) {
-        this.pusula?.setMessage('Siper yerine kilitlendi! Şimdi ustanın eline tam oturacak sapı tak.');
+        this.pusula?.setMessage("Kabza başlığı yerine oturdu! Şimdi ustanın eline tam oturacak ahşap kabzayı tak.");
       } else if (this.swordAssembledCount === 3) {
-        this.pusula?.setMessage('Sap montajı tamam! Son olarak kılıcın dengesini sağlayan başlığı yerleştir.');
+        this.pusula?.setMessage("Harika gidiyorsun! Son parçayı da yerine yerleştir.");
       } else if (this.swordAssembledCount === 4) {
         this.onAllSwordPartsCompleted();
       }
@@ -3341,12 +3433,12 @@ export class DemirCagiScene extends BaseScene {
       SoundFx.playSandSlide();
 
       // Restore card-sized hitArea
-      part.container.input?.hitArea?.setTo(-125, -90, 250, 180);
+      part.container.input?.hitArea?.setTo(0, 12, 250, 180);
 
       this.tweens.add({
         targets: part.container,
         x: part.cardSlot.x,
-        y: part.cardSlot.y - 12,
+        y: part.cardSlot.y - 4,
         duration: 240,
         ease: 'Back.easeOut',
         onComplete: () => {
@@ -3382,7 +3474,7 @@ export class DemirCagiScene extends BaseScene {
 
   /**
    * Final Completion: 4/4 Pieces Assembled
-   * Executes metallic specular light gleam, golden aura, fanfare and victory transition.
+   * Executes specular light gleam, engraving explorer's name on blade, golden aura, fanfare and victory.
    */
   private onAllSwordPartsCompleted(): void {
     if (this.isSwordCompleted) return;
@@ -3391,11 +3483,29 @@ export class DemirCagiScene extends BaseScene {
     // Lock interactions
     this.swordParts.forEach((p) => p.container.disableInteractive());
 
+    // Fade out target guide silhouette and any slot helper outlines
+    if (this.swordGuideSilhouette) {
+      this.tweens.add({
+        targets: this.swordGuideSilhouette,
+        alpha: 0,
+        duration: 300,
+        onComplete: () => this.swordGuideSilhouette?.destroy(),
+      });
+    }
+
+    this.swordSlots.forEach((slot) => {
+      this.tweens.add({
+        targets: [slot.outline, slot.badge],
+        alpha: 0,
+        duration: 300,
+      });
+    });
+
     // Audio Fanfare & Sword Sheath Ring
     SoundFx.playSwordSheath();
     SoundFx.playVictoryFanfare();
 
-    // Cinematic zoom-in onto the completed Ottoman master sword
+    // Cinematic zoom-in onto the completed Yatağan master sword
     this.cameras.main.zoomTo(1.08, 900);
 
     // Warm Ambient Gold Aura behind the completed sword
@@ -3441,10 +3551,103 @@ export class DemirCagiScene extends BaseScene {
       });
     }
 
-    this.pusula?.setMessage('Harika! Tüm parçaları doğru yerlerine yerleştirdin ve eseri tamamladın.');
+    // Companion guidance: Name engraving starting
+    this.pusula?.setMessage("Harika! Yatağan'ı tamamladın. Şimdi adına özel ustalık izi kılıca işleniyor!");
 
-    this.time.delayedCall(1800, () => {
-      this.onGameCompleted();
+    // --- KÂŞİFİN ADINI KILICA İŞLEME (Left-to-Right Controlled Reveal) ---
+    const session = GameStore.getPlayerSession();
+    const rawName = session?.fullName?.trim();
+    const displayName = (rawName && rawName.length > 0 ? rawName : 'KÂŞİF').toLocaleUpperCase('tr-TR');
+
+    // Update stand plaque with explorer name
+    if (this.standPlaqueText) {
+      this.standPlaqueText.setText(`✦ ${displayName} ✦`);
+    }
+
+    // Dynamic font size adaptation based on string length
+    let engraveFontSize = '15px';
+    if (displayName.length > 20) {
+      engraveFontSize = '10px';
+    } else if (displayName.length > 14) {
+      engraveFontSize = '12px';
+    } else if (displayName.length > 8) {
+      engraveFontSize = '13.5px';
+    }
+
+    // Blade Engraving Container (Centered at X: 810, Y: 468 on the Yatağan blade)
+    this.bladeEngravingContainer = this.add.container(810, 468);
+    this.bladeEngravingContainer.setDepth(32);
+
+    // Chiseled Bevel Highlight Offset (Giving authentic 3D engraved steel depth)
+    const bevelHighlight = this.createText(1, 1, `✦ ${displayName} ✦`, {
+      fontFamily: 'Cinzel, "Cinzel Decorative", Georgia, serif',
+      fontSize: engraveFontSize,
+      fontStyle: 'bold',
+      color: '#FEF08A',
+    });
+    bevelHighlight.setAlpha(0.6);
+    bevelHighlight.setOrigin(0.5);
+    this.bladeEngravingContainer.add(bevelHighlight);
+
+    // Deep Chiseled Charcoal Metal Text
+    const deepEngraveText = this.createText(0, 0, `✦ ${displayName} ✦`, {
+      fontFamily: 'Cinzel, "Cinzel Decorative", Georgia, serif',
+      fontSize: engraveFontSize,
+      fontStyle: 'bold',
+      color: '#1E293B',
+    });
+    deepEngraveText.setOrigin(0.5);
+    this.bladeEngravingContainer.add(deepEngraveText);
+
+    this.stage4Container?.add(this.bladeEngravingContainer);
+
+    // 1.2s Controlled Engraving Reveal Animation from Left to Right
+    const textBoundsW = Math.max(160, deepEngraveText.width + 20);
+    const maskStartX = 810 - textBoundsW / 2;
+    const maskG = this.make.graphics({});
+    const mask = maskG.createGeometryMask();
+    this.bladeEngravingContainer.setMask(mask);
+
+    const maskProgress = { w: 0 };
+    maskG.fillStyle(0xffffff, 1);
+    maskG.fillRect(maskStartX, 440, 0, 56);
+
+    // Chisel Spark at cutting front
+    const chiselSpark = this.add.graphics();
+    chiselSpark.fillStyle(0xfde047, 0.95);
+    chiselSpark.fillCircle(0, 0, 3);
+    chiselSpark.setDepth(36);
+    this.stage4Container?.add(chiselSpark);
+
+    SoundFx.playStampEngrave();
+
+    this.tweens.add({
+      targets: maskProgress,
+      w: textBoundsW + 10,
+      duration: 1200,
+      ease: 'Linear',
+      onUpdate: () => {
+        maskG.clear();
+        maskG.fillStyle(0xffffff, 1);
+        maskG.fillRect(maskStartX, 440, maskProgress.w, 56);
+        chiselSpark.x = maskStartX + maskProgress.w;
+        chiselSpark.y = 468;
+        if (Math.random() < 0.25) {
+          this.createHearthSparks(chiselSpark.x, chiselSpark.y, 1);
+        }
+      },
+      onComplete: () => {
+        this.bladeEngravingContainer?.clearMask(true);
+        maskG.destroy();
+        chiselSpark.destroy();
+        SoundFx.playStampEngrave();
+
+        this.pusula?.setMessage("Harika! Tüm parçalar doğru yerleştirildi. Artık kılıcın hazır!");
+
+        this.time.delayedCall(1600, () => {
+          this.onGameCompleted();
+        });
+      },
     });
   }
 
@@ -3489,6 +3692,9 @@ export class DemirCagiScene extends BaseScene {
         this.stage4DragLayer.destroy();
         this.stage4DragLayer = undefined;
       }
+      this.swordGuideSilhouette = undefined;
+      this.standPlaqueText = undefined;
+      this.bladeEngravingContainer = undefined;
 
       if (nextStage === 1) {
         this.bgImage?.setTexture('iron_stage1_furnace');

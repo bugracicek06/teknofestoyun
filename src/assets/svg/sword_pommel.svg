@@ -1,91 +1,113 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 136 104" width="136" height="104">
   <defs>
-    <!-- Rich Engraved Brass / Gilt Bronze Pommel Gradient -->
+    <!-- Rich Dark Walnut / Horn Core Gradient -->
+    <linearGradient id="pommelWoodGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4a2411"/>
+      <stop offset="25%" stop-color="#321609"/>
+      <stop offset="55%" stop-color="#230d04"/>
+      <stop offset="85%" stop-color="#180802"/>
+      <stop offset="100%" stop-color="#0c0401"/>
+    </linearGradient>
+
+    <!-- Engraved Brass / Gilt Bronze Border Gradient -->
     <linearGradient id="pommelBrassGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#FEF08A"/>
-      <stop offset="25%" stop-color="#F59E0B"/>
-      <stop offset="55%" stop-color="#D97706"/>
-      <stop offset="80%" stop-color="#92400E"/>
+      <stop offset="0%" stop-color="#FFFBEB"/>
+      <stop offset="20%" stop-color="#FEF08A"/>
+      <stop offset="50%" stop-color="#F59E0B"/>
+      <stop offset="80%" stop-color="#B45309"/>
       <stop offset="100%" stop-color="#451A03"/>
     </linearGradient>
 
-    <!-- Metallic Specular Bevel -->
-    <linearGradient id="pommelHighlight" x1="0%" y1="0%" x2="100%" y2="50%">
-      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.9"/>
-      <stop offset="40%" stop-color="#FEF08A" stop-opacity="0.6"/>
-      <stop offset="100%" stop-color="#78350F" stop-opacity="0.3"/>
-    </linearGradient>
+    <!-- Gold Repoussé Medallion Radial Gradient -->
+    <radialGradient id="goldRosetteGrad" cx="40%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="25%" stop-color="#FEF08A"/>
+      <stop offset="60%" stop-color="#F59E0B"/>
+      <stop offset="85%" stop-color="#D97706"/>
+      <stop offset="100%" stop-color="#78350F"/>
+    </radialGradient>
 
     <filter id="pommelDropShadow" x="-10%" y="-10%" width="130%" height="130%">
-      <feDropShadow dx="0" dy="4" stdDeviation="3" flood-color="#000000" flood-opacity="0.65"/>
+      <feDropShadow dx="0" dy="4" stdDeviation="3.5" flood-color="#000000" flood-opacity="0.65"/>
     </filter>
   </defs>
 
   <g filter="url(#pommelDropShadow)">
-    <!-- 1. Left Collar Ring: Seamless connection with grip (height: 44px, matching grip's 44px) -->
-    <rect x="1" y="1" width="14" height="44" rx="2" fill="url(#pommelBrassGrad)" stroke="#78350F" stroke-width="1.5"/>
+    <!-- 1. Left Collar Ring: Seamless Connection with Grip (height: 44px, matching grip's 44px exactly) -->
+    <rect x="1" y="1" width="12" height="44" rx="2" fill="url(#pommelBrassGrad)" stroke="#78350F" stroke-width="1.5"/>
     <line x1="5" y1="3" x2="5" y2="43" stroke="#FEF08A" stroke-width="1.2" opacity="0.85"/>
-    <line x1="10" y1="3" x2="10" y2="43" stroke="#451A03" stroke-width="1.2" opacity="0.75"/>
+    <line x1="9" y1="3" x2="9" y2="43" stroke="#451A03" stroke-width="1.2" opacity="0.75"/>
 
-    <!-- 2. Master Pistol-Grip Curved Pommel Body (Kabza Başı) -->
-    <!-- Top crest runs from (14, 1) -> (55, 3) -> (90, 16) -> rounds over beak (125, 45) -> (128, 72) -> (105, 96) -->
-    <!-- Inner throat curves from (105, 96) -> (75, 90) -> (72, 70) -> (88, 55) -> (55, 42) -> (14, 45) -->
-    <path d="M 14 1 
-             C 45 2, 75 10, 96 22 
-             C 118 35, 130 55, 126 76 
-             C 122 92, 108 99, 92 98 
-             C 76 96, 68 85, 74 72 
-             C 80 60, 92 56, 88 46 
-             C 82 36, 50 38, 14 45 
+    <!-- 2. Master Yatağan Eared Pommel Silhouette (Geleneksel Kulaklı Kabza Başı) -->
+    <!-- Top crest: from (12, 1) -> (50, 4) -> (85, 16) -> flares over ear (118, 42) -> (128, 68) -> (114, 96) -->
+    <!-- Inner throat: from (114, 96) -> (96, 96) -> (80, 84) -> (74, 68) -> (60, 52) -> (36, 44) -> (12, 45) -->
+    <!-- Brass outer frame -->
+    <path d="M 12 1 
+             C 45 3, 78 12, 98 24 
+             C 120 38, 132 58, 128 78 
+             C 124 94, 108 100, 92 98 
+             C 78 96, 70 85, 76 72 
+             C 80 62, 88 56, 78 46 
+             C 65 38, 40 40, 12 45 
              Z" 
           fill="url(#pommelBrassGrad)" 
           stroke="#78350F" 
-          stroke-width="2" 
+          stroke-width="2.2" 
           stroke-linejoin="round"/>
 
-    <!-- 3. Raised Outer Bevel Rim Line -->
-    <path d="M 18 5 
-             C 46 6, 73 14, 93 25 
-             C 113 37, 124 54, 120 73 
-             C 116 88, 104 94, 91 93 
-             C 79 91, 74 82, 78 73" 
+    <!-- Dark Polished Walnut Core Inset within the Brass Frame -->
+    <path d="M 14 5 
+             C 44 7, 74 15, 94 26 
+             C 114 39, 124 57, 120 75 
+             C 117 89, 104 94, 92 92 
+             C 82 90, 77 82, 80 73 
+             C 84 64, 88 60, 78 51 
+             C 66 43, 42 43, 14 43 
+             Z" 
+          fill="url(#pommelWoodGrad)" 
+          stroke="#180802" 
+          stroke-width="1.5"/>
+
+    <!-- 3. Raised Gold Bevel Border Trim -->
+    <path d="M 16 7 
+             C 44 9, 72 17, 91 28 
+             C 110 40, 120 57, 116 74 
+             C 113 86, 102 91, 92 89" 
           stroke="#FEF08A" 
           stroke-width="1.5" 
           stroke-linecap="round" 
           fill="none" 
-          opacity="0.85"/>
+          opacity="0.9"/>
 
-    <!-- 4. Ottoman Seljuk / Rumi Arabesque Filigree Engravings -->
-    <!-- Central Flowing Spiral Vine -->
-    <path d="M 32 20 
-             C 52 18, 70 26, 84 36 
-             C 98 46, 106 62, 102 75 
-             C 98 84, 88 84, 86 76" 
-          stroke="#451A03" 
-          stroke-width="2" 
-          stroke-linecap="round" 
-          fill="none"/>
+    <!-- 4. Ottoman Arabesque Gold Foliage on Neck (Sap Boyun Tezhibi) -->
+    <path d="M 24 24 Q 42 20, 58 28 T 78 38" stroke="url(#pommelBrassGrad)" stroke-width="1.6" fill="none"/>
+    <circle cx="36" cy="24" r="2.2" fill="#FEF08A"/>
+    <circle cx="56" cy="29" r="2.5" fill="#FEF08A"/>
 
-    <path d="M 32 21 
-             C 52 19, 70 27, 84 37 
-             C 98 47, 106 63, 102 76 
-             C 98 85, 88 85, 86 77" 
-          stroke="#FEF08A" 
-          stroke-width="1" 
-          stroke-linecap="round" 
-          fill="none"/>
-
-    <!-- Engraved Floral Medallion near the curve apex -->
-    <circle cx="68" cy="28" r="9" fill="#78350F" stroke="#FDE68A" stroke-width="1.2"/>
-    <circle cx="68" cy="28" r="6" fill="#D97706"/>
-    <circle cx="68" cy="28" r="2.5" fill="#FFFFFF"/>
-
-    <!-- Lanyard Eyelet / Rivet Stud (Askı/Püskül Halkası Perçini) -->
-    <circle cx="98" cy="74" r="8" fill="#451A03" stroke="#FDE68A" stroke-width="1.5"/>
-    <circle cx="98" cy="74" r="5" fill="url(#pommelHighlight)"/>
-    <circle cx="98" cy="74" r="2.5" fill="#140602"/>
+    <!-- 5. Iconic Yatağan Ear Rosette Medallion (Kulak Üzerindeki Altın Rozet Çiçek) -->
+    <!-- Center: X: 102, Y: 68 -->
+    <g transform="translate(102, 68)">
+      <!-- Outer Engraved Ring -->
+      <circle cx="0" cy="0" r="16" fill="#451A03" stroke="#FDE68A" stroke-width="1.5"/>
+      <circle cx="0" cy="0" r="13" fill="url(#goldRosetteGrad)"/>
+      
+      <!-- 8-Petal Ottoman Rosette Inlay -->
+      <g fill="#451A03" opacity="0.85">
+        <ellipse cx="0" cy="-7" rx="2.5" ry="4"/>
+        <ellipse cx="0" cy="7" rx="2.5" ry="4"/>
+        <ellipse cx="-7" cy="0" rx="4" ry="2.5"/>
+        <ellipse cx="7" cy="0" rx="4" ry="2.5"/>
+        <ellipse cx="-5" cy="-5" rx="2.5" ry="3.5" transform="rotate(45 -5 -5)"/>
+        <ellipse cx="5" cy="5" rx="2.5" ry="3.5" transform="rotate(45 5 5)"/>
+        <ellipse cx="5" cy="-5" rx="2.5" ry="3.5" transform="rotate(-45 5 -5)"/>
+        <ellipse cx="-5" cy="5" rx="2.5" ry="3.5" transform="rotate(-45 -5 5)"/>
+      </g>
+      <!-- Central Golden Pistil Pearl -->
+      <circle cx="0" cy="0" r="4.2" fill="#FEF08A" stroke="#78350F" stroke-width="0.8"/>
+      <circle cx="-1.2" cy="-1.2" r="1.5" fill="#FFFFFF"/>
+    </g>
 
     <!-- Specular Highlight Curve on Outer Crest -->
-    <path d="M 25 7 C 50 8, 75 16, 92 27" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.9" fill="none"/>
+    <path d="M 22 4 C 48 6, 75 14, 94 25" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" opacity="0.9" fill="none"/>
   </g>
 </svg>

@@ -8,6 +8,8 @@ import { SanayilesmeScene } from './scenes/modules/SanayilesmeScene';
 import { MilliTeknolojiScene } from './scenes/modules/MilliTeknolojiScene';
 import { UzayTeknolojileriScene } from './scenes/modules/UzayTeknolojileriScene';
 
+export { DEV_CONFIG, DEV_UNLOCK_ALL_LEVELS } from '../config/devConfig';
+
 export const createGameConfig = (parentContainerId: string): Phaser.Types.Core.GameConfig => ({
   type: Phaser.AUTO,
   parent: parentContainerId,

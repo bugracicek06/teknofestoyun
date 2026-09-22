@@ -1,21 +1,29 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 46" width="144" height="46">
   <defs>
-    <!-- Rich Corded Leather Gradient -->
-    <linearGradient id="gripLeatherGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#854018"/>
-      <stop offset="25%" stop-color="#5C260E"/>
-      <stop offset="55%" stop-color="#3B1708"/>
-      <stop offset="85%" stop-color="#240D04"/>
-      <stop offset="100%" stop-color="#140602"/>
+    <!-- Rich Dark Polished Walnut / Horn Wood Grain Gradient -->
+    <linearGradient id="walnutWoodGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#4a2411"/>
+      <stop offset="25%" stop-color="#321609"/>
+      <stop offset="55%" stop-color="#230d04"/>
+      <stop offset="85%" stop-color="#180802"/>
+      <stop offset="100%" stop-color="#0c0401"/>
     </linearGradient>
 
-    <!-- Brass Collar Gradient -->
-    <linearGradient id="ferruleBrassGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#FEF08A"/>
-      <stop offset="25%" stop-color="#F59E0B"/>
-      <stop offset="60%" stop-color="#B45309"/>
-      <stop offset="85%" stop-color="#78350F"/>
+    <!-- Brass Ferrule Ring Gradient -->
+    <linearGradient id="gripFerruleBrass" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFBEB"/>
+      <stop offset="20%" stop-color="#FEF08A"/>
+      <stop offset="50%" stop-color="#F59E0B"/>
+      <stop offset="80%" stop-color="#B45309"/>
       <stop offset="100%" stop-color="#451A03"/>
+    </linearGradient>
+
+    <!-- Gold Inlay (Kakma) Gradient -->
+    <linearGradient id="gripGoldInlay" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFBEB"/>
+      <stop offset="30%" stop-color="#FDE68A"/>
+      <stop offset="65%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#B45309"/>
     </linearGradient>
 
     <filter id="gripDropShadow" x="-10%" y="-20%" width="120%" height="150%">
@@ -24,48 +32,77 @@
   </defs>
 
   <g filter="url(#gripDropShadow)">
-    <!-- 1. Central Ergonomic Leather Grip Body -->
-    <!-- Gently flared towards ends: height 42 at edges, 38 at waist center -->
-    <path d="M 16 3 
-             Q 72 6, 128 3 
-             L 128 43 
-             Q 72 40, 16 43 
+    <!-- 1. Master Ergonomic Walnut Grip Body -->
+    <!-- Contoured profile: height 44px at joints, waist at 41px -->
+    <path d="M 14 1 
+             Q 72 3.5, 130 1 
+             L 130 45 
+             Q 72 42.5, 14 45 
              Z" 
-          fill="url(#gripLeatherGrad)" 
-          stroke="#1A0701" 
+          fill="url(#walnutWoodGrad)" 
+          stroke="#100502" 
           stroke-width="1.8"/>
 
-    <!-- 2. Diagonal Corded Leather Wrap Segments & Raised Ribs -->
-    <g stroke="#1A0701" stroke-width="2.5" opacity="0.8">
-      <line x1="28" y1="4" x2="42" y2="42"/>
-      <line x1="44" y1="4" x2="58" y2="42"/>
-      <line x1="60" y1="5" x2="74" y2="41"/>
-      <line x1="76" y1="5" x2="90" y2="41"/>
-      <line x1="92" y1="4" x2="106" y2="42"/>
-      <line x1="108" y1="4" x2="122" y2="42"/>
+    <!-- 2. Subtle Wood Texture Sheen -->
+    <path d="M 16 6 Q 72 8, 128 6" stroke="#854d0e" stroke-width="1" opacity="0.4" fill="none"/>
+    <path d="M 16 11 Q 72 13, 128 11" stroke="#fde68a" stroke-width="0.8" opacity="0.3" fill="none"/>
+
+    <!-- 3. Ottoman Traditional Gold Inlaid Floral Vines & Rosettes (Altın Kakma Çiçekler) -->
+    <!-- Matching the exact museum Yatagan hilt in the reference image -->
+    <g fill="none" stroke="url(#gripGoldInlay)">
+      <!-- Central Stem Sinuous Line -->
+      <path d="M 22 23 Q 45 18, 72 23 T 122 23" stroke-width="1.4"/>
+      <!-- Branch Leaflets -->
+      <path d="M 35 22 Q 40 14, 46 16" stroke-width="1.1"/>
+      <path d="M 42 24 Q 48 31, 54 28" stroke-width="1.1"/>
+      <path d="M 60 21 Q 65 14, 71 16" stroke-width="1.1"/>
+      <path d="M 73 24 Q 78 32, 85 29" stroke-width="1.1"/>
+      <path d="M 90 22 Q 96 14, 102 16" stroke-width="1.1"/>
+      <path d="M 98 24 Q 104 31, 110 29" stroke-width="1.1"/>
     </g>
 
-    <!-- Highlight Stitch / Gold Wire Binding along each rib -->
-    <g stroke="#D97706" stroke-width="1.2" opacity="0.85">
-      <line x1="29" y1="4" x2="43" y2="42"/>
-      <line x1="45" y1="4" x2="59" y2="42"/>
-      <line x1="61" y1="5" x2="75" y2="41"/>
-      <line x1="77" y1="5" x2="91" y2="41"/>
-      <line x1="93" y1="4" x2="107" y2="42"/>
-      <line x1="109" y1="4" x2="123" y2="42"/>
+    <!-- Inlaid Gold Rosettes (Petal Blossoms) -->
+    <!-- Blossom 1 (Left: X: 34) -->
+    <g transform="translate(34, 22)">
+      <circle cx="0" cy="0" r="4.2" fill="url(#gripGoldInlay)" stroke="#78350F" stroke-width="0.6"/>
+      <circle cx="0" cy="0" r="1.6" fill="#FFFFFF"/>
+      <circle cx="-3" cy="-3" r="1" fill="#FEF08A"/>
+      <circle cx="3" cy="-3" r="1" fill="#FEF08A"/>
+      <circle cx="-3" cy="3" r="1" fill="#FEF08A"/>
+      <circle cx="3" cy="3" r="1" fill="#FEF08A"/>
     </g>
 
-    <!-- Specular Ridge Sheen Line across Top Surface -->
-    <path d="M 18 8 Q 72 10, 126 8" stroke="#FDE68A" stroke-width="1.2" opacity="0.65" fill="none"/>
+    <!-- Blossom 2 (Center: X: 72) -->
+    <g transform="translate(72, 23)">
+      <circle cx="0" cy="0" r="5.2" fill="url(#gripGoldInlay)" stroke="#78350F" stroke-width="0.7"/>
+      <circle cx="0" cy="0" r="2.0" fill="#FFFFFF"/>
+      <circle cx="-4" cy="0" r="1.2" fill="#FEF08A"/>
+      <circle cx="4" cy="0" r="1.2" fill="#FEF08A"/>
+      <circle cx="0" cy="-4" r="1.2" fill="#FEF08A"/>
+      <circle cx="0" cy="4" r="1.2" fill="#FEF08A"/>
+    </g>
 
-    <!-- 3. Left Brass Ferrule Ring (Meets Crossguard) -->
-    <rect x="2" y="1" width="14" height="44" rx="3" fill="url(#ferruleBrassGrad)" stroke="#78350F" stroke-width="1.5"/>
-    <line x1="6" y1="3" x2="6" y2="43" stroke="#FEF08A" stroke-width="1.2" opacity="0.8"/>
-    <line x1="11" y1="3" x2="11" y2="43" stroke="#451A03" stroke-width="1.2" opacity="0.7"/>
+    <!-- Blossom 3 (Right: X: 110) -->
+    <g transform="translate(110, 23)">
+      <circle cx="0" cy="0" r="4.2" fill="url(#gripGoldInlay)" stroke="#78350F" stroke-width="0.6"/>
+      <circle cx="0" cy="0" r="1.6" fill="#FFFFFF"/>
+      <circle cx="-3" cy="-3" r="1" fill="#FEF08A"/>
+      <circle cx="3" cy="-3" r="1" fill="#FEF08A"/>
+      <circle cx="-3" cy="3" r="1" fill="#FEF08A"/>
+      <circle cx="3" cy="3" r="1" fill="#FEF08A"/>
+    </g>
 
-    <!-- 4. Right Brass Ferrule Ring (Meets Pommel) -->
-    <rect x="128" y="1" width="14" height="44" rx="3" fill="url(#ferruleBrassGrad)" stroke="#78350F" stroke-width="1.5"/>
-    <line x1="132" y1="3" x2="132" y2="43" stroke="#FEF08A" stroke-width="1.2" opacity="0.8"/>
-    <line x1="137" y1="3" x2="137" y2="43" stroke="#451A03" stroke-width="1.2" opacity="0.7"/>
+    <!-- Specular Highlight Ridge on Top Edge -->
+    <path d="M 16 4 Q 72 6, 128 4" stroke="#FFFFFF" stroke-width="1.2" opacity="0.65" fill="none"/>
+
+    <!-- 4. Left Brass Ferrule Collar Ring (Meets Crossguard) -->
+    <rect x="2" y="1" width="12" height="44" rx="2" fill="url(#gripFerruleBrass)" stroke="#78350F" stroke-width="1.4"/>
+    <line x1="5" y1="3" x2="5" y2="43" stroke="#FEF08A" stroke-width="1.2" opacity="0.85"/>
+    <line x1="10" y1="3" x2="10" y2="43" stroke="#451A03" stroke-width="1.2" opacity="0.75"/>
+
+    <!-- 5. Right Brass Ferrule Collar Ring (Meets Pommel with Exact Zero-Gap Alignment) -->
+    <rect x="130" y="1" width="12" height="44" rx="2" fill="url(#gripFerruleBrass)" stroke="#78350F" stroke-width="1.4"/>
+    <line x1="133" y1="3" x2="133" y2="43" stroke="#FEF08A" stroke-width="1.2" opacity="0.85"/>
+    <line x1="138" y1="3" x2="138" y2="43" stroke="#451A03" stroke-width="1.2" opacity="0.75"/>
   </g>
 </svg>

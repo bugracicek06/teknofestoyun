@@ -35,10 +35,10 @@ export const GAME_MODULES: GameModuleInfo[] = [
   {
     id: 'sanayilesme',
     sceneKey: SceneKeys.SANAYILESME,
-    title: 'Mühendislik – Mekanizmayı Kur',
-    era: 'Mekanik Güç & Dişli Aktarımı',
-    description: 'Büyükten küçüğe dişli aktarımı, tork dönüşümü ve modern sanayileşme.',
-    icon: '⚙️',
+    title: 'Bilim ve Sanayileşme – Geleceği Üreten Türkiye',
+    era: 'Devrim Otomobili & Yerli Üretim',
+    description: '1961 Devrim otomobilinin motorunu adım adım inşa et ve çalıştır.',
+    icon: '🚗',
     accentColor: 0x00f2fe, // Turkuaz / Mühendislik Mavisi
     hexColor: '#00F2FE',
   },
