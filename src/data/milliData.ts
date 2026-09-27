@@ -28,23 +28,23 @@ export const MILLI_STAGES: MilliStage[] = [
   },
   {
     id: 3,
-    title: 'ROTANI BELİRLE',
-    subtitle: 'GÜVENLİ, ETKİLİ VE DOĞRU ROTA',
+    title: 'ROTANI BELİRLE VE GÖKYÜZÜNE YÜKSEL',
+    subtitle: 'GÜVENLİ ROTA, KESİNTİSİZ UÇUŞ',
     parchmentText:
-      "İHA'nı kalkış noktasından görev bölgesine ulaştırmak için harita üzerinde kontrol noktalarını seçerek bir uçuş rotası oluştur.",
-    taskBadge: 'Harita üzerinde sırayla 4 kontrol noktası seçerek rotanı tamamla.',
+      "İHA'nı kalkış noktasından görev bölgesine ulaştırmak için kontrol noktalarını sırayla seçerek rotanı oluştur, ardından uçağının gökyüzünde süzülüşünü izle.",
+    taskBadge: '4 kontrol noktasını bağla ve İHA’nı görev sahasına uçur.',
     kasifText:
-      "Kontrol noktalarını sırayla seçerek İHA'nın uçuş rotasını oluştur. Rota ne kadar iyi olursa görev o kadar başarılı olur!",
+      "Harika! Rotanı belirle ve gökyüzüne yüksel. İHA'nın görev bölgesine ulaşmasını canlı takip et!",
   },
   {
     id: 4,
-    title: 'GÖKYÜZÜNE YÜKSEL',
-    subtitle: 'ROTANI TAKİP ET, GÖREV BÖLGESİNE ULAŞ',
+    title: 'GÖREVİ TAMAMLA',
+    subtitle: 'BAŞARILI GÖREV, GÜVENLİ YARINLAR',
     parchmentText:
-      "İHA'n şimdi kalkış yapıyor ve belirlediğin rotayı takip ederek görev bölgesine doğru ilerliyor. Ekrandaki bilgileri takip et ve İHA'nın görev rotasını tamamlamasını izle.",
-    taskBadge: "İHA'nın güvenli şekilde kalkış yapmasını ve rotayı takip ederek görev bölgesine ulaşmasını izle.",
+      "Pamukkale Üniversitesi sivil gözlem İHA'sı belirlenen rotayı başarıyla tamamladı ve erken uyarı verilerini aktardı. Görevi tamamlayarak başarı sertifikanı alabilirsin.",
+    taskBadge: 'Tüm aşamalar tamamlandı. Görev raporunu ve sertifikanı incele.',
     kasifText:
-      "Harika! İHA'n başarılı bir şekilde havalandı. Şimdi rotayı takip ederek görev bölgesine ilerliyor.",
+      'Tebrikler Kaşif! İHA görevini eksiksiz tamamladı. Millî teknoloji hamlesine katkın için teşekkürler!',
   },
 ];
 
@@ -137,9 +137,12 @@ export const IHA_PARTS: IhaPart[] = [
   },
 ];
 
+export type MilliSensorId = 'elektro_optik' | 'termal' | 'multispektral';
+
 export interface MissionSensor {
-  id: 'termal' | 'lidar' | 'multispektral';
+  id: MilliSensorId;
   name: string;
+  cardTitle: string;
   code: string;
   role: string;
   shortDesc: string;
@@ -151,35 +154,50 @@ export interface MissionSensor {
 
 export const MISSION_SENSORS: MissionSensor[] = [
   {
-    id: 'termal',
-    name: 'Termal Kamera (FLIR)',
-    code: 'FLIR-T600',
-    role: 'Isı Değişimlerini Gözlemleme',
-    shortDesc: 'Sıcaklık farklarını tespit ederek orman yangınlarını erken fark etmeyi sağlar.',
-    badge: 'Yüksek Sıcaklık Tespiti',
-    features: ['Kızılötesi görüntüleme', 'Sıcak nokta tespiti', 'Erken uyarı imkanı'],
-    color: '#FF6B00',
-    image: '/assets/milli/sensor_thermal.jpg',
-  },
-  {
-    id: 'lidar',
-    name: 'LiDAR & Gece Görüş',
-    code: 'LIDAR-3DX',
-    role: 'Arazi ve Çevre Algılama',
-    shortDesc: 'Lazer tarama ile arazinin 3 boyutlu yüzey modelini ve gece haritasını çıkarır.',
-    badge: '3D Yüzey Haritalama',
-    features: ['3D yüzey haritalama', 'Sıfır ışıkta algılama', 'Hassas yükseklik tespiti'],
+    id: 'elektro_optik',
+    name: 'Elektro-Optik Sensör',
+    cardTitle: 'ELEKTRO-OPTİK',
+    code: 'EO-CAM4K',
+    role: 'Gündüz Keşif ve Yüksek Çözünürlüklü Optik',
+    shortDesc: 'Yüksek çözünürlüklü görüntüleme, keşif, gözlem ve haritalama görevleri için kullanılır.',
+    badge: 'Yüksek Çözünürlüklü Optik',
+    features: [
+      'Yüksek çözünürlüklü görüntüleme',
+      'Keşif ve gözlem',
+      'Haritalama ve analiz',
+    ],
     color: '#00F2FE',
     image: '/assets/milli/sensor_lidar.jpg',
   },
   {
+    id: 'termal',
+    name: 'Termal Sensör',
+    cardTitle: 'TERMAL',
+    code: 'FLIR-T600',
+    role: 'Kızılötesi & Isı Tabanlı Algılama',
+    shortDesc: 'Düşük görüş koşullarında ısı farklarını tespit ederek gece ve zorlu şartlarda gözetleme sağlar.',
+    badge: 'Kızılötesi Isı Algılama',
+    features: [
+      'Düşük görüş koşullarında algılama',
+      'Isı tabanlı görüntüleme',
+      'Arama ve tespit',
+    ],
+    color: '#FF6B00',
+    image: '/assets/milli/sensor_thermal.jpg',
+  },
+  {
     id: 'multispektral',
-    name: 'Multispektral Kamera',
+    name: 'Multispektral Sensör',
+    cardTitle: 'MULTİSPEKTRAL',
     code: 'SPEC-NDVI',
-    role: 'Bitki Örtüsü ve Çevresel Gözlem',
-    shortDesc: 'Geniş spektrum dalga boylarıyla bitki sağlığını, klorofil ve kuraklığı inceler.',
-    badge: 'Bitki Sağlığı İndeksi',
-    features: ['Klorofil analizi', 'Bitki sağlığı haritası', 'Çevresel değişim takibi'],
+    role: 'Bitki Örtüsü ve Çevre Analizi',
+    shortDesc: 'Farklı spektral bantların incelenmesiyle tarımsal analiz, bitki sağlığı ve çevresel gözlem yapar.',
+    badge: 'Çok Bantlı Spektral Analiz',
+    features: [
+      'Bitki ve çevre analizi',
+      'Farklı spektral bantların incelenmesi',
+      'Çevresel gözlem',
+    ],
     color: '#10B981',
     image: '/assets/milli/sensor_multispectral.jpg',
   },

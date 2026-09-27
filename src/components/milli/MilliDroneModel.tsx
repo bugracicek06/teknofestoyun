@@ -325,8 +325,9 @@ export const DroneMotorGeometry: React.FC<{
   isMold?: boolean;
   isTargeted?: boolean;
   isMagneticNear?: boolean;
+  isSpinning?: boolean;
   style?: React.CSSProperties;
-}> = ({ isMold = false, isTargeted = false, isMagneticNear = false, style }) => {
+}> = ({ isMold = false, isTargeted = false, isMagneticNear = false, isSpinning = false, style }) => {
   if (isMold) {
     const strokeColor = isMagneticNear ? '#14E6B4' : isTargeted ? '#00F2FE' : 'rgba(0, 230, 245, 0.9)';
     const fillColor = isMagneticNear
@@ -393,25 +394,69 @@ export const DroneMotorGeometry: React.FC<{
       {/* Rear Spinner Cone Hub */}
       <polygon points="566,186 592,200 566,214" fill="url(#carbonMaterial)" stroke="#00F2FE" strokeWidth={1.2} />
 
-      {/* Carbon Propeller Blade 1 (Upper) */}
-      <path
-        d="M 580,194 Q 594,136 602,98 Q 610,102 608,114 Q 598,150 582,200 Z"
-        fill="url(#bladeBevelGrad)"
-        stroke="#475569"
-        strokeWidth={1.2}
-      />
-      {/* Blade 1 High-Visibility Gold Safety Tip */}
-      <path d="M 598,118 L 602,98 Q 610,102 608,114 L 602,128 Z" fill="#F59E0B" />
+      {/* Propeller Rendering: High-Speed Motion-Blur Disc during flight, or stationary blades on ground */}
+      {isSpinning ? (
+        <g id="propeller-spinning-disc">
+          {/* Subtle Pusher Prop Exhaust Wake */}
+          <path
+            d="M 590,195 L 635,188 L 635,212 L 590,205 Z"
+            fill="rgba(0, 242, 254, 0.25)"
+            filter="blur(4px)"
+          />
+          {/* High Velocity Outer Propeller Blur Disc */}
+          <ellipse
+            cx="582"
+            cy="200"
+            rx="7"
+            ry="96"
+            fill="rgba(30, 41, 59, 0.4)"
+            stroke="rgba(0, 242, 254, 0.65)"
+            strokeWidth="1.5"
+          />
+          {/* High-Visibility Golden Tip Streak Blur Rings */}
+          <ellipse
+            cx="582"
+            cy="200"
+            rx="5"
+            ry="92"
+            fill="rgba(245, 158, 11, 0.18)"
+            stroke="rgba(245, 158, 11, 0.7)"
+            strokeWidth="1.2"
+            strokeDasharray="14 10"
+          />
+          {/* Inner Fast Rotation Blade Core */}
+          <ellipse
+            cx="582"
+            cy="200"
+            rx="3"
+            ry="72"
+            fill="rgba(255, 255, 255, 0.3)"
+            filter="blur(1.5px)"
+          />
+        </g>
+      ) : (
+        <>
+          {/* Carbon Propeller Blade 1 (Upper) */}
+          <path
+            d="M 580,194 Q 594,136 602,98 Q 610,102 608,114 Q 598,150 582,200 Z"
+            fill="url(#bladeBevelGrad)"
+            stroke="#475569"
+            strokeWidth={1.2}
+          />
+          {/* Blade 1 High-Visibility Gold Safety Tip */}
+          <path d="M 598,118 L 602,98 Q 610,102 608,114 L 602,128 Z" fill="#F59E0B" />
 
-      {/* Carbon Propeller Blade 2 (Lower) */}
-      <path
-        d="M 580,208 Q 594,256 602,286 Q 610,282 608,270 Q 598,238 582,202 Z"
-        fill="url(#bladeBevelGrad)"
-        stroke="#475569"
-        strokeWidth={1.2}
-      />
-      {/* Blade 2 High-Visibility Gold Safety Tip */}
-      <path d="M 598,264 L 602,286 Q 610,282 608,270 L 602,254 Z" fill="#F59E0B" />
+          {/* Carbon Propeller Blade 2 (Lower) */}
+          <path
+            d="M 580,208 Q 594,256 602,286 Q 610,282 608,270 Q 598,238 582,202 Z"
+            fill="url(#bladeBevelGrad)"
+            stroke="#475569"
+            strokeWidth={1.2}
+          />
+          {/* Blade 2 High-Visibility Gold Safety Tip */}
+          <path d="M 598,264 L 602,286 Q 610,282 608,270 L 602,254 Z" fill="#F59E0B" />
+        </>
+      )}
 
       {/* Central Hub Hex Bolt */}
       <circle cx="582" cy="200" r="4.5" fill="#E2E8F0" stroke="#00F2FE" strokeWidth={1.2} />
@@ -626,3 +671,37 @@ export const DronePartCardVisual: React.FC<{
     </svg>
   );
 };
+
+/**
+ * ============================================================================
+ * 7. COMPLETE ASSEMBLED CIVILIAN UAV (100% Shared Across Stages 1, 2, 3)
+ * Exact geometry, materials, Pamukkale Üniversitesi identity
+ * Supports spinning propeller for flight animation mode
+ * ============================================================================
+ */
+export const CompletedDroneSvg: React.FC<{
+  isSpinning?: boolean;
+  className?: string;
+  style?: React.CSSProperties;
+}> = ({ isSpinning = false, className = '', style }) => (
+  <svg
+    viewBox="0 0 1000 500"
+    className={`completed-uav-svg ${className}`}
+    style={{
+      width: '100%',
+      height: '100%',
+      overflow: 'visible',
+      filter: 'drop-shadow(0 16px 36px rgba(0, 0, 0, 0.85))',
+      ...style,
+    }}
+  >
+    <DroneSvgDefs />
+    <DroneWingGeometry section="right" />
+    <DroneTailGeometry />
+    <DroneFuselageGeometry />
+    <DroneLandingGearGeometry />
+    <DroneWingGeometry section="left" />
+    <DroneMotorGeometry isSpinning={isSpinning} />
+  </svg>
+);
+

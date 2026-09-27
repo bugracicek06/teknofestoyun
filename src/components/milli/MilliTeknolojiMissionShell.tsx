@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { MILLI_STAGES, MISSION_SENSORS, WAYPOINTS, type WaypointPoint, FOOTER_QUOTE_MILLI } from '../../data/milliData';
+import { MILLI_STAGES, MISSION_SENSORS, WAYPOINTS, type WaypointPoint, type MilliSensorId } from '../../data/milliData';
 import { MilliStage1Assembly } from './MilliStage1Assembly';
 import { MilliStage2Payload } from './MilliStage2Payload';
 import { MilliStage3Route } from './MilliStage3Route';
@@ -30,17 +30,23 @@ export const MilliTeknolojiMissionShell: React.FC<MilliTeknolojiMissionShellProp
   onToggleFullscreen,
   onNextMission,
 }) => {
-  // Exactly 4 Stages: 1 = Tasarla, 2 = Modül Seç, 3 = Rota Belirle, 4 = Gökyüzüne Yüksel
+  // Exactly 4 Stages: 1 = Tasarla, 2 = Modül Seç, 3 = Rota Belirle ve Gökyüzüne Yüksel, 4 = Görevi Tamamla
   const [currentStage, setCurrentStage] = useState<1 | 2 | 3 | 4>(1);
-  const [selectedSensorId, setSelectedSensorId] = useState<'termal' | 'lidar' | 'multispektral'>('termal');
+  const [stage2SelectedSensorId, setStage2SelectedSensorId] = useState<MilliSensorId | null>(null);
+  const [selectedSensorId, setSelectedSensorId] = useState<MilliSensorId>('elektro_optik');
   const [, setConfirmedWaypoints] = useState<WaypointPoint[]>(WAYPOINTS);
+  const [stage3FlightState, setStage3FlightState] = useState<{
+    isReady: boolean;
+    isFlying: boolean;
+    isCompleted: boolean;
+  }>({ isReady: false, isFlying: false, isCompleted: false });
+  const [stage3TriggerFlight, setStage3TriggerFlight] = useState<boolean>(false);
   const [isModuleFinished, setIsModuleFinished] = useState<boolean>(false);
   const [stage1PlacedCount, setStage1PlacedCount] = useState<number>(0);
 
   const startTimeRef = useRef<number>(Date.now());
   const completedRef = useRef<boolean>(false);
 
-  const stageConfig = MILLI_STAGES.find(s => s.id === currentStage) || MILLI_STAGES[0];
   const selectedSensor = MISSION_SENSORS.find(s => s.id === selectedSensorId) || MISSION_SENSORS[0];
 
   const handleFinishModule = () => {
@@ -154,7 +160,7 @@ export const MilliTeknolojiMissionShell: React.FC<MilliTeknolojiMissionShellProp
           position: 'absolute',
           inset: 0,
           background:
-            currentStage === 1
+            currentStage <= 2
               ? 'radial-gradient(ellipse at center, rgba(3, 10, 22, 0.40) 35%, rgba(2, 8, 18, 0.58) 100%)'
               : 'radial-gradient(circle at 50% 50%, rgba(4, 9, 20, 0.2) 0%, rgba(4, 9, 20, 0.75) 100%)',
           pointerEvents: 'none',
@@ -243,7 +249,11 @@ export const MilliTeknolojiMissionShell: React.FC<MilliTeknolojiMissionShellProp
               >
                 {currentStage === 1
                   ? "1. ETAP: İHA'NI TASARLA"
-                  : `GÖREV: SİVİL GÖZLEM VE ERKEN UYARI (AŞAMA ${currentStage}/4)`}
+                  : currentStage === 2
+                  ? '2. ETAP: GÖREV MODÜLÜNÜ SEÇ'
+                  : currentStage === 3
+                  ? '3. ETAP: ROTANI BELİRLE VE GÖKYÜZÜNE YÜKSEL'
+                  : '4. ETAP: GÖREVİ TAMAMLA'}
               </div>
             </div>
           </div>
@@ -349,150 +359,12 @@ export const MilliTeknolojiMissionShell: React.FC<MilliTeknolojiMissionShellProp
           position: 'relative',
           flex: 1,
           display: 'flex',
-          padding: currentStage === 1 ? 0 : '16px 24px',
-          gap: currentStage === 1 ? 0 : '20px',
+          padding: 0,
+          gap: 0,
           minHeight: 0,
           zIndex: 10,
         }}
       >
-        {/* Left Parchment Mission Info Panel (for stages 2, 3, 4) */}
-        {currentStage > 1 && (
-          <aside
-            style={{
-              width: '320px',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              gap: '14px',
-              flexShrink: 0,
-              zIndex: 15,
-            }}
-          >
-          {/* Main Parchment Card */}
-          <div
-            style={{
-              background: '#FAF6EF',
-              color: '#1E293B',
-              borderRadius: '18px',
-              padding: '22px',
-              boxShadow: '0 12px 30px rgba(0, 0, 0, 0.45)',
-              border: '1px solid #E2D9C8',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '12px',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div
-                style={{
-                  width: '12px',
-                  height: '12px',
-                  borderRadius: '50%',
-                  background: '#F59E0B',
-                }}
-              />
-              <span style={{ fontSize: '18px', color: '#64748B' }}>⚙️</span>
-            </div>
-
-            <div>
-              <div
-                style={{
-                  fontSize: '20px',
-                  fontWeight: 900,
-                  color: '#0F172A',
-                  letterSpacing: '0.5px',
-                }}
-              >
-                {stageConfig.title}
-              </div>
-              <div
-                style={{
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  color: '#0284C7',
-                  letterSpacing: '0.6px',
-                  marginTop: '2px',
-                }}
-              >
-                {stageConfig.subtitle}
-              </div>
-            </div>
-
-            <p
-              style={{
-                fontSize: '13px',
-                color: '#334155',
-                lineHeight: '1.5',
-                margin: 0,
-              }}
-            >
-              {stageConfig.parchmentText}
-            </p>
-
-            {/* Target Mission Badge Box */}
-            <div
-              style={{
-                marginTop: '4px',
-                background: '#F5EBE1',
-                borderRadius: '12px',
-                padding: '12px',
-                border: '1px solid #E5D5C0',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '4px',
-              }}
-            >
-              <div
-                style={{
-                  fontSize: '11px',
-                  fontWeight: 800,
-                  color: '#D97706',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <span>🎯</span>
-                <span>GÖREV</span>
-              </div>
-              <div style={{ fontSize: '12px', color: '#1E293B', fontWeight: 600 }}>
-                {stageConfig.taskBadge}
-              </div>
-            </div>
-          </div>
-
-          {/* Kaşif Robot Mascot Speech Bubble */}
-          <div
-            style={{
-              background: 'rgba(6, 16, 36, 0.88)',
-              border: '1px solid rgba(0, 242, 254, 0.35)',
-              borderRadius: '16px',
-              padding: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              backdropFilter: 'blur(12px)',
-              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
-            }}
-          >
-            <img
-              src="/assets/kasif_3d.png"
-              alt="Kaşif"
-              style={{ width: '48px', height: '48px', objectFit: 'contain', flexShrink: 0 }}
-            />
-            <div
-              style={{
-                fontSize: '12px',
-                color: '#FFFFFF',
-                lineHeight: '1.4',
-                fontWeight: 500,
-              }}
-            >
-              {stageConfig.kasifText}
-            </div>
-          </div>
-        </aside>
-        )}
 
         {/* Center / Right Stage Content */}
         <section
@@ -517,16 +389,22 @@ export const MilliTeknolojiMissionShell: React.FC<MilliTeknolojiMissionShellProp
 
           {currentStage === 2 && (
             <MilliStage2Payload
-              onComplete={sensorId => {
-                SoundFx.playSuccessTone();
-                setSelectedSensorId(sensorId);
-                setCurrentStage(3);
+              selectedSensorId={stage2SelectedSensorId}
+              onSelectSensor={setStage2SelectedSensorId}
+              onComplete={() => {
+                if (stage2SelectedSensorId) {
+                  SoundFx.playSuccessTone();
+                  setSelectedSensorId(stage2SelectedSensorId);
+                  setCurrentStage(3);
+                }
               }}
             />
           )}
 
           {currentStage === 3 && (
             <MilliStage3Route
+              onFlightStateChange={setStage3FlightState}
+              triggerFlight={stage3TriggerFlight}
               onComplete={waypoints => {
                 SoundFx.playSuccessTone();
                 setConfirmedWaypoints(waypoints);
@@ -624,23 +502,33 @@ export const MilliTeknolojiMissionShell: React.FC<MilliTeknolojiMissionShellProp
                   </div>
 
                   {/* Step Label */}
-                  <span
+                  <div
                     style={{
-                      fontSize: '12px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      fontSize: stage.id === 3 ? '10.5px' : '12px',
                       fontWeight: isActive ? 800 : 600,
                       color: isActive ? '#FDE68A' : isCompleted ? '#34D399' : 'rgba(255, 255, 255, 0.65)',
                       letterSpacing: '0.4px',
+                      lineHeight: '1.2',
                     }}
                   >
-                    {stage.title}
-                  </span>
+                    {stage.id === 3 ? (
+                      <>
+                        <span>ROTANI BELİRLE VE</span>
+                        <span>GÖKYÜZÜNE YÜKSEL</span>
+                      </>
+                    ) : (
+                      <span>{stage.title}</span>
+                    )}
+                  </div>
                 </div>
               </React.Fragment>
             );
           })}
         </div>
 
-        {/* Footer Right Side: Stage 1 Next Button (Matching Reference) or Quote */}
+        {/* Footer Right Side: Stage Next Buttons */}
         {currentStage === 1 ? (
           <button
             id="milli-stage1-next-btn"
@@ -673,21 +561,134 @@ export const MilliTeknolojiMissionShell: React.FC<MilliTeknolojiMissionShellProp
             <span>Görev Modülünü Seç</span>
             <span style={{ fontSize: '15px' }}>→</span>
           </button>
-        ) : (
-          <div
+        ) : currentStage === 2 ? (
+          <button
+            id="milli-stage2-next-btn"
+            disabled={!stage2SelectedSensorId}
+            onClick={() => {
+              if (stage2SelectedSensorId) {
+                SoundFx.playSuccessTone();
+                setSelectedSensorId(stage2SelectedSensorId);
+                setCurrentStage(3);
+              }
+            }}
             style={{
+              padding: '10px 22px',
+              borderRadius: '10px',
+              border: stage2SelectedSensorId ? '1px solid #FDE68A' : '1px solid rgba(255, 255, 255, 0.15)',
+              background: stage2SelectedSensorId
+                ? 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)'
+                : 'rgba(55, 65, 81, 0.55)',
+              color: stage2SelectedSensorId ? '#FFFFFF' : 'rgba(255, 255, 255, 0.45)',
+              fontWeight: 800,
+              fontSize: '13px',
+              letterSpacing: '0.4px',
+              cursor: stage2SelectedSensorId ? 'pointer' : 'not-allowed',
+              boxShadow: stage2SelectedSensorId ? '0 0 20px rgba(245, 158, 11, 0.5)' : 'none',
               display: 'flex',
               alignItems: 'center',
-              gap: '10px',
-              fontSize: '12px',
-              fontWeight: 600,
-              color: 'rgba(0, 242, 254, 0.85)',
-              letterSpacing: '0.5px',
+              gap: '8px',
+              transition: 'all 0.3s ease',
             }}
           >
-            <span>{FOOTER_QUOTE_MILLI}</span>
-            <span>✈️</span>
-          </div>
+            <span>Rotanı Belirle</span>
+            <span style={{ fontSize: '15px' }}>→</span>
+          </button>
+        ) : currentStage === 3 ? (
+          stage3FlightState.isCompleted ? (
+            <button
+              id="milli-stage3-next-btn"
+              onClick={() => {
+                SoundFx.playSuccessTone();
+                handleFinishModule();
+              }}
+              style={{
+                padding: '10px 22px',
+                borderRadius: '10px',
+                border: '1px solid #6EE7B7',
+                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                color: '#FFFFFF',
+                fontWeight: 800,
+                fontSize: '13px',
+                letterSpacing: '0.4px',
+                cursor: 'pointer',
+                boxShadow: '0 0 20px rgba(16, 185, 129, 0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.3s ease',
+              }}
+            >
+              <span>6. Bölüme Geç</span>
+              <span style={{ fontSize: '15px' }}>→</span>
+            </button>
+          ) : (
+            <button
+              id="milli-stage3-fly-btn"
+              disabled={!stage3FlightState.isReady || stage3FlightState.isFlying}
+              onClick={() => {
+                if (stage3FlightState.isReady && !stage3FlightState.isFlying) {
+                  setStage3TriggerFlight(true);
+                }
+              }}
+              style={{
+                padding: '10px 22px',
+                borderRadius: '10px',
+                border: stage3FlightState.isReady
+                  ? '1px solid #FDE68A'
+                  : '1px solid rgba(255, 255, 255, 0.15)',
+                background: stage3FlightState.isReady
+                  ? 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)'
+                  : 'rgba(55, 65, 81, 0.55)',
+                color: stage3FlightState.isReady ? '#FFFFFF' : 'rgba(255, 255, 255, 0.45)',
+                fontWeight: 800,
+                fontSize: '13px',
+                letterSpacing: '0.4px',
+                cursor:
+                  stage3FlightState.isReady && !stage3FlightState.isFlying
+                    ? 'pointer'
+                    : 'not-allowed',
+                boxShadow: stage3FlightState.isReady
+                  ? '0 0 20px rgba(245, 158, 11, 0.5)'
+                  : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.3s ease',
+              }}
+            >
+              <span>
+                {stage3FlightState.isFlying
+                  ? 'Uçuş Devam Ediyor...'
+                  : 'Rotayı Onayla ve Uçuşa Geç'}
+              </span>
+              <span style={{ fontSize: '15px' }}>→</span>
+            </button>
+          )
+        ) : (
+          <button
+            id="milli-stage4-finish-btn"
+            onClick={handleFinishModule}
+            style={{
+              padding: '10px 22px',
+              borderRadius: '10px',
+              border: '1px solid #6EE7B7',
+              background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+              color: '#FFFFFF',
+              fontWeight: 800,
+              fontSize: '13px',
+              letterSpacing: '0.4px',
+              cursor: 'pointer',
+              boxShadow: '0 0 20px rgba(16, 185, 129, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.3s ease',
+            }}
+          >
+            <span>6. Bölüme Geç</span>
+            <span style={{ fontSize: '15px' }}>→</span>
+          </button>
         )}
       </footer>
     </div>

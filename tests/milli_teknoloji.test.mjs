@@ -27,8 +27,8 @@ test('Module 5: Exactly 4 stages exist in sequential order', () => {
 
   assert.equal(MILLI_STAGES[0].title, "İHA'NI TASARLA");
   assert.equal(MILLI_STAGES[1].title, 'GÖREV MODÜLÜNÜ SEÇ');
-  assert.equal(MILLI_STAGES[2].title, 'ROTANI BELİRLE');
-  assert.equal(MILLI_STAGES[3].title, 'GÖKYÜZÜNE YÜKSEL');
+  assert.equal(MILLI_STAGES[2].title, 'ROTANI BELİRLE VE GÖKYÜZÜNE YÜKSEL');
+  assert.equal(MILLI_STAGES[3].title, 'GÖREVİ TAMAMLA');
 });
 
 test('Module 5: Strictly NO combat, weapons, bombs, or firefighting mechanics in data', () => {
@@ -70,10 +70,10 @@ test('Module 5: Exactly 4 İHA assembly parts exist with valid schema', () => {
   }
 });
 
-test('Module 5: Exactly 3 civilian mission sensors exist (Termal, LiDAR, Multispektral)', () => {
+test('Module 5: Exactly 3 civilian mission sensors exist (Elektro-Optik, Termal, Multispektral)', () => {
   assert.equal(MISSION_SENSORS.length, 3, 'Must have exactly 3 civilian sensors');
   const sensorIds = MISSION_SENSORS.map(s => s.id);
-  assert.deepEqual(sensorIds, ['termal', 'lidar', 'multispektral']);
+  assert.deepEqual(sensorIds, ['elektro_optik', 'termal', 'multispektral']);
 
   for (const sensor of MISSION_SENSORS) {
     assert.ok(sensor.features.length >= 3, 'Each sensor must have at least 3 features');
@@ -104,7 +104,7 @@ test('Module 5: Background and 3D UAV assets exist on disk in public directory',
     'public/assets/milli/pau_aerial_bg.jpg',
     'public/assets/milli/uav_fuselage.png',
     'public/assets/milli/uav_assembled.png',
-    'public/assets/milli/uav_flight.png',
+    'public/assets/milli/uav_flight_stage3.png',
   ];
 
   for (const fileRel of requiredFiles) {
