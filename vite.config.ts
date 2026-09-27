@@ -157,7 +157,30 @@ function devCertificateApiPlugin(): Plugin {
   };
 }
 
+import { execSync } from 'node:child_process';
+
+function commitHashPlugin(): Plugin {
+  let commit = process.env.COMMIT_REF || '';
+  if (!commit) {
+    try {
+      commit = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
+    } catch {
+      commit = 'unknown';
+    }
+  }
+  const buildTime = new Date().toISOString();
+  return {
+    name: 'commit-hash-meta',
+    transformIndexHtml(html) {
+      return html.replace(
+        '</head>',
+        `    <meta name="build-commit" content="${commit}" />\n    <meta name="build-time" content="${buildTime}" />\n  </head>`
+      );
+    },
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), devCertificateApiPlugin()],
+  plugins: [react(), devCertificateApiPlugin(), commitHashPlugin()],
 });
