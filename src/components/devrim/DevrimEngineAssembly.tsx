@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { DEVRIM_ENGINE_PARTS, type DevrimEnginePart } from '../../data/devrimData';
-import { DevrimEnginePartSvg } from './DevrimEnginePartsSVGs';
+import { DevrimEnginePartSvg, DevrimEngineBayScene } from './DevrimEnginePartsSVGs';
 import { SoundFx } from '../../game/utils/audio';
+import { shuffleArray } from '../../utils/shuffle';
 
 interface DevrimEngineAssemblyProps {
   onComplete: () => void;
   onPartPlaced?: (partId: string) => void;
+  onFeedbackMessage?: (msg: string) => void;
 }
 
 interface DragState {
@@ -15,19 +17,27 @@ interface DragState {
   startY: number;
   currentX: number;
   currentY: number;
-  originRect: DOMRect;
 }
 
 export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
   onComplete,
   onPartPlaced,
+  onFeedbackMessage,
 }) => {
+  // Stable shuffled tray order: randomized ONCE on initial mount via Fisher-Yates
+  const [shuffledParts] = useState<DevrimEnginePart[]>(() => shuffleArray(DEVRIM_ENGINE_PARTS));
+
   const [placedPartIds, setPlacedPartIds] = useState<string[]>([]);
   const [justSnappedPartId, setJustSnappedPartId] = useState<string | null>(null);
+  const [shakingPartId, setShakingPartId] = useState<string | null>(null);
   const [selectedPartId, setSelectedPartId] = useState<string | null>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [hoveredSlotId, setHoveredSlotId] = useState<string | null>(null);
   const [isAllCompleted, setIsAllCompleted] = useState(false);
+  const [hasInteracted, setHasInteracted] = useState(false);
+
+  // Local Kaşif dialogue bubble text
+  const [kasifText, setKasifText] = useState('Parçaları sürükle ve doğru yuvalara bırak!');
 
   const stageRef = useRef<HTMLDivElement>(null);
   const slotRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -38,15 +48,28 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
   const onPartPlacedRef = useRef(onPartPlaced);
   onPartPlacedRef.current = onPartPlaced;
 
+  const onFeedbackMessageRef = useRef(onFeedbackMessage);
+  onFeedbackMessageRef.current = onFeedbackMessage;
+
   const completionTriggeredRef = useRef(false);
   const completionTimerRef = useRef<number | null>(null);
+  const shakeTimerRef = useRef<number | null>(null);
+  const feedbackTimerRef = useRef<number | null>(null);
 
-  // Clean unmount cleanup: only clear timer when component unmounts
+  // Clean unmount cleanup
   useEffect(() => {
     return () => {
       if (completionTimerRef.current !== null) {
         window.clearTimeout(completionTimerRef.current);
         completionTimerRef.current = null;
+      }
+      if (shakeTimerRef.current !== null) {
+        window.clearTimeout(shakeTimerRef.current);
+        shakeTimerRef.current = null;
+      }
+      if (feedbackTimerRef.current !== null) {
+        window.clearTimeout(feedbackTimerRef.current);
+        feedbackTimerRef.current = null;
       }
     };
   }, []);
@@ -55,70 +78,75 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
     if (completionTriggeredRef.current) return;
     completionTriggeredRef.current = true;
     setIsAllCompleted(true);
-    SoundFx.playSuccessTone?.();
+
+    if (SoundFx.playVictoryFanfare) {
+      SoundFx.playVictoryFanfare();
+    } else {
+      SoundFx.playSuccessTone?.();
+    }
+
+    const victoryMsg = 'Harika! Motor hazır. Şimdi çalıştıralım!';
+    setKasifText(victoryMsg);
+    onFeedbackMessageRef.current?.(victoryMsg);
 
     if (completionTimerRef.current !== null) {
       window.clearTimeout(completionTimerRef.current);
     }
+    // Auto-advance to Step 4 after 1350ms
     completionTimerRef.current = window.setTimeout(() => {
       onCompleteRef.current?.();
-    }, 1500);
+    }, 1350);
   }, []);
 
-  const snapPartIntoSlot = useCallback((partId: string) => {
-    if (completionTriggeredRef.current) return;
+  const snapPartIntoSlot = useCallback(
+    (partId: string) => {
+      if (completionTriggeredRef.current) return;
 
-    SoundFx.playLockSound?.();
-    setJustSnappedPartId(partId);
-    setSelectedPartId(null);
-    onPartPlacedRef.current?.(partId);
-
-    setTimeout(() => {
-      setJustSnappedPartId(null);
-    }, 700);
-
-    setPlacedPartIds(prev => {
-      if (prev.includes(partId)) return prev;
-      const next = [...prev, partId];
-      if (next.length === DEVRIM_ENGINE_PARTS.length) {
-        triggerCompletion();
+      // Authentic mechanical lock SFX
+      if (SoundFx.playLockSound) {
+        SoundFx.playLockSound();
+      } else {
+        SoundFx.playClickTone?.();
       }
-      return next;
-    });
-  }, [triggerCompletion]);
 
-  // Secondary guard: catches pre-filled state or external updates
+      setJustSnappedPartId(partId);
+      setSelectedPartId(null);
+      setHoveredSlotId(null);
+      onPartPlacedRef.current?.(partId);
+
+      // Brief praise message
+      setKasifText('Harika oturdu! Diğer parçaya geçelim.');
+      if (feedbackTimerRef.current !== null) window.clearTimeout(feedbackTimerRef.current);
+      feedbackTimerRef.current = window.setTimeout(() => {
+        if (!completionTriggeredRef.current) {
+          setKasifText('Parçaları sürükle ve doğru yuvalara bırak!');
+        }
+      }, 2000);
+
+      window.setTimeout(() => {
+        setJustSnappedPartId(null);
+      }, 700);
+
+      setPlacedPartIds(prev => {
+        if (prev.includes(partId)) return prev;
+        const next = [...prev, partId];
+        if (next.length === DEVRIM_ENGINE_PARTS.length) {
+          triggerCompletion();
+        }
+        return next;
+      });
+    },
+    [triggerCompletion]
+  );
+
+  // Sync completion if state reaches target count
   useEffect(() => {
     if (placedPartIds.length >= DEVRIM_ENGINE_PARTS.length && !completionTriggeredRef.current) {
       triggerCompletion();
     }
   }, [placedPartIds, triggerCompletion]);
 
-  // Pointer event handlers for drag
-  const handlePointerDown = (part: DevrimEnginePart, e: React.PointerEvent<HTMLDivElement>) => {
-    if (completionTriggeredRef.current || isAllCompleted || placedPartIds.includes(part.id) || dragState) return;
-
-    e.preventDefault();
-    e.stopPropagation();
-
-    const target = e.currentTarget;
-    target.setPointerCapture(e.pointerId);
-
-    const rect = target.getBoundingClientRect();
-
-    setDragState({
-      partId: part.id,
-      pointerId: e.pointerId,
-      startX: e.clientX,
-      startY: e.clientY,
-      currentX: e.clientX,
-      currentY: e.clientY,
-      originRect: rect,
-    });
-
-    SoundFx.playClickTone?.();
-  };
-
+  // Generous Proximity & Overlap detection for kids (~55-60% overlap tolerance)
   const checkSlotProximity = useCallback((partId: string, clientX: number, clientY: number) => {
     const slotEl = slotRefs.current[partId];
     if (!slotEl) return false;
@@ -127,16 +155,44 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
 
-    // Generous proximity detection (radius of 90px or inside rect)
     const distance = Math.hypot(clientX - centerX, clientY - centerY);
-    const isInside =
-      clientX >= rect.left - 30 &&
-      clientX <= rect.right + 30 &&
-      clientY >= rect.top - 30 &&
-      clientY <= rect.bottom + 30;
+    const radiusTolerance = Math.max(rect.width, rect.height) * 0.62;
 
-    return isInside || distance < 90;
+    const isInsideBounds =
+      clientX >= rect.left - 40 &&
+      clientX <= rect.right + 40 &&
+      clientY >= rect.top - 40 &&
+      clientY <= rect.bottom + 40;
+
+    return isInsideBounds || distance < Math.max(90, radiusTolerance);
   }, []);
+
+  // Pointer event drag handlers (Pointer Events with Pointer Capture)
+  const handlePointerDown = (part: DevrimEnginePart, e: React.PointerEvent<HTMLDivElement>) => {
+    if (completionTriggeredRef.current || isAllCompleted || placedPartIds.includes(part.id) || dragState) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const target = e.currentTarget;
+    try {
+      target.setPointerCapture(e.pointerId);
+    } catch {
+      // Safe fallback
+    }
+
+    setHasInteracted(true);
+    setDragState({
+      partId: part.id,
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      currentX: e.clientX,
+      currentY: e.clientY,
+    });
+
+    SoundFx.playClickTone?.();
+  };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!dragState || dragState.pointerId !== e.pointerId) return;
@@ -153,7 +209,7 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
     } catch {
-      // Ignore if capture was already released
+      // Safe fallback
     }
 
     const { partId, startX, startY } = dragState;
@@ -163,11 +219,27 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
     if (isSnapped) {
       snapPartIntoSlot(partId);
     } else if (movedDist < 10) {
-      // User tapped without dragging: toggle selection for tap-to-place
+      // Tap-to-place toggle selection
       setSelectedPartId(prev => (prev === partId ? null : partId));
     } else {
-      // Wrong drop, return to tray
-      SoundFx.playErrorTone?.();
+      // Wrong drop: gentle shake, no harsh buzzer, return to tray smoothly
+      setShakingPartId(partId);
+      SoundFx.playClickTone?.();
+      const retryMsg = 'Bir kez daha deneyelim!';
+      setKasifText(retryMsg);
+      onFeedbackMessageRef.current?.(retryMsg);
+
+      if (feedbackTimerRef.current !== null) window.clearTimeout(feedbackTimerRef.current);
+      feedbackTimerRef.current = window.setTimeout(() => {
+        if (!completionTriggeredRef.current) {
+          setKasifText('Parçaları sürükle ve doğru yuvalara bırak!');
+        }
+      }, 2200);
+
+      if (shakeTimerRef.current !== null) window.clearTimeout(shakeTimerRef.current);
+      shakeTimerRef.current = window.setTimeout(() => {
+        setShakingPartId(null);
+      }, 300);
     }
 
     setDragState(null);
@@ -187,6 +259,7 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
 
   return (
     <div
+      className="devrim-assembly-container"
       style={{
         position: 'relative',
         width: '100%',
@@ -196,298 +269,548 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
         alignItems: 'center',
         justifyContent: 'space-between',
         userSelect: 'none',
+        padding: '0 16px 48px 16px',
+        boxSizing: 'border-box',
+        overflow: 'hidden',
       }}
     >
       {/* =========================================================================
-          ENGINE BAY WORKSHOP STAGE (Middle Focus)
+          TOP RIGHT FLOATING HUD: PARÇA MONTAJI: 0 / 4
           ========================================================================= */}
       <div
-        ref={stageRef}
-        className="devrim-engine-stage"
         style={{
-          position: 'relative',
-          width: '100%',
-          maxWidth: '1060px',
-          aspectRatio: '16 / 9',
-          maxHeight: 'calc(100vh - 290px)',
-          borderRadius: '16px',
-          overflow: 'hidden',
-          boxShadow: '0 20px 50px rgba(0,0,0,0.65), 0 0 0 1px rgba(245, 158, 11, 0.25)',
-          background: '#0B111E',
+          position: 'absolute',
+          top: '2px',
+          right: '28px',
+          zIndex: 35,
+          padding: '5px 16px',
+          borderRadius: '9999px',
+          background: 'rgba(8, 14, 26, 0.92)',
+          border: '1.2px solid rgba(245, 158, 11, 0.45)',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          backdropFilter: 'blur(8px)',
         }}
       >
-        {/* Real Engine Bay Backdrop (Clean photographic view) */}
-        <img
-          src="/assets/devrim/devrim_engine_bay.jpg"
-          alt="Devrim Motor Bölmesi"
+        <span style={{ color: '#F5A400', fontSize: '11px', fontWeight: '900', letterSpacing: '1px' }}>
+          PARÇA MONTAJI:
+        </span>
+        <span
           style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            pointerEvents: 'none',
+            color: placedPartIds.length === 4 ? '#10B981' : '#FEF08A',
+            fontSize: '13.5px',
+            fontWeight: '900',
           }}
-        />
+        >
+          {placedPartIds.length} / 4
+        </span>
+      </div>
 
-        {/* Ambient Dark Vignette & Glow */}
+      {/* =========================================================================
+          MIDDLE ROW: LEFT MISSION PANEL + KAŞİF & CENTER ENGINE STAGE
+          ========================================================================= */}
+      <div
+        style={{
+          width: '100%',
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+          minHeight: 0,
+        }}
+      >
+        {/* -----------------------------------------------------------------------
+            LEFT: SLEEK FLOATING MISSION PANEL & KAŞİF MASCOT
+            ----------------------------------------------------------------------- */}
         <div
+          className="devrim-assembly-left-panel"
           style={{
             position: 'absolute',
-            inset: 0,
-            background:
-              'radial-gradient(circle at 50% 50%, rgba(245, 158, 11, 0.06) 0%, rgba(10, 16, 28, 0.3) 70%, rgba(5, 8, 15, 0.7) 100%)',
+            left: '12px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+            width: 'clamp(210px, 17vw, 260px)',
+            zIndex: 30,
             pointerEvents: 'none',
           }}
-        />
-
-        {/* =======================================================================
-            TARGET SLOTS OVERLAY ON MOTOR (5 Precise Mounting Points)
-            ======================================================================= */}
-        {DEVRIM_ENGINE_PARTS.map(part => {
-          const isPlaced = placedPartIds.includes(part.id);
-          const isHovered = hoveredSlotId === part.id;
-          const isSelectedTarget = selectedPartId === part.id;
-          const isJustSnapped = justSnappedPartId === part.id;
-
-          return (
-            <div
-              key={part.id}
-              ref={el => {
-                slotRefs.current[part.id] = el;
-              }}
-              onClick={() => {
-                if (selectedPartId === part.id) {
-                  snapPartIntoSlot(part.id);
-                }
-              }}
-              style={{
-                position: 'absolute',
-                left: `${part.slot.leftPercent}%`,
-                top: `${part.slot.topPercent}%`,
-                width: `${part.slot.widthPercent}%`,
-                height: `${part.slot.heightPercent}%`,
-                transform: 'translate(-50%, -50%)',
-                borderRadius: '10px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: selectedPartId === part.id ? 'pointer' : 'default',
-                border: isPlaced
-                  ? '2px solid rgba(16, 185, 129, 0.85)'
-                  : isHovered || isSelectedTarget
-                  ? '3px solid #38BDF8'
-                  : '1.5px dashed rgba(245, 158, 11, 0.75)',
-                background: isPlaced
-                  ? 'rgba(16, 185, 129, 0.18)'
-                  : isHovered || isSelectedTarget
-                  ? 'rgba(56, 189, 248, 0.32)'
-                  : 'rgba(15, 23, 42, 0.55)',
-                boxShadow: isPlaced
-                  ? '0 0 20px rgba(16, 185, 129, 0.6)'
-                  : isHovered || isSelectedTarget
-                  ? '0 0 25px rgba(56, 189, 248, 0.85)'
-                  : 'none',
-                transition: 'all 0.25s ease',
-                zIndex: isHovered || isSelectedTarget || isJustSnapped ? 20 : 10,
-              }}
-            >
-              {/* Part Label Badge */}
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '-18px',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  background: isPlaced
-                    ? 'rgba(6, 78, 59, 0.92)'
-                    : isHovered
-                    ? '#0284C7'
-                    : 'rgba(15, 23, 42, 0.88)',
-                  color: isPlaced ? '#A7F3D0' : isHovered ? '#FFFFFF' : '#FDE68A',
-                  fontSize: '11px',
-                  fontWeight: '700',
-                  padding: '2px 8px',
-                  borderRadius: '9999px',
-                  whiteSpace: 'nowrap',
-                  border: isPlaced
-                    ? '1px solid rgba(16, 185, 129, 0.7)'
-                    : '1px solid rgba(245, 158, 11, 0.4)',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.5)',
-                  pointerEvents: 'none',
-                  letterSpacing: '0.3px',
-                }}
-              >
-                {isPlaced ? `✓ ${part.name}` : part.name}
-              </div>
-
-              {/* Rendered Part when Placed */}
-              {isPlaced && (
-                <div
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    padding: '4px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    animation: isJustSnapped ? 'scalePulse 0.45s ease-out' : 'none',
-                  }}
-                >
-                  <DevrimEnginePartSvg id={part.id} width="95%" height="95%" />
-                </div>
-              )}
-            </div>
-          );
-        })}
-
-        {/* All Parts Complete Toast Overlay */}
-        {isAllCompleted && (
+        >
+          {/* 🎯 GÖREV Card */}
           <div
             style={{
-              position: 'absolute',
-              inset: 0,
+              position: 'relative',
+              background: 'rgba(8, 14, 26, 0.9)',
+              border: '1.5px solid rgba(245, 164, 0, 0.35)',
+              borderRadius: '16px',
+              padding: '14px 16px',
+              boxShadow: '0 12px 30px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(12px)',
               display: 'flex',
               flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'rgba(10, 16, 28, 0.85)',
-              backdropFilter: 'blur(4px)',
-              zIndex: 50,
-              animation: 'fadeIn 0.4s ease-out',
+              gap: '6px',
+              pointerEvents: 'auto',
             }}
           >
             <div
               style={{
-                background: 'linear-gradient(135deg, #10B981 0%, #047857 100%)',
-                color: '#FFFFFF',
-                padding: '16px 36px',
-                borderRadius: '9999px',
-                fontSize: '24px',
+                color: '#F5A400',
+                fontSize: '11px',
                 fontWeight: '900',
                 letterSpacing: '1px',
-                boxShadow: '0 0 35px rgba(16, 185, 129, 0.8)',
-                border: '2px solid #6EE7B7',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '12px',
+                gap: '6px',
               }}
             >
-              <span>✓</span> MOTOR TAMAMLANDI
+              <span>🎯</span>
+              <span>GÖREV</span>
             </div>
-            <p
+            <div
               style={{
-                color: '#E2E8F0',
-                fontSize: '16px',
-                fontWeight: '600',
-                marginTop: '12px',
+                color: '#FFFFFF',
+                fontSize: '13px',
+                fontWeight: '700',
+                lineHeight: '1.35',
               }}
             >
-              Devrim'in motoru hazır! Marş adımına geçiliyor...
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* =========================================================================
-          BOTTOM TRAY: DRAGGABLE ENGINE PARTS
-          ========================================================================= */}
-      <div
-        className="devrim-parts-tray"
-        style={{
-          width: '100%',
-          maxWidth: '1060px',
-          marginTop: '12px',
-          padding: '12px 18px',
-          background: 'rgba(15, 23, 42, 0.85)',
-          border: '1.5px solid rgba(245, 158, 11, 0.35)',
-          borderRadius: '16px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-          gap: '12px',
-          alignItems: 'center',
-          boxSizing: 'border-box',
-        }}
-      >
-        {DEVRIM_ENGINE_PARTS.map(part => {
-          const isPlaced = placedPartIds.includes(part.id);
-          const isDraggingThis = dragState?.partId === part.id;
-          const isSelected = selectedPartId === part.id;
-
-          return (
+              Parçaları doğru yuvalara yerleştir.
+            </div>
             <div
-              key={part.id}
-              onPointerDown={e => handlePointerDown(part, e)}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              onPointerCancel={handlePointerCancel}
+              style={{
+                color: '#94A3B8',
+                fontSize: '11px',
+                lineHeight: '1.4',
+                marginTop: '2px',
+              }}
+            >
+              Tüm parçaları tamamladığında motor hazır olacak.
+            </div>
+          </div>
+
+          {/* Kaşif Mascot + Speech Bubble */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              position: 'relative',
+              pointerEvents: 'auto',
+            }}
+          >
+            {/* Kaşif Speech Bubble */}
+            <div
               style={{
                 position: 'relative',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '8px 6px',
-                borderRadius: '12px',
-                minHeight: '102px',
-                background: isPlaced
-                  ? 'rgba(30, 41, 59, 0.35)'
-                  : isSelected
-                  ? 'rgba(245, 158, 11, 0.28)'
-                  : isDraggingThis
-                  ? 'rgba(245, 158, 11, 0.25)'
-                  : 'rgba(30, 41, 59, 0.85)',
-                border: isPlaced
-                  ? '1.5px solid rgba(71, 85, 105, 0.4)'
-                  : isSelected
-                  ? '2.5px solid #F59E0B'
-                  : isDraggingThis
-                  ? '2px solid #F59E0B'
-                  : '1.5px solid rgba(255, 255, 255, 0.15)',
-                boxShadow: isSelected ? '0 0 16px rgba(245, 158, 11, 0.7)' : 'none',
-                cursor: isPlaced ? 'default' : 'grab',
-                opacity: isPlaced ? 0.35 : isDraggingThis ? 0.25 : 1,
-                touchAction: 'none',
-                userSelect: 'none',
-                transition: isDraggingThis ? 'none' : 'all 0.2s ease',
+                background: 'rgba(15, 23, 42, 0.94)',
+                border: '1.5px solid rgba(56, 189, 248, 0.6)',
+                borderRadius: '14px',
+                padding: '8px 12px',
+                color: '#E0F2FE',
+                fontSize: '11px',
+                fontWeight: '700',
+                lineHeight: '1.35',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.7), 0 0 14px rgba(56, 189, 248, 0.25)',
+                backdropFilter: 'blur(10px)',
+                marginBottom: '6px',
+                maxWidth: '220px',
+                transition: 'all 0.25s ease',
               }}
             >
-              {/* Part SVG Graphic */}
+              {kasifText}
+              {/* Little speech tail pointing down to Kaşif */}
               <div
                 style={{
-                  width: '100%',
-                  height: '62px',
+                  position: 'absolute',
+                  bottom: '-6px',
+                  left: '28px',
+                  width: '10px',
+                  height: '6px',
+                  backgroundColor: 'rgba(15, 23, 42, 0.94)',
+                  clipPath: 'polygon(0 0, 100% 0, 50% 100%)',
+                }}
+              />
+            </div>
+
+            {/* Kaşif Mascot Graphic */}
+            <img
+              src="/assets/devrim/kasif_mascot.webp"
+              alt="Kaşif Robot"
+              style={{
+                width: 'clamp(90px, 8vw, 130px)',
+                height: 'auto',
+                filter: 'drop-shadow(0 12px 24px rgba(0, 0, 0, 0.7)) drop-shadow(0 0 16px rgba(56, 189, 248, 0.3))',
+                animation: 'devrimKasifFloat 4s ease-in-out infinite',
+              }}
+            />
+          </div>
+        </div>
+
+        {/* -----------------------------------------------------------------------
+            CENTER: THE CINEMATIC DEVRİM ENGINE BAY ASSEMBLY SCENE
+            ----------------------------------------------------------------------- */}
+        <div
+          ref={stageRef}
+          className="devrim-engine-stage"
+          style={{
+            position: 'relative',
+            width: 'min(920px, 60vw)',
+            aspectRatio: '16 / 10',
+            maxHeight: 'calc(100vh - 250px)',
+            borderRadius: '24px',
+            overflow: 'hidden',
+            boxShadow: '0 24px 70px rgba(0,0,0,0.85), 0 0 0 1.5px rgba(245, 158, 11, 0.35)',
+            background: '#070B14',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transform: isAllCompleted ? 'scale(1.015)' : 'scale(1)',
+            transition: 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)',
+          }}
+        >
+          {/* Cinematic 1960s Devrim Car Front & Open Engine Bay Scene */}
+          <DevrimEngineBayScene placedPartIds={placedPartIds} />
+
+          {/* =====================================================================
+              THE 4 TARGET SLOTS & SNAPPED PARTS
+              100% Geometry, Aspect Ratio & Coordinate match with Draggable pieces
+              ===================================================================== */}
+          {DEVRIM_ENGINE_PARTS.map(part => {
+            const isPlaced = placedPartIds.includes(part.id);
+            const isHovered = hoveredSlotId === part.id;
+            const isSelectedTarget = selectedPartId === part.id;
+            const isJustSnapped = justSnappedPartId === part.id;
+
+            return (
+              <div
+                key={part.id}
+                ref={el => {
+                  slotRefs.current[part.id] = el;
+                }}
+                onClick={() => {
+                  if (selectedPartId === part.id) {
+                    snapPartIntoSlot(part.id);
+                  }
+                }}
+                style={{
+                  position: 'absolute',
+                  left: `${part.slot.leftPercent}%`,
+                  top: `${part.slot.topPercent}%`,
+                  width: `${part.slot.widthPercent}%`,
+                  height: `${part.slot.heightPercent}%`,
+                  transform: 'translate(-50%, -50%)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  pointerEvents: 'none',
+                  cursor: selectedPartId === part.id ? 'pointer' : 'default',
+                  zIndex: isHovered || isSelectedTarget || isJustSnapped ? 25 : isPlaced ? 15 : 10,
+                  transition: 'transform 0.2s ease',
                 }}
               >
-                <DevrimEnginePartSvg id={part.id} width="85%" height="85%" />
-              </div>
+                {/* Floating Slot Label Badge (Visible only when empty) */}
+                {!isPlaced && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '-13px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      background: isHovered
+                        ? '#0284C7'
+                        : isSelectedTarget
+                        ? '#D97706'
+                        : 'rgba(15, 23, 42, 0.92)',
+                      color: isHovered || isSelectedTarget ? '#FFFFFF' : '#FEF08A',
+                      fontSize: '9.5px',
+                      fontWeight: '800',
+                      padding: '2px 8px',
+                      borderRadius: '9999px',
+                      whiteSpace: 'nowrap',
+                      border: isHovered
+                        ? '1.2px solid #38BDF8'
+                        : isSelectedTarget
+                        ? '1.2px solid #F59E0B'
+                        : '1px solid rgba(245, 158, 11, 0.5)',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.6)',
+                      pointerEvents: 'none',
+                      letterSpacing: '0.4px',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    {part.name}
+                  </div>
+                )}
 
-              {/* Part Name */}
-              <span
+                {/* Exact Geometry SVG: Slot Silhouette OR Full Snapped Part */}
+                <div
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    animation: isJustSnapped
+                      ? 'devrimSnapPulse 0.5s ease-out'
+                      : isHovered || isSelectedTarget
+                      ? 'devrimHoverGlow 1.4s infinite ease-in-out'
+                      : 'none',
+                  }}
+                >
+                  {isPlaced ? (
+                    <DevrimEnginePartSvg id={part.id} isSlot={false} />
+                  ) : (
+                    <DevrimEnginePartSvg
+                      id={part.id}
+                      isSlot={true}
+                      glow={isHovered || isSelectedTarget}
+                    />
+                  )}
+                </div>
+
+                {/* Sparkle burst on successful snap */}
+                {isJustSnapped && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: '-10px',
+                      borderRadius: '16px',
+                      border: '2px solid #10B981',
+                      boxShadow: '0 0 35px rgba(16, 185, 129, 0.9), inset 0 0 20px rgba(16, 185, 129, 0.5)',
+                      pointerEvents: 'none',
+                      animation: 'devrimSparkleFade 0.65s ease-out forwards',
+                    }}
+                  />
+                )}
+              </div>
+            );
+          })}
+
+          {/* 4/4 Completed Light Sweep Effect */}
+          {isAllCompleted && (
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background:
+                  'linear-gradient(105deg, transparent 20%, rgba(245, 158, 11, 0.4) 45%, rgba(56, 189, 248, 0.5) 55%, transparent 80%)',
+                pointerEvents: 'none',
+                zIndex: 40,
+                animation: 'devrimCompletedSweep 1.2s ease-in-out forwards',
+              }}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* =========================================================================
+          BOTTOM: PARÇALAR TEPSİSİ (4 Draggable Cards, Shuffled at Start)
+          ========================================================================= */}
+      <div
+        className="devrim-parts-tray-container"
+        style={{
+          width: 'min(920px, 60vw)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '3px',
+          zIndex: 30,
+        }}
+      >
+        {/* Tray Header Bar */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            padding: '0 8px',
+          }}
+        >
+          <span
+            style={{
+              color: '#F5A400',
+              fontSize: '11px',
+              fontWeight: '900',
+              letterSpacing: '1.5px',
+              textTransform: 'uppercase',
+            }}
+          >
+            PARÇALAR
+          </span>
+          <span style={{ color: '#94A3B8', fontSize: '10.5px', fontWeight: '500' }}>
+            Parçayı sürükle ve motor üzerindeki yuvaya bırak
+          </span>
+        </div>
+
+        {/* Tray Body with 4 Cards */}
+        <div
+          className="devrim-parts-tray"
+          style={{
+            width: '100%',
+            padding: '6px 12px',
+            background: 'rgba(10, 16, 28, 0.94)',
+            border: '1.5px solid rgba(245, 158, 11, 0.35)',
+            borderRadius: '16px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.65)',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+            gap: '12px',
+            alignItems: 'center',
+            boxSizing: 'border-box',
+          }}
+        >
+          {shuffledParts.map((part, idx) => {
+            const isPlaced = placedPartIds.includes(part.id);
+            const isDraggingThis = dragState?.partId === part.id;
+            const isSelected = selectedPartId === part.id;
+            const isShaking = shakingPartId === part.id;
+
+            return (
+              <div
+                key={part.id}
+                onPointerDown={e => handlePointerDown(part, e)}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerCancel}
                 style={{
-                  fontSize: '12px',
-                  fontWeight: '700',
-                  color: isPlaced ? '#94A3B8' : '#F1F5F9',
-                  textAlign: 'center',
-                  lineHeight: '1.2',
-                  pointerEvents: 'none',
-                  marginTop: '4px',
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '4px 8px',
+                  borderRadius: '12px',
+                  height: '76px',
+                  background: isPlaced
+                    ? 'rgba(15, 23, 42, 0.4)'
+                    : isSelected
+                    ? 'rgba(245, 158, 11, 0.25)'
+                    : isDraggingThis
+                    ? 'rgba(245, 158, 11, 0.15)'
+                    : 'rgba(20, 30, 48, 0.88)',
+                  border: isPlaced
+                    ? '1.5px solid rgba(71, 85, 105, 0.35)'
+                    : isSelected
+                    ? '2px solid #F59E0B'
+                    : isDraggingThis
+                    ? '2px solid #38BDF8'
+                    : '1.5px solid rgba(255, 255, 255, 0.14)',
+                  boxShadow: isSelected
+                    ? '0 0 16px rgba(245, 158, 11, 0.7)'
+                    : isDraggingThis
+                    ? '0 0 14px rgba(56, 189, 248, 0.6)'
+                    : 'none',
+                  cursor: isPlaced ? 'default' : 'grab',
+                  opacity: isPlaced ? 0.35 : isDraggingThis ? 0.2 : 1,
+                  touchAction: 'none',
+                  userSelect: 'none',
+                  transition: isDraggingThis ? 'none' : 'transform 0.2s ease, border-color 0.2s ease',
+                  animation: isShaking ? 'devrimWrongDropShake 0.3s ease' : 'none',
                 }}
               >
-                {part.name}
-              </span>
-            </div>
-          );
-        })}
+                {/* Minimal 6-Dot Grip Indicator on Left */}
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '3px',
+                    marginRight: '6px',
+                    opacity: isPlaced ? 0.2 : 0.6,
+                    flexShrink: 0,
+                  }}
+                >
+                  <div style={{ display: 'flex', gap: '3px' }}>
+                    <div style={{ width: '3px', height: '3px', borderRadius: '50%', background: '#94A3B8' }} />
+                    <div style={{ width: '3px', height: '3px', borderRadius: '50%', background: '#94A3B8' }} />
+                  </div>
+                  <div style={{ display: 'flex', gap: '3px' }}>
+                    <div style={{ width: '3px', height: '3px', borderRadius: '50%', background: '#94A3B8' }} />
+                    <div style={{ width: '3px', height: '3px', borderRadius: '50%', background: '#94A3B8' }} />
+                  </div>
+                  <div style={{ display: 'flex', gap: '3px' }}>
+                    <div style={{ width: '3px', height: '3px', borderRadius: '50%', background: '#94A3B8' }} />
+                    <div style={{ width: '3px', height: '3px', borderRadius: '50%', background: '#94A3B8' }} />
+                  </div>
+                </div>
+
+                {/* Part Graphic & Name Container */}
+                <div
+                  style={{
+                    flex: 1,
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    minWidth: 0,
+                  }}
+                >
+                  {/* Part Graphic */}
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '50px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    <DevrimEnginePartSvg id={part.id} width="88%" height="88%" />
+                  </div>
+
+                  {/* Part Name */}
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: '800',
+                      color: isPlaced ? '#94A3B8' : '#F1F5F9',
+                      textAlign: 'center',
+                      lineHeight: '1.1',
+                      pointerEvents: 'none',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      maxWidth: '100%',
+                    }}
+                  >
+                    {isPlaced ? `✓ ${part.name}` : part.name}
+                  </span>
+                </div>
+
+                {/* Onboarding Interactive Hand Icon on first unplaced item */}
+                {!hasInteracted && idx === 0 && !isPlaced && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      right: '6px',
+                      bottom: '6px',
+                      pointerEvents: 'none',
+                      animation: 'devrimHandBounce 1.8s infinite ease-in-out',
+                    }}
+                  >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M8 12V4a2 2 0 114 0v6M12 10a2 2 0 114 0v2M16 12a2 2 0 114 0v4a7 7 0 11-14 0v-4"
+                        stroke="#38BDF8"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* =========================================================================
           ACTIVE DRAG GHOST (Follows Cursor / Touch)
+          ONLY the mechanical part moves with the cursor (as requested)
           ========================================================================= */}
       {dragState && (
         <div
@@ -495,33 +818,19 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
             position: 'fixed',
             left: `${dragState.currentX}px`,
             top: `${dragState.currentY}px`,
-            transform: 'translate(-50%, -50%) scale(1.15)',
+            transform: 'translate(-50%, -50%) scale(1.08)',
             width: '120px',
-            height: '95px',
-            padding: '8px',
-            borderRadius: '12px',
-            background: 'rgba(15, 23, 42, 0.92)',
-            border: '2px solid #F59E0B',
-            boxShadow: '0 12px 30px rgba(0,0,0,0.6), 0 0 20px rgba(245, 158, 11, 0.5)',
+            height: '90px',
             pointerEvents: 'none',
             zIndex: 9999,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
+            filter: 'drop-shadow(0 14px 28px rgba(0,0,0,0.8)) drop-shadow(0 0 18px rgba(245, 158, 11, 0.65))',
           }}
         >
-          <DevrimEnginePartSvg id={dragState.partId} width="90%" height="70%" />
-          <span
-            style={{
-              fontSize: '11px',
-              fontWeight: '800',
-              color: '#FDE68A',
-              marginTop: '4px',
-            }}
-          >
-            {DEVRIM_ENGINE_PARTS.find(p => p.id === dragState.partId)?.name}
-          </span>
+          <DevrimEnginePartSvg id={dragState.partId} width="100%" height="100%" />
         </div>
       )}
     </div>

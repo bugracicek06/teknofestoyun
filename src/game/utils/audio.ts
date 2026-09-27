@@ -1041,6 +1041,54 @@ class SoundSynth {
       // Ignore audio policy error
     }
   }
+
+  /**
+   * Warm authentic 1960s engine ignition start purr
+   */
+  public playCarStart() {
+    try {
+      this.initCtx();
+      if (!this.ctx || GameStore.getState().isAudioMuted) return;
+      const t = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(85, t);
+      osc.frequency.linearRampToValueAtTime(150, t + 0.28);
+      osc.frequency.linearRampToValueAtTime(95, t + 0.7);
+      gain.gain.setValueAtTime(0.14, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.75);
+      osc.connect(gain);
+      gain.connect(this.outputDestination);
+      osc.start(t);
+      osc.stop(t + 0.75);
+    } catch {}
+  }
+
+  /**
+   * Gentle engine acceleration sound for Devrim departure
+   */
+  public playCarDrive() {
+    try {
+      this.initCtx();
+      if (!this.ctx || GameStore.getState().isAudioMuted) return;
+      const t = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(80, t);
+      osc.frequency.linearRampToValueAtTime(115, t + 0.8);
+      osc.frequency.exponentialRampToValueAtTime(190, t + 2.7);
+      gain.gain.setValueAtTime(0.01, t);
+      gain.gain.linearRampToValueAtTime(0.12, t + 0.35);
+      gain.gain.setValueAtTime(0.12, t + 1.8);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 2.9);
+      osc.connect(gain);
+      gain.connect(this.outputDestination);
+      osc.start(t);
+      osc.stop(t + 2.9);
+    } catch {}
+  }
 }
 
 export const SoundFx = new SoundSynth();

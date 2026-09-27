@@ -33,6 +33,7 @@ import { MISSION_CARD_IMAGES } from '../data/cardImages';
 import { GobeklitepeMissionShell } from './GobeklitepeMissionShell';
 import { CiniSanatiMissionShell } from './CiniSanatiMissionShell';
 import { DevrimOtomobiliMissionShell } from './devrim/DevrimOtomobiliMissionShell';
+import { MilliTeknolojiMissionShell } from './milli/MilliTeknolojiMissionShell';
 import { ModuleIntroScreen } from './ModuleIntroScreen';
 import { getModuleIntroConfig } from '../data/moduleIntros';
 import { DEV_UNLOCK_ALL_LEVELS } from '../config/devConfig';
@@ -733,6 +734,23 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
         />
       )}
 
+      {sceneKey === SceneKeys.MILLI_TEKNOLOJI && (
+        <MilliTeknolojiMissionShell
+          isAudioMuted={state.isAudioMuted}
+          fullscreen={fullscreen}
+          onHome={() => navigate(SceneKeys.START, false)}
+          onBack={() => navigate(SceneKeys.WORLD_MAP)}
+          onToggleAudio={() => {
+            GameStore.toggleAudioMuted();
+            stopNarration();
+          }}
+          onHelp={() => pause('help')}
+          onPause={() => pause('pause')}
+          onToggleFullscreen={toggleFullscreen}
+          onNextMission={() => navigate(SceneKeys.UZAY_TEKNOLOJILERI)}
+        />
+      )}
+
       {/* Cinematic Module Intro Screen for modules 2 through 6 */}
       {panel === 'intro' && sceneKey !== SceneKeys.GOBEKLITEPE && introConfig && (
         <ModuleIntroScreen
@@ -744,7 +762,7 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
         />
       )}
 
-      {sceneKey !== SceneKeys.GOBEKLITEPE && sceneKey !== SceneKeys.ANADOLU_USTALIGI && sceneKey !== SceneKeys.SANAYILESME && (
+      {sceneKey !== SceneKeys.GOBEKLITEPE && sceneKey !== SceneKeys.ANADOLU_USTALIGI && sceneKey !== SceneKeys.SANAYILESME && sceneKey !== SceneKeys.MILLI_TEKNOLOJI && (
         <nav
           className={`control-bar ${menu ? 'landing-controls' : 'in-game'}`}
           aria-label="Oyun kontrolleri"

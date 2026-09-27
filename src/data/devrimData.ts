@@ -1,5 +1,5 @@
 export interface DevrimEnginePart {
-  id: 'motor_blogu' | 'radyator' | 'aku' | 'hava_filtresi' | 'atesleme';
+  id: 'motor_blogu' | 'radyator' | 'aku' | 'hava_filtresi';
   name: string;
   subName: string;
   order: number;
@@ -21,10 +21,10 @@ export const DEVRIM_ENGINE_PARTS: DevrimEnginePart[] = [
     order: 1,
     description: 'Pistonların ve silindirlerin yer aldığı, motorun ana mekanik gövdesidir.',
     slot: {
-      leftPercent: 51.5,
-      topPercent: 53.0,
-      widthPercent: 18,
-      heightPercent: 26,
+      leftPercent: 50.0,
+      topPercent: 44.5,
+      widthPercent: 20.0,
+      heightPercent: 47.0,
     },
   },
   {
@@ -34,10 +34,10 @@ export const DEVRIM_ENGINE_PARTS: DevrimEnginePart[] = [
     order: 2,
     description: 'Motorun aşırı ısınmasını önleyerek ideal çalışma sıcaklığını korur.',
     slot: {
-      leftPercent: 49.5,
-      topPercent: 77.0,
-      widthPercent: 44,
-      heightPercent: 14,
+      leftPercent: 50.0,
+      topPercent: 82.0,
+      widthPercent: 52.0,
+      heightPercent: 17.5,
     },
   },
   {
@@ -47,10 +47,10 @@ export const DEVRIM_ENGINE_PARTS: DevrimEnginePart[] = [
     order: 3,
     description: 'İlk marş ve elektrik sistemleri için gerekli akımı depolar.',
     slot: {
-      leftPercent: 78.5,
-      topPercent: 68.0,
-      widthPercent: 18,
-      heightPercent: 20,
+      leftPercent: 73.5,
+      topPercent: 51.0,
+      widthPercent: 19.0,
+      heightPercent: 26.5,
     },
   },
   {
@@ -60,23 +60,10 @@ export const DEVRIM_ENGINE_PARTS: DevrimEnginePart[] = [
     order: 4,
     description: 'Karbüratöre giren havayı süzerek yakıtın verimli yanmasını sağlar.',
     slot: {
-      leftPercent: 33.5,
-      topPercent: 39.0,
-      widthPercent: 17,
-      heightPercent: 18,
-    },
-  },
-  {
-    id: 'atesleme',
-    name: 'Ateşleme Sistemi',
-    subName: 'Distribütör ve Buji Dağıtıcı',
-    order: 5,
-    description: 'Silindirlerdeki yakıt-hava karışımını doğru zamanda ateşleyen elektrik kıvılcımını üretir.',
-    slot: {
-      leftPercent: 62.0,
-      topPercent: 48.0,
-      widthPercent: 12,
-      heightPercent: 16,
+      leftPercent: 28.5,
+      topPercent: 27.5,
+      widthPercent: 19.0,
+      heightPercent: 21.0,
     },
   },
 ];
@@ -101,29 +88,29 @@ export const DEVRIM_STEPS: Record<1 | 2 | 3 | 4 | 5, DevrimStepConfig> = {
     step: 1,
     badge: '1. ADIM',
     title: 'DEVRİM İLE TANIŞ',
-    subTitle: "Türkiye'nin ilk yerli ve millî otomobili.",
+    subTitle: 'Bir mühendislik hikâyesini keşfet.',
     parchment: {
       title: 'DEVRİM',
-      subTitle: 'Bir Hayalin Gerçeğe Dönüşü',
+      subTitle: '1961 - Türkiye\'nin İlk Yerli Otomobili',
       body1: "Devrim, 1961 yılında Türk mühendis ve işçilerinin emeğiyle geliştirilen Türkiye'nin ilk yerli otomobilidir.",
       body2: "Bu araç, bağımsızlık, azim ve inançla geleceği üreten Türkiye'nin simgelerinden biridir.",
       callout: "Devrim'in motorunu keşfetmeye hazır mısın?",
     },
-    kasifMessage: "Devrim'in motorunu inceleyelim! Kaputunu aç ve bu tarihi aracın kalbini keşfet.",
+    kasifMessage: "Devrim'in motorunu keşfedelim! Kaputa dokun.",
   },
   2: {
     step: 2,
     badge: '2. ADIM',
     title: 'KAPUTU AÇ',
-    subTitle: 'Motoru inşa etmek için önce kaputu açalım.',
+    subTitle: "Devrim'in motorunu yakından incele.",
     parchment: {
       title: 'DEVRİM',
-      subTitle: 'Bir Hayalin Gerçeğe Dönüşü',
+      subTitle: '1961 - Türkiye\'nin İlk Yerli Otomobili',
       body1: "Devrim, 1961 yılında Türk mühendis ve işçilerinin emeğiyle geliştirilen Türkiye'nin ilk yerli otomobilidir.",
       body2: "Bu araç, bağımsızlık, azim ve inançla geleceği üreten Türkiye'nin simgelerinden biridir.",
-      callout: 'Kaputa dokunarak motor bölmesini açalım!',
+      callout: 'Harika! Şimdi motoru birlikte tamamlayalım.',
     },
-    kasifMessage: 'Kaputun üzerine dokun! Yumuşakça açılarak motor bölmesini gösterecek.',
+    kasifMessage: 'Harika! Şimdi motoru birlikte tamamlayalım.',
   },
   3: {
     step: 3,

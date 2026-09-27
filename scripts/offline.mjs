@@ -5,7 +5,10 @@ const version = createHash('sha256').update(files.join('|')).digest('hex').slice
 await writeFile('dist/sw.js', `
 const CACHE = 'mmt-${version}';
 const FILES = ${JSON.stringify(['/', '/index.html', ...files])};
-self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(FILES))));
+self.addEventListener('install', event => {
+  self.skipWaiting();
+  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(FILES)));
+});
 self.addEventListener('activate', event => event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k.startsWith('mmt-') && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);

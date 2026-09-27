@@ -3272,17 +3272,340 @@ body.cert-route-active #root,
   to { opacity: 1; }
 }
 
+/* =========================================================================
+   DEVRİM OTOMOBİLİ – İNTERAKTİF MÜZE KİOSK SAHNESİ
+   ========================================================================= */
+
+@keyframes devrimHotspotPulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7), 0 0 15px rgba(245, 158, 11, 0.4);
+  }
+  70% {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 14px rgba(245, 158, 11, 0), 0 0 25px rgba(245, 158, 11, 0.2);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0), 0 0 15px rgba(245, 158, 11, 0.4);
+  }
+}
+
+@keyframes devrimHotspotWave {
+  0% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+@keyframes devrimKasifFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes devrimLightSweep {
+  0% {
+    transform: translateX(-120%) skewX(-20deg);
+  }
+  20%, 100% {
+    transform: translateX(250%) skewX(-20deg);
+  }
+}
+
+@keyframes devrimTungstenFlicker {
+  0%, 100% {
+    opacity: 0.95;
+  }
+  45% {
+    opacity: 1.0;
+  }
+  48% {
+    opacity: 0.93;
+  }
+  52% {
+    opacity: 0.98;
+  }
+  75% {
+    opacity: 0.94;
+  }
+}
+
+@keyframes devrimEngineVibrate {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(-1.5px, 1px); }
+  50% { transform: translate(1px, -1px); }
+  75% { transform: translate(-1px, -0.5px); }
+  100% { transform: translate(1.5px, 0.5px); }
+}
+
+@keyframes devrimCarDeparture {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  /* 0-10%: idle engine vibration */
+  6% {
+    transform: translate3d(-1px, -1px, 0) rotate(0.1deg);
+  }
+  12% {
+    transform: translate3d(0.5px, 0.5px, 0) rotate(-0.1deg);
+  }
+  /* 12-22%: backward weight transfer / squat */
+  20% {
+    transform: translate3d(-6px, 3px, 0) rotate(-0.6deg);
+  }
+  /* 22-50%: rolls forward, front lifts subtly */
+  35% {
+    transform: translate3d(70px, -2px, 0) rotate(0.4deg);
+  }
+  50% {
+    transform: translate3d(240px, 0.5px, 0) rotate(0.2deg);
+  }
+  /* 50-75%: picks up speed across workshop */
+  68% {
+    transform: translate3d(560px, -1.5px, 0) rotate(0.35deg);
+  }
+  /* 75-100%: accelerates smoothly off-screen to the right */
+  86% {
+    transform: translate3d(1020px, 0px, 0) rotate(0.2deg);
+  }
+  100% {
+    transform: translate3d(1800px, 0px, 0) rotate(0deg);
+  }
+}
+
+@keyframes devrimModalPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.88) translateY(14px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .devrim-car-departing {
+    animation: devrimCarDepartureSimple 1.2s ease forwards !important;
+  }
+}
+
+@keyframes devrimCarDepartureSimple {
+  0% { transform: translate3d(0, 0, 0); opacity: 1; }
+  100% { transform: translate3d(800px, 0, 0); opacity: 0; }
+}
+
+.devrim-hood-hotspot {
+  position: absolute;
+  z-index: 25;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 0;
+  outline: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.devrim-hood-hotspot:hover {
+  transform: translate(-50%, -50%) scale(1.08) !important;
+}
+
+.devrim-hood-badge {
+  background: rgba(10, 16, 30, 0.92);
+  border: 1.5px solid #F5A400;
+  backdrop-filter: blur(8px);
+  padding: 6px 16px;
+  border-radius: 9999px;
+  color: #FEF3C7;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), 0 0 16px rgba(245, 164, 0, 0.5);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.devrim-hood-hotspot:hover .devrim-hood-badge {
+  border-color: #FEF08A;
+  background: rgba(15, 23, 42, 0.98);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.8), 0 0 22px rgba(245, 164, 0, 0.8);
+}
+
+.devrim-hood-ring-wrapper {
+  position: relative;
+  width: 90px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.devrim-hood-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid #F5A400;
+  box-shadow: 0 0 18px rgba(245, 164, 0, 0.8), inset 0 0 12px rgba(245, 164, 0, 0.35);
+  transform: perspective(300px) rotateX(48deg);
+  animation: devrimRingGlow 2.4s infinite ease-in-out;
+}
+
+.devrim-hood-ring-pulse {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1.5px solid #F5A400;
+  transform: perspective(300px) rotateX(48deg);
+  animation: devrimRingPulse 2.4s infinite ease-out;
+}
+
+.devrim-hood-hand {
+  font-size: 26px;
+  filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.9));
+  animation: devrimHandBounce 2s infinite ease-in-out;
+  z-index: 2;
+  margin-top: -6px;
+}
+
+@keyframes devrimRingGlow {
+  0%, 100% {
+    box-shadow: 0 0 14px rgba(245, 164, 0, 0.7), inset 0 0 8px rgba(245, 164, 0, 0.3);
+    border-color: #F5A400;
+  }
+  50% {
+    box-shadow: 0 0 28px rgba(245, 164, 0, 1), inset 0 0 16px rgba(254, 240, 138, 0.7);
+    border-color: #FEF08A;
+  }
+}
+
+@keyframes devrimRingPulse {
+  0% {
+    transform: perspective(300px) rotateX(48deg) scale(0.9);
+    opacity: 0.9;
+  }
+  100% {
+    transform: perspective(300px) rotateX(48deg) scale(1.6);
+    opacity: 0;
+  }
+}
+
+@keyframes devrimHandBounce {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-5px) scale(1.05);
+  }
+}
+
+.devrim-hood-hotspot-core {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #f59e0b 0%, #d97706 70%, #92400e 100%);
+  border: 2px solid #fef08a;
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.8), inset 0 0 10px rgba(254, 240, 138, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: devrimHotspotPulse 2.2s infinite ease-in-out;
+}
+
+.devrim-hood-hotspot-wave {
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  border: 2px solid #f59e0b;
+  pointer-events: none;
+  animation: devrimHotspotWave 2.2s infinite ease-out;
+}
+
+.devrim-engine-hotspot-pin {
+  position: absolute;
+  z-index: 25;
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+  outline: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 0.2s ease;
+}
+
+.devrim-engine-hotspot-pin:hover {
+  transform: scale(1.12);
+}
+
+.devrim-engine-hotspot-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #f59e0b 0%, #d97706 70%, #92400e 100%);
+  border: 2px solid #fef08a;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 900;
+  animation: devrimHotspotPulse 2.5s infinite ease-in-out;
+}
+
+@keyframes devrimWrongDropShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px) rotate(-1deg); }
+  40% { transform: translateX(8px) rotate(1deg); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(5px); }
+}
+
+@keyframes devrimSnapPulse {
+  0% { transform: scale(0.92); }
+  50% { transform: scale(1.08); filter: drop-shadow(0 0 16px #10B981); }
+  100% { transform: scale(1); filter: none; }
+}
+
+@keyframes devrimHoverGlow {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.7)); }
+  50% { filter: drop-shadow(0 0 18px rgba(56, 189, 248, 1)) drop-shadow(0 0 30px rgba(245, 158, 11, 0.5)); }
+}
+
+@keyframes devrimCompletedSweep {
+  0% { transform: translateX(-120%); opacity: 0; }
+  50% { opacity: 0.9; }
+  100% { transform: translateX(120%); opacity: 0; }
+}
+
+@keyframes devrimSparkleFade {
+  0% { transform: scale(0.85); opacity: 1; }
+  100% { transform: scale(1.2); opacity: 0; }
+}
+
 @media (max-height: 900px) {
   .devrim-mission-shell main {
     padding: 0 20px !important;
     gap: 16px !important;
-  }
-  .devrim-parchment-card {
-    padding: 16px 14px !important;
-    max-height: 420px !important;
-  }
-  .devrim-parchment-card h1 {
-    font-size: 19px !important;
   }
   .devrim-parts-tray {
     min-height: 86px !important;
@@ -3293,29 +3616,207 @@ body.cert-route-active #root,
 
 @media (max-height: 768px) {
   .devrim-mission-shell header {
-    padding: 8px 20px !important;
+    padding: 6px 18px !important;
   }
   .devrim-mission-shell footer {
-    padding: 6px 20px !important;
+    padding: 6px 18px !important;
   }
   .devrim-mission-shell main {
-    grid-template-columns: 260px 1fr 280px !important;
-    padding: 0 14px !important;
+    padding: 0 16px !important;
     gap: 12px !important;
-    max-height: calc(100vh - 130px) !important;
-  }
-  .devrim-parchment-card {
-    padding: 12px 10px !important;
-    max-height: 380px !important;
-  }
-  .devrim-parchment-card h1 {
-    font-size: 17px !important;
-  }
-  .devrim-parchment-card p {
-    font-size: 11.5px !important;
+    max-height: calc(100vh - 120px) !important;
   }
   .devrim-parts-tray {
     margin-top: 6px !important;
     padding: 6px 10px !important;
   }
 }
+
+/* ==========================================================
+   ÇİNİ SANATI (MODULE 3) - STEP 4 INTERACTIVE STYLES
+   ========================================================== */
+@keyframes ciniGlazeReveal {
+  0% {
+    filter: brightness(1.28) saturate(1.15);
+    opacity: 0.75;
+  }
+  50% {
+    filter: brightness(1.12) saturate(1.08);
+    opacity: 0.95;
+  }
+  100% {
+    filter: brightness(1) saturate(1);
+    opacity: 1;
+  }
+}
+
+@keyframes ciniBrushStroke {
+  0% {
+    transform: translate(-10px, -5px) rotate(0deg) scale(1);
+  }
+  25% {
+    transform: translate(-10px, -5px) rotate(-14deg) scale(1.05);
+  }
+  60% {
+    transform: translate(-10px, -5px) rotate(8deg) scale(1.04);
+  }
+  85% {
+    transform: translate(-10px, -5px) rotate(-6deg) scale(1.02);
+  }
+  100% {
+    transform: translate(-10px, -5px) rotate(0deg) scale(1);
+  }
+}
+
+.artisan-hand-brush.is-brushing {
+  animation: ciniBrushStroke 0.62s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+.cini-motif-region path,
+.cini-motif-region circle,
+.cini-motif-region polygon,
+.cini-motif-region rect {
+  transition: fill 0.32s cubic-bezier(0.2, 0.8, 0.2, 1), stroke 0.25s ease, filter 0.25s ease, transform 0.2s ease;
+}
+
+@keyframes ciniUnpaintedPulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 3px rgba(22, 182, 201, 0.35)) drop-shadow(0 0 1px rgba(21, 84, 164, 0.25));
+  }
+  50% {
+    filter: drop-shadow(0 0 8px rgba(22, 182, 201, 0.65)) drop-shadow(0 0 3px rgba(53, 200, 240, 0.45));
+  }
+}
+
+@keyframes ciniTouchFlash {
+  0% {
+    filter: drop-shadow(0 0 24px #F2B705) drop-shadow(0 0 14px #16B6C9) brightness(1.22);
+    transform: scale(1.025);
+  }
+  100% {
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.2));
+    transform: scale(1);
+  }
+}
+
+.cini-motif-region.is-unpainted {
+  animation: ciniUnpaintedPulse 2.8s ease-in-out infinite;
+  opacity: 1 !important;
+}
+
+.cini-motif-region.is-just-painted {
+  animation: ciniTouchFlash 0.55s ease-out forwards !important;
+}
+
+.cini-motif-region.is-unpainted:hover {
+  filter: drop-shadow(0 0 14px rgba(242, 183, 5, 0.95)) drop-shadow(0 0 8px rgba(22, 182, 201, 0.75)) brightness(1.1) !important;
+  transform: scale(1.018);
+}
+
+.cini-motif-region.is-painted {
+  animation: none !important;
+  filter: none !important;
+  opacity: 1 !important;
+}
+
+.cini-motif-region.is-painted path,
+.cini-motif-region.is-painted circle,
+.cini-motif-region.is-painted polygon,
+.cini-motif-region.is-painted rect {
+  animation: none !important;
+  filter: none !important;
+  opacity: 1 !important;
+}
+
+/* Numbered Painting Badges: Pure scale pulse, constant opacity: 1, zero flicker */
+@keyframes targetPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+.cini-number-badge {
+  opacity: 1 !important;
+  user-select: none;
+}
+
+.cini-badge-content {
+  transform-origin: 0px 0px;
+  user-select: none;
+  transition: opacity 0.25s ease;
+}
+
+.cini-badge-content.is-active,
+.cini-number-badge.is-active {
+  animation: targetPulse 1.6s ease-in-out infinite;
+  opacity: 1 !important;
+}
+
+.cini-badge-content.is-passive,
+.cini-number-badge.is-passive {
+  opacity: 0.65 !important;
+  animation: none !important;
+}
+
+@keyframes ciniBadgeShake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  20%, 60% {
+    transform: translateX(-5px);
+  }
+  40%, 80% {
+    transform: translateX(5px);
+  }
+}
+
+.cini-badge-content.is-shaking,
+.cini-number-badge.is-shaking {
+  animation: ciniBadgeShake 0.45s ease-in-out;
+}
+
+/* Pure CSS hover for interactive çini regions (no React re-render overhead) */
+.cini-motif-region:hover {
+  filter: drop-shadow(0 0 12px rgba(242, 183, 5, 0.85)) drop-shadow(0 0 6px rgba(22, 182, 201, 0.65)) brightness(1.06);
+}
+
+@media (max-height: 900px) {
+  .cini-sanati-shell .cini-main-grid {
+    padding: 0 20px !important;
+    gap: 16px !important;
+  }
+  .cini-sanati-shell .cini-parchment-card {
+    padding: 16px 14px !important;
+  }
+  .cini-sanati-shell .cini-selection-panel {
+    padding: 16px 14px !important;
+    max-height: 520px !important;
+  }
+}
+
+@media (max-height: 768px) {
+  .cini-sanati-shell header {
+    padding: 8px 20px !important;
+  }
+  .cini-sanati-shell footer {
+    padding: 8px 24px !important;
+  }
+  .cini-sanati-shell .cini-main-grid {
+    padding: 0 16px !important;
+    gap: 12px !important;
+    max-height: calc(100vh - 120px) !important;
+  }
+  .cini-sanati-shell .cini-parchment-card {
+    padding: 12px 10px !important;
+  }
+  .cini-sanati-shell .cini-selection-panel {
+    padding: 12px 10px !important;
+    max-height: 470px !important;
+    gap: 8px !important;
+  }
+}
+
+

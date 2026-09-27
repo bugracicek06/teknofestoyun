@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DEVRIM_ENGINE_PARTS, DEVRIM_STEPS, ATATURK_QUOTE_DEVRIM } from '../src/data/devrimData.ts';
 
-test('DEVRIM_ENGINE_PARTS: contains exactly 5 engine parts with complete metadata and normalized slots', () => {
-  assert.equal(DEVRIM_ENGINE_PARTS.length, 5, 'Should have exactly 5 engine components');
-  const expectedIds = ['motor_blogu', 'radyator', 'aku', 'hava_filtresi', 'atesleme'];
+test('DEVRIM_ENGINE_PARTS: contains exactly 4 engine parts with complete metadata and normalized slots', () => {
+  assert.equal(DEVRIM_ENGINE_PARTS.length, 4, 'Should have exactly 4 engine components');
+  const expectedIds = ['motor_blogu', 'radyator', 'aku', 'hava_filtresi'];
   assert.deepEqual(DEVRIM_ENGINE_PARTS.map(p => p.id), expectedIds);
 
   DEVRIM_ENGINE_PARTS.forEach(part => {
@@ -13,8 +13,8 @@ test('DEVRIM_ENGINE_PARTS: contains exactly 5 engine parts with complete metadat
     assert.ok(part.description.length > 0, `Part ${part.id} must have a description`);
     assert.ok(part.slot.leftPercent > 0 && part.slot.leftPercent < 100, `Slot X for ${part.id} must be in bounds`);
     assert.ok(part.slot.topPercent > 0 && part.slot.topPercent < 100, `Slot Y for ${part.id} must be in bounds`);
-    assert.ok(part.slot.widthPercent > 0 && part.slot.widthPercent <= 50, `Slot width for ${part.id} must be positive`);
-    assert.ok(part.slot.heightPercent > 0 && part.slot.heightPercent <= 50, `Slot height for ${part.id} must be positive`);
+    assert.ok(part.slot.widthPercent > 0 && part.slot.widthPercent <= 60, `Slot width for ${part.id} must be positive`);
+    assert.ok(part.slot.heightPercent > 0 && part.slot.heightPercent <= 60, `Slot height for ${part.id} must be positive`);
   });
 });
 
@@ -39,7 +39,7 @@ test('ATATURK_QUOTE_DEVRIM: contains authentic inspirational quote for Devrim ch
   assert.equal(ATATURK_QUOTE_DEVRIM.author, 'K. Atatürk');
 });
 
-test('Assembly logic: duplicate parts are ignored and completion triggers only when all 5 unique parts placed', () => {
+test('Assembly logic: duplicate parts are ignored and completion triggers only when all 4 unique parts placed', () => {
   let placed = [];
   const addPart = (id) => {
     if (!placed.includes(id)) {
@@ -54,12 +54,11 @@ test('Assembly logic: duplicate parts are ignored and completion triggers only w
 
   addPart('radyator');
   addPart('aku');
-  addPart('hava_filtresi');
-  assert.equal(placed.length, 4);
+  assert.equal(placed.length, 3);
   assert.equal(placed.length === DEVRIM_ENGINE_PARTS.length, false);
 
-  addPart('atesleme');
-  assert.equal(placed.length, 5);
+  addPart('hava_filtresi');
+  assert.equal(placed.length, 4);
   assert.equal(placed.length === DEVRIM_ENGINE_PARTS.length, true);
 });
 

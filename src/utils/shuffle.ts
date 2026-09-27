@@ -13,3 +13,6 @@ export function shuffleAnimals<T>(items: readonly T[]): T[] {
   }
   return result;
 }
+
+export const shuffleArray = shuffleAnimals;
+

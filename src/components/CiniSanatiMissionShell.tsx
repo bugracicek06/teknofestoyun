@@ -1,12 +1,16 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import {
   CINI_OBJECTS,
   CINI_MOTIFS,
   CINI_COLORS,
+  MOTIF_REGION_DEFINITIONS,
   STEP_QUOTES,
+  getCiniColorByHex,
   type CiniObject,
   type CiniMotif,
   type CiniColor,
+  type PaintedRegion,
+  type MotifRegionDef,
 } from '../data/ciniData';
 import { CiniObjectRenderer } from './cini/CiniObjectRenderer';
 import { ArtisanHandBrush } from './cini/ArtisanHandBrush';
@@ -42,16 +46,60 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1);
 
   // Selected State
-  const [selectedObjectId, setSelectedObjectId] = useState<'tabak' | 'vazo' | 'karo'>('tabak');
+  const [selectedObjectId, setSelectedObjectId] = useState<'tabak' | 'pano' | 'karo'>('tabak');
   const [selectedMotifId, setSelectedMotifId] = useState<'lale' | 'karanfil' | 'rumi' | 'hatayi' | 'geometrik' | 'yaprak'>('lale');
-  const [primaryColorId, setPrimaryColorId] = useState<string>('kobalt');
-  const [secondaryColorId, setSecondaryColorId] = useState<string>('mercan');
-  const [colorLayerTarget, setColorLayerTarget] = useState<'primary' | 'secondary'>('primary');
 
-  // Step 4 Painting Progress State (Zones 0..5)
-  const [paintedZones, setPaintedZones] = useState<number[]>([]);
-  const [brushPos, setBrushPos] = useState<{ x: number; y: number }>({ x: 440, y: 340 });
+  // Single Source of Truth for Colors across Step 3, 4, 5
+  // User selects in Step 3, used in Step 3 preview, seamlessly carried to Step 4 & 5
+  const [selectedPalette, setSelectedPalette] = useState<{
+    primary: string;   // Mavi: #245DB5
+    secondary: string; // Kırmızı: #E53935
+    accent: string;    // Turkuaz: #16B6C8
+  }>({
+    primary: '#245DB5',
+    secondary: '#E53935',
+    accent: '#16B6C8',
+  });
+  const [colorLayerTarget, setColorLayerTarget] = useState<'primary' | 'secondary' | 'accent'>('primary');
+
+  // Step 4 Painting State: Stable Region ID -> PaintedRegion object
+  const [currentPaintStep, setCurrentPaintStep] = useState<number>(1);
+  const [paintedRegions, setPaintedRegions] = useState<Record<string, PaintedRegion>>({});
+  const [paintHistory, setPaintHistory] = useState<
+    Array<{ regionId: string; previousRecord?: PaintedRegion; previousStep: number }>
+  >([]);
+  const [activeColorHex, setActiveColorHex] = useState<string>('#245DB5');
+  const [justPaintedRegion, setJustPaintedRegion] = useState<string | null>(null);
+  const [showStep4Hint, setShowStep4Hint] = useState<boolean>(true);
+  const [shakingRegionId, setShakingRegionId] = useState<string | null>(null);
+  const [wrongStepWarning, setWrongStepWarning] = useState<string | null>(null);
+
+  // Brush Animation State & Interaction Lock
+  const [brushPos, setBrushPos] = useState<{ x: number; y: number }>({ x: 300, y: 300 });
   const [isBrushPainting, setIsBrushPainting] = useState<boolean>(false);
+  const [isHandVisible, setIsHandVisible] = useState<boolean>(false);
+  const [hoveredRegion, setHoveredRegion] = useState<string | null>(null);
+
+  // Synchronous lock and timers
+  const isPaintingRef = useRef<boolean>(false);
+  const paintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handRetractTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shakeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const warningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup timers on unmount to prevent leaks and double-triggers
+  useEffect(() => {
+    return () => {
+      if (paintTimerRef.current) clearTimeout(paintTimerRef.current);
+      if (handRetractTimerRef.current) clearTimeout(handRetractTimerRef.current);
+      if (shakeTimerRef.current) clearTimeout(shakeTimerRef.current);
+      if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
+    };
+  }, []);
+
+  // Modals
+  const [showClearConfirmModal, setShowClearConfirmModal] = useState<boolean>(false);
+  const [showIncompleteModal, setShowIncompleteModal] = useState<boolean>(false);
 
   const workpieceContainerRef = useRef<HTMLDivElement>(null);
   const startTimeRef = useRef<number>(Date.now());
@@ -62,10 +110,42 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
     CINI_OBJECTS.find((o) => o.id === selectedObjectId) || CINI_OBJECTS[0];
   const selectedMotif: CiniMotif =
     CINI_MOTIFS.find((m) => m.id === selectedMotifId) || CINI_MOTIFS[0];
-  const primaryColor: CiniColor =
-    CINI_COLORS.find((c) => c.id === primaryColorId) || CINI_COLORS[0];
-  const secondaryColor: CiniColor =
-    CINI_COLORS.find((c) => c.id === secondaryColorId) || CINI_COLORS[2];
+
+  // Exact color lookups based on single source of truth: selectedPalette
+  const primaryColor: CiniColor = getCiniColorByHex(selectedPalette.primary);
+  const secondaryColor: CiniColor = getCiniColorByHex(selectedPalette.secondary);
+  const accentColor: CiniColor = getCiniColorByHex(selectedPalette.accent);
+  const activeColorItem: CiniColor = getCiniColorByHex(activeColorHex);
+
+  const totalRegionDefs = MOTIF_REGION_DEFINITIONS[selectedMotifId] || [];
+  const totalRegionCount = totalRegionDefs.length;
+  const paintedCount = Object.keys(paintedRegions).length;
+
+  // Single Source of Truth for active target: currentPaintStep
+  const activeRegionDef = useMemo(() => {
+    const defs = MOTIF_REGION_DEFINITIONS[selectedMotifId] || [];
+    return defs.find((r) => r.order === currentPaintStep) || null;
+  }, [selectedMotifId, currentPaintStep]);
+
+  const activeStepOrder = currentPaintStep;
+
+  // Initial guidance: first 3 regions pulse with extra prominent glow to guide children
+  const leadHintRegions = useMemo(() => {
+    if (currentStep !== 4 || paintedCount > 0) return [];
+    const defs = MOTIF_REGION_DEFINITIONS[selectedMotifId] || [];
+    return defs.slice(0, 3).map((r) => r.id);
+  }, [currentStep, paintedCount, selectedMotifId]);
+
+  // Helper: auto-suggest default color for region based on its semantic palette role
+  const getSuggestedColorForRegion = useCallback(
+    (def: MotifRegionDef | null | undefined): string => {
+      if (!def) return selectedPalette.primary;
+      if (def.paletteRole === 'secondary') return selectedPalette.secondary;
+      if (def.paletteRole === 'accent') return selectedPalette.accent;
+      return selectedPalette.primary;
+    },
+    [selectedPalette]
+  );
 
   // Navigation handlers
   const handleNextStep = () => {
@@ -77,8 +157,14 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
       SoundFx.playSuccessTone();
     } else if (currentStep === 3) {
       setCurrentStep(4);
-      setPaintedZones([]);
-      setBrushPos({ x: 440, y: 340 });
+      setPaintedRegions({});
+      setPaintHistory([]);
+      setCurrentPaintStep(1);
+      const firstDef = totalRegionDefs.find((r) => r.order === 1);
+      setActiveColorHex(getSuggestedColorForRegion(firstDef));
+      isPaintingRef.current = false;
+      setIsBrushPainting(false);
+      setIsHandVisible(false);
       SoundFx.playSuccessTone();
     }
   };
@@ -92,42 +178,178 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
     }
   };
 
-  // Step 4: User taps an interactive zone on the artwork
-  const handlePaintZone = (zoneIndex: number, clientX: number, clientY: number) => {
-    if (isBrushPainting || paintedZones.includes(zoneIndex)) return;
+  // Step 4: Tap on any motif region (Atomic pointer interaction)
+  const handleRegionClick = (
+    regionId: string,
+    clientX: number,
+    clientY: number,
+    _targetCenter: { x: number; y: number }
+  ) => {
+    // Prevent duplicate triggers / concurrent strokes
+    if (isPaintingRef.current || isBrushPainting) return;
 
-    // Move brush tip precisely to the tapped position within the workpiece container
+    const clickedDef = totalRegionDefs.find((r) => r.id === regionId);
+    if (!clickedDef) return;
+
+    // Check sequential order: must match currentPaintStep
+    if (clickedDef.order !== currentPaintStep) {
+      if (!paintedRegions[regionId]) {
+        setShakingRegionId(regionId);
+        setWrongStepWarning(`Önce ${currentPaintStep} numarayı boya!`);
+        SoundFx.playClickTone?.();
+        if (shakeTimerRef.current) clearTimeout(shakeTimerRef.current);
+        shakeTimerRef.current = setTimeout(() => {
+          setShakingRegionId((curr) => (curr === regionId ? null : curr));
+        }, 500);
+        if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
+        warningTimerRef.current = setTimeout(() => {
+          setWrongStepWarning((curr) => (curr ? null : curr));
+        }, 2400);
+      }
+      return;
+    }
+
+    // Interaction lock
+    isPaintingRef.current = true;
+    setWrongStepWarning(null);
+
     const rect = workpieceContainerRef.current?.getBoundingClientRect();
-    if (!rect) return;
+    if (!rect) {
+      isPaintingRef.current = false;
+      return;
+    }
 
+    // Relative coordinates inside the workpiece container
     const relativeX = clientX - rect.left;
     const relativeY = clientY - rect.top;
 
     setBrushPos({ x: relativeX, y: relativeY });
+    setIsHandVisible(true);
     setIsBrushPainting(true);
+    setShowStep4Hint(false);
     SoundFx.playStoneDrag();
 
-    setTimeout(() => {
-      setIsBrushPainting(false);
-      setPaintedZones((prev) => {
-        if (prev.includes(zoneIndex)) return prev;
-        const next = [...prev, zoneIndex];
-        // If all 6 zones are completed, transition smoothly to Step 5!
-        if (next.length === 6) {
-          setTimeout(() => {
-            setCurrentStep(5);
-            SoundFx.playSuccessTone();
-          }, 800);
-        }
-        return next;
-      });
-    }, 650);
+    // Record undo history with step
+    const previousRecord = paintedRegions[regionId];
+    const previousStep = currentPaintStep;
+    setPaintHistory((prev) => [...prev, { regionId, previousRecord, previousStep }]);
+
+    // Clear prior timers if any
+    if (paintTimerRef.current) clearTimeout(paintTimerRef.current);
+    if (handRetractTimerRef.current) clearTimeout(handRetractTimerRef.current);
+
+    // Capture the paint color snapshot for this atomic stroke
+    const paintColorHex = activeColorHex;
+    const colorObj = getCiniColorByHex(paintColorHex);
+
+    // Atomic Painting Flow:
+    // 1. Brush arrives & paints (280ms)
+    // 2. Region color is immutably stored in paintedRegions
+    // 3. Step advances & next color is suggested from palette role
+    // 4. Brush lifts & lock released (180ms)
+    paintTimerRef.current = setTimeout(() => {
+      setPaintedRegions((prev) => ({
+        ...prev,
+        [regionId]: {
+          regionId,
+          colorId: colorObj.id,
+          colorHex: paintColorHex,
+        },
+      }));
+
+      setJustPaintedRegion(regionId);
+      setTimeout(() => {
+        setJustPaintedRegion((curr) => (curr === regionId ? null : curr));
+      }, 400);
+
+      const nextStep = currentPaintStep + 1;
+      setCurrentPaintStep(nextStep);
+
+      const nextDef = totalRegionDefs.find((r) => r.order === nextStep);
+      if (nextDef) {
+        setActiveColorHex(getSuggestedColorForRegion(nextDef));
+      }
+
+      handRetractTimerRef.current = setTimeout(() => {
+        setIsBrushPainting(false);
+        setIsHandVisible(false);
+        isPaintingRef.current = false;
+      }, 180);
+    }, 280);
+  };
+
+  // Undo last painted region
+  const handleUndo = () => {
+    if (paintHistory.length === 0 || isPaintingRef.current || isBrushPainting) return;
+    const lastAction = paintHistory[paintHistory.length - 1];
+    setPaintHistory((prev) => prev.slice(0, prev.length - 1));
+
+    setPaintedRegions((prev) => {
+      const next = { ...prev };
+      if (lastAction.previousRecord) {
+        next[lastAction.regionId] = lastAction.previousRecord;
+      } else {
+        delete next[lastAction.regionId];
+      }
+      return next;
+    });
+
+    if (lastAction.previousStep !== undefined) {
+      setCurrentPaintStep(lastAction.previousStep);
+      const targetDef = totalRegionDefs.find((r) => r.order === lastAction.previousStep);
+      if (targetDef) {
+        setActiveColorHex(getSuggestedColorForRegion(targetDef));
+      }
+    } else {
+      setCurrentPaintStep((prev) => Math.max(1, prev - 1));
+    }
+    SoundFx.playClickTone?.();
+  };
+
+  // Clear all painted regions
+  const handleClearAll = () => {
+    if (paintTimerRef.current) clearTimeout(paintTimerRef.current);
+    if (handRetractTimerRef.current) clearTimeout(handRetractTimerRef.current);
+    if (shakeTimerRef.current) clearTimeout(shakeTimerRef.current);
+    if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
+
+    isPaintingRef.current = false;
+    setCurrentPaintStep(1);
+    setPaintedRegions({});
+    setPaintHistory([]);
+    setIsBrushPainting(false);
+    setIsHandVisible(false);
+    setJustPaintedRegion(null);
+    setShowStep4Hint(true);
+    setShakingRegionId(null);
+    setWrongStepWarning(null);
+    setShowClearConfirmModal(false);
+    const firstDef = totalRegionDefs.find((r) => r.order === 1);
+    setActiveColorHex(getSuggestedColorForRegion(firstDef));
+    SoundFx.playClickTone?.();
+  };
+
+  // Complete Step 4 and proceed to Step 5
+  const handleCompletePattern = () => {
+    if (paintedCount < 2 && !showIncompleteModal) {
+      setShowIncompleteModal(true);
+      return;
+    }
+    setShowIncompleteModal(false);
+    setIsHandVisible(false);
+    setCurrentStep(5);
+    SoundFx.playSuccessTone();
   };
 
   // Step 5: "Tekrar Tasarla"
   const handleResetDesign = () => {
     setCurrentStep(1);
-    setPaintedZones([]);
+    setPaintedRegions({});
+    setPaintHistory([]);
+    setJustPaintedRegion(null);
+    setShowStep4Hint(true);
+    setShakingRegionId(null);
+    setWrongStepWarning(null);
     completedRef.current = false;
     SoundFx.playSuccessTone();
   };
@@ -143,6 +365,7 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
       Motif: selectedMotif.name,
       'Ana Renk': primaryColor.name,
       'İkinci Renk': secondaryColor.name,
+      'Boyanan Bölge': `${paintedCount} parça`,
       Sanat: 'Anadolu Çini Sanatı',
     };
 
@@ -175,9 +398,9 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
         };
       case 4:
         return {
-          subtitle: 'Ustalık ve Sabır',
-          body: 'Seçtiğin desen ve renklerle çini eserini şimdi hayata geçir! Usta ellerin izinden giderek, deseni eserine işle.',
-          callout: 'Geleneksel sanat, sabır ve özenle hayat bulur.',
+          subtitle: 'USTALIK VE SABIR',
+          body: '“Rengini seç, motiflere dokun ve kendi çini eserini tamamla.”',
+          callout: 'Çini eserini renklendir.',
         };
       case 5:
         return {
@@ -189,7 +412,6 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
   };
 
   const parchment = getParchmentContent();
-  const progressPercent = Math.round((paintedZones.length / 6) * 100);
 
   return (
     <div
@@ -217,14 +439,14 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
           position: 'absolute',
           inset: 0,
           background:
-            'radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.45) 75%, rgba(0,0,0,0.85) 100%)',
+            'radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0.06) 0%, rgba(0,0,0,0.40) 75%, rgba(0,0,0,0.85) 100%)',
           pointerEvents: 'none',
           zIndex: 1,
         }}
       />
 
       {/* =========================================================================
-          TOP GAME HEADER (Standard Kiosk Controls & Section Title)
+          TOP GAME HEADER
           ========================================================================= */}
       <header
         style={{
@@ -238,7 +460,7 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
             'linear-gradient(180deg, rgba(10, 16, 28, 0.88) 0%, rgba(10, 16, 28, 0.4) 70%, transparent 100%)',
         }}
       >
-        {/* Left: Back & Home Buttons & Section Pill */}
+        {/* Left: Back & Home Buttons & Section Title */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button
             onClick={handlePrevStep}
@@ -284,7 +506,7 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
             🏠
           </button>
 
-          {/* Section Title Plaque */}
+          {/* Section Plaque */}
           <div
             style={{
               padding: '10px 24px',
@@ -308,7 +530,7 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
           </div>
         </div>
 
-        {/* Center Top Plaque: Step Banner */}
+        {/* Center Top Banner */}
         <div
           style={{
             position: 'absolute',
@@ -341,7 +563,7 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
           </div>
         </div>
 
-        {/* Right Action Controls */}
+        {/* Right Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button
             onClick={onToggleAudio}
@@ -437,124 +659,205 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
           zIndex: 10,
           flex: 1,
           display: 'grid',
-          gridTemplateColumns: currentStep === 1 ? '320px 1fr' : '320px 1fr 400px',
+          gridTemplateColumns: currentStep === 1 ? '320px 1fr' : '310px 1fr 380px',
           alignItems: 'center',
-          padding: '0 36px',
-          gap: '24px',
-          maxHeight: 'calc(100% - 150px)',
+          padding: '0 32px',
+          gap: '20px',
+          maxHeight: 'calc(100% - 145px)',
         }}
       >
         {/* -----------------------------------------------------------------------
-            LEFT: PARCHMENT INFO CARD (Common to all 5 stages)
+            LEFT COLUMN: PARCHMENT INFO CARD + MASCOT KAŞİF
             ----------------------------------------------------------------------- */}
-        <div
-          className="cini-parchment-card"
-          style={{
-            position: 'relative',
-            background: 'linear-gradient(135deg, #FBF6E9 0%, #F2E8D2 60%, #E7DAC1 100%)',
-            border: '2px solid #9A7B56',
-            borderRadius: '16px',
-            padding: '26px 22px',
-            boxShadow:
-              '0 18px 36px rgba(0, 0, 0, 0.45), inset 0 0 40px rgba(180, 130, 80, 0.15)',
-            color: '#2A1806',
-            maxHeight: '480px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            fontFamily: "'Cinzel', 'Trajan Pro', Georgia, serif",
-          }}
-        >
-          {/* Top Decorative Pin */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '310px' }}>
           <div
+            className="cini-parchment-card"
             style={{
-              position: 'absolute',
-              top: '12px',
-              left: '14px',
-              width: '16px',
-              height: '16px',
-              borderRadius: '50%',
-              background: '#5B3E25',
-              border: '2px solid #D97706',
+              position: 'relative',
+              background: 'linear-gradient(135deg, #FBF6E9 0%, #F2E8D2 60%, #E7DAC1 100%)',
+              border: '2px solid #9A7B56',
+              borderRadius: '16px',
+              padding: currentStep === 4 ? '20px 18px' : '26px 22px',
+              boxShadow:
+                '0 18px 36px rgba(0, 0, 0, 0.45), inset 0 0 40px rgba(180, 130, 80, 0.15)',
+              color: '#2A1806',
+              fontFamily: "'Cinzel', 'Trajan Pro', Georgia, serif",
             }}
-          />
-
-          <div style={{ textAlign: 'center', color: '#0047AB', fontSize: '26px' }}>۞</div>
-
-          <div style={{ textAlign: 'center', margin: '6px 0 12px 0' }}>
-            <h1
+          >
+            {/* Top Pin */}
+            <div
               style={{
-                fontSize: '24px',
-                fontWeight: '900',
-                color: '#1B1204',
-                margin: '0 0 4px 0',
-                letterSpacing: '1px',
+                position: 'absolute',
+                top: '12px',
+                left: '14px',
+                width: '16px',
+                height: '16px',
+                borderRadius: '50%',
+                background: '#5B3E25',
+                border: '2px solid #D97706',
+              }}
+            />
+
+            <div style={{ textAlign: 'center', color: '#0047AB', fontSize: '24px' }}>۞</div>
+
+            <div style={{ textAlign: 'center', margin: '4px 0 8px 0' }}>
+              <h1
+                style={{
+                  fontSize: '22px',
+                  fontWeight: '900',
+                  color: '#1B1204',
+                  margin: '0 0 2px 0',
+                  letterSpacing: '1px',
+                }}
+              >
+                ÇİNİ SANATI
+              </h1>
+              <p
+                style={{
+                  fontSize: '12px',
+                  fontStyle: 'italic',
+                  color: '#854D0E',
+                  margin: 0,
+                  fontWeight: '700',
+                  letterSpacing: '0.5px',
+                }}
+              >
+                {parchment.subtitle}
+              </p>
+            </div>
+
+            <div
+              style={{
+                fontSize: currentStep === 4 ? '13.5px' : '14px',
+                lineHeight: '1.5',
+                color: '#3B230C',
+                textAlign: 'center',
+                fontFamily: "'Outfit', 'Segoe UI', sans-serif",
+                fontWeight: '500',
               }}
             >
-              ÇİNİ SANATI
-            </h1>
-            <p
+              {parchment.body}
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                margin: '8px 0',
+                color: '#0047AB',
+                fontSize: '14px',
+              }}
+            >
+              <span>—</span>
+              <span>۞</span>
+              <span>—</span>
+            </div>
+
+            {/* Mission Box */}
+            <div
               style={{
                 fontSize: '13px',
-                fontStyle: 'italic',
-                color: '#854D0E',
-                margin: 0,
+                lineHeight: '1.4',
+                color: '#2A1806',
+                textAlign: 'center',
                 fontWeight: '600',
+                fontFamily: "'Outfit', 'Segoe UI', sans-serif",
+                background: 'rgba(217, 119, 6, 0.12)',
+                borderRadius: '10px',
+                padding: '10px 12px',
+                border: '1px solid rgba(217, 119, 6, 0.28)',
               }}
             >
-              {parchment.subtitle}
-            </p>
+              <div style={{ fontSize: '12px', fontWeight: '800', color: '#B45309', marginBottom: '2px' }}>
+                🎯 GÖREV
+              </div>
+              <div>{parchment.callout}</div>
+            </div>
           </div>
 
-          <div
-            style={{
-              fontSize: '14px',
-              lineHeight: '1.6',
-              color: '#3B230C',
-              textAlign: 'center',
-              fontFamily: "'Outfit', 'Segoe UI', sans-serif",
-              fontWeight: '500',
-            }}
-          >
-            {parchment.body}
-          </div>
-
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '10px',
-              margin: '12px 0',
-              color: '#0047AB',
-              fontSize: '16px',
-            }}
-          >
-            <span>—</span>
-            <span>۞</span>
-            <span>—</span>
-          </div>
-
-          <div
-            style={{
-              fontSize: '13px',
-              lineHeight: '1.5',
-              color: '#2A1806',
-              textAlign: 'center',
-              fontWeight: '600',
-              fontFamily: "'Outfit', 'Segoe UI', sans-serif",
-              background: 'rgba(217, 119, 6, 0.12)',
-              borderRadius: '10px',
-              padding: '12px 14px',
-              border: '1px solid rgba(217, 119, 6, 0.25)',
-            }}
-          >
-            {parchment.callout}
-          </div>
+          {/* Robot Mascot Kaşif with speech bubble in Step 4 */}
+          {currentStep === 4 && (
+            <div
+              className="cini-kasif-guide"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                animation: 'fadeInUp 0.4s ease-out',
+                zIndex: 20,
+              }}
+            >
+              <img
+                src="/assets/devrim/kasif_mascot.webp"
+                alt="Kaşif"
+                style={{
+                  width: '74px',
+                  height: 'auto',
+                  flexShrink: 0,
+                  filter: 'drop-shadow(0 6px 14px rgba(0, 0, 0, 0.45))',
+                }}
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = '/assets/kasif_3d.png';
+                }}
+              />
+              <div
+                style={{
+                  position: 'relative',
+                  background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%)',
+                  border: '1.5px solid #F59E0B',
+                  borderRadius: '14px 14px 14px 2px',
+                  padding: '10px 14px',
+                  color: '#FEF08A',
+                  fontSize: '12.5px',
+                  fontWeight: '700',
+                  lineHeight: '1.35',
+                  boxShadow: '0 6px 18px rgba(0,0,0,0.35)',
+                }}
+              >
+                {wrongStepWarning ? (
+                  <span style={{ color: '#FDE047', fontWeight: '800' }}>
+                    {wrongStepWarning}
+                  </span>
+                ) : !activeRegionDef ? (
+                  <>
+                    Tebrikler!
+                    <br />
+                    Eserin harika görünüyor!
+                  </>
+                ) : activeRegionDef.order === 1 ? (
+                  <>
+                    Rengini seç,
+                    <br />
+                    1 numaralı motife dokun!
+                  </>
+                ) : activeRegionDef.order === 2 ? (
+                  <>
+                    Harika!
+                    <br />
+                    Şimdi 2 numarayı boya.
+                  </>
+                ) : activeRegionDef.order === 3 ? (
+                  <>
+                    Süper!
+                    <br />
+                    Sırada 3 numara var.
+                  </>
+                ) : (
+                  <>
+                    Harika gidiyorsun!
+                    <br />
+                    Sırada {activeRegionDef.order} numara var.
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* -----------------------------------------------------------------------
-            CENTER: WORKPIECE DISPLAY (Step 1: 4 Objects Grid | Steps 2-5: Center Piece)
+            CENTER: WORKPIECE DISPLAY (Dominant, Majestic Centerpiece)
             ----------------------------------------------------------------------- */}
         {currentStep === 1 ? (
           /* STEP 1: 3 ARTWORK OPTIONS GRID (Tabak, Vazo, Karo) */
@@ -565,7 +868,7 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '28px',
+              gap: '24px',
               width: '100%',
               maxWidth: '1080px',
               margin: '0 auto',
@@ -576,7 +879,7 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
               style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                gap: '28px',
+                gap: '24px',
                 width: '100%',
                 justifyContent: 'center',
                 alignItems: 'center',
@@ -595,7 +898,7 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      gap: '16px',
+                      gap: '14px',
                       cursor: 'pointer',
                       width: '100%',
                     }}
@@ -621,7 +924,6 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
                         transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
                       }}
                     >
-                      {/* Check badge when selected */}
                       {isSelected && (
                         <div
                           style={{
@@ -651,11 +953,10 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
                         primaryColor={primaryColor}
                         secondaryColor={secondaryColor}
                         mode="selection"
-                        scale={obj.id === 'vazo' ? 0.90 : 0.82}
+                        scale={0.82}
                       />
                     </div>
 
-                    {/* Object Name Pill Button */}
                     <button
                       type="button"
                       style={{
@@ -682,17 +983,16 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
               })}
             </div>
 
-            {/* Confirm & Proceed Button centered under the 3 cards */}
             <button
               onClick={handleNextStep}
               style={{
-                marginTop: '10px',
-                padding: '16px 48px',
+                marginTop: '6px',
+                padding: '15px 44px',
                 borderRadius: '16px',
                 border: 'none',
                 background: 'linear-gradient(135deg, #FDE68A 0%, #F59E0B 50%, #D97706 100%)',
                 color: '#291705',
-                fontSize: '19px',
+                fontSize: '18px',
                 fontWeight: '900',
                 cursor: 'pointer',
                 boxShadow: '0 8px 24px rgba(245, 158, 11, 0.5)',
@@ -716,13 +1016,42 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               height: '100%',
+              width: '100%',
             }}
           >
+            {/* Step 4: Initial Tutorial Guidance Toast */}
+            {currentStep === 4 && showStep4Hint && paintedCount === 0 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '12px',
+                  background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.94) 0%, rgba(20, 38, 68, 0.94) 100%)',
+                  border: '1.5px solid #38BDF8',
+                  boxShadow: '0 8px 24px rgba(22, 182, 201, 0.45)',
+                  borderRadius: '9999px',
+                  padding: '8px 22px',
+                  color: '#FFFFFF',
+                  fontSize: '13.5px',
+                  fontWeight: '800',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  zIndex: 25,
+                  pointerEvents: 'none',
+                  animation: 'fadeInDown 0.3s ease-out',
+                }}
+              >
+                <span style={{ fontSize: '18px' }}>✨</span>
+                <span>1 numaralı motiften başlayarak sırayla dokun ve boya!</span>
+              </div>
+            )}
+
             <CiniObjectRenderer
               object={selectedObject}
               motif={selectedMotif}
               primaryColor={primaryColor}
               secondaryColor={secondaryColor}
+              accentColor={accentColor}
               mode={
                 currentStep === 2
                   ? 'draft'
@@ -732,8 +1061,14 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
                   ? 'interactive'
                   : 'completed'
               }
-              paintedZones={paintedZones}
-              onPaintZone={handlePaintZone}
+              paintedRegions={paintedRegions}
+              onRegionClick={handleRegionClick}
+              hoveredRegion={hoveredRegion}
+              onRegionHover={setHoveredRegion}
+              leadHintRegions={leadHintRegions}
+              justPaintedRegion={justPaintedRegion}
+              activeStepOrder={activeStepOrder}
+              shakingRegionId={shakingRegionId}
             />
 
             {/* Step 4: Floating Animated Artisan Hand & Brush */}
@@ -742,8 +1077,35 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
                 x={brushPos.x}
                 y={brushPos.y}
                 isPainting={isBrushPainting}
-                brushColor={primaryColor.hex}
+                brushColor={activeColorHex}
+                brushType="orta"
+                visible={isHandVisible}
               />
+            )}
+
+            {/* Step 4: Progress Chip below artwork */}
+            {currentStep === 4 && (
+              <div
+                style={{
+                  marginTop: '6px',
+                  background: 'rgba(15, 23, 42, 0.85)',
+                  border: '1px solid rgba(245, 158, 11, 0.4)',
+                  borderRadius: '9999px',
+                  padding: '6px 18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  color: '#FEF08A',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                }}
+              >
+                <span>🎨 BOYANAN BÖLGE:</span>
+                <span style={{ color: '#FFFFFF', fontWeight: '900' }}>
+                  {paintedCount} / {totalRegionCount}
+                </span>
+              </div>
             )}
           </div>
         )}
@@ -755,18 +1117,19 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
           <div
             className="cini-selection-panel"
             style={{
-              background: 'rgba(10, 20, 35, 0.9)',
+              background: 'rgba(10, 20, 36, 0.94)',
               backdropFilter: 'blur(16px)',
               border: '1.5px solid rgba(217, 119, 6, 0.45)',
-              borderRadius: '20px',
-              padding: '22px 20px',
-              boxShadow: '0 20px 48px rgba(0, 0, 0, 0.6)',
+              borderRadius: '22px',
+              padding: currentStep === 4 ? '16px 16px' : '20px 18px',
+              boxShadow: '0 20px 48px rgba(0, 0, 0, 0.65)',
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
               color: '#FFFFFF',
-              maxHeight: '560px',
-              gap: '16px',
+              maxHeight: currentStep === 4 ? 'min(86vh, 600px)' : '580px',
+              overflow: 'hidden',
+              gap: currentStep === 4 ? '10px' : '12px',
             }}
           >
             {/* STEP 2: DESEN SEÇ PANEL */}
@@ -780,7 +1143,6 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
                   </p>
                 </div>
 
-                {/* 6 Motif Cards (2x3 grid) */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
                   {CINI_MOTIFS.map((m) => {
                     const isSelected = selectedMotifId === m.id;
@@ -841,7 +1203,6 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
                   })}
                 </div>
 
-                {/* Bottom Action */}
                 <button
                   onClick={handleNextStep}
                   style={{
@@ -873,63 +1234,129 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
                   </p>
                 </div>
 
-                {/* Primary vs Secondary Color Layer Selector */}
+                {/* 3 Color Layer Tabs: Ana Renk, 2. Renk, Vurgu */}
                 <div
                   style={{
                     display: 'flex',
-                    background: 'rgba(15, 23, 42, 0.8)',
+                    background: 'rgba(15, 23, 42, 0.85)',
                     borderRadius: '9999px',
-                    padding: '3px',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    padding: '4px',
+                    border: '1px solid rgba(255, 255, 255, 0.16)',
+                    gap: '4px',
                   }}
                 >
                   <button
                     onClick={() => setColorLayerTarget('primary')}
                     style={{
                       flex: 1,
-                      padding: '8px 12px',
+                      padding: '8px 10px',
                       borderRadius: '9999px',
                       border: 'none',
-                      background: colorLayerTarget === 'primary' ? '#0047AB' : 'transparent',
-                      color: colorLayerTarget === 'primary' ? '#FFFFFF' : '#94A3B8',
-                      fontSize: '13px',
+                      background: colorLayerTarget === 'primary' ? selectedPalette.primary : 'transparent',
+                      color: '#FFFFFF',
+                      fontSize: '12px',
                       fontWeight: '800',
                       cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      boxShadow: colorLayerTarget === 'primary' ? `0 0 14px ${selectedPalette.primary}` : 'none',
+                      transition: 'all 0.2s ease',
                     }}
                   >
-                    Ana Renk ({primaryColor.name})
+                    <span
+                      style={{
+                        width: '9px',
+                        height: '9px',
+                        borderRadius: '50%',
+                        background: selectedPalette.primary,
+                        border: '1.5px solid #FFFFFF',
+                      }}
+                    />
+                    <span>Ana ({primaryColor.name})</span>
                   </button>
                   <button
                     onClick={() => setColorLayerTarget('secondary')}
                     style={{
                       flex: 1,
-                      padding: '8px 12px',
+                      padding: '8px 10px',
                       borderRadius: '9999px',
                       border: 'none',
-                      background: colorLayerTarget === 'secondary' ? '#DC2626' : 'transparent',
-                      color: colorLayerTarget === 'secondary' ? '#FFFFFF' : '#94A3B8',
-                      fontSize: '13px',
+                      background: colorLayerTarget === 'secondary' ? selectedPalette.secondary : 'transparent',
+                      color: '#FFFFFF',
+                      fontSize: '12px',
                       fontWeight: '800',
                       cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      boxShadow: colorLayerTarget === 'secondary' ? `0 0 14px ${selectedPalette.secondary}` : 'none',
+                      transition: 'all 0.2s ease',
                     }}
                   >
-                    2. Renk ({secondaryColor.name})
+                    <span
+                      style={{
+                        width: '9px',
+                        height: '9px',
+                        borderRadius: '50%',
+                        background: selectedPalette.secondary,
+                        border: '1.5px solid #FFFFFF',
+                      }}
+                    />
+                    <span>2. ({secondaryColor.name})</span>
+                  </button>
+                  <button
+                    onClick={() => setColorLayerTarget('accent')}
+                    style={{
+                      flex: 1,
+                      padding: '8px 10px',
+                      borderRadius: '9999px',
+                      border: 'none',
+                      background: colorLayerTarget === 'accent' ? selectedPalette.accent : 'transparent',
+                      color: '#FFFFFF',
+                      fontSize: '12px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      boxShadow: colorLayerTarget === 'accent' ? `0 0 14px ${selectedPalette.accent}` : 'none',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: '9px',
+                        height: '9px',
+                        borderRadius: '50%',
+                        background: selectedPalette.accent,
+                        border: '1.5px solid #FFFFFF',
+                      }}
+                    />
+                    <span>Vurgu ({accentColor.name})</span>
                   </button>
                 </div>
 
-                {/* 6 Large Color Swatches Grid (3x2) */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                {/* 6 Net Çini Rengi Grid (3x2) */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px 10px' }}>
                   {CINI_COLORS.map((c) => {
                     const isSelected =
-                      colorLayerTarget === 'primary' ? primaryColorId === c.id : secondaryColorId === c.id;
+                      selectedPalette[colorLayerTarget].toLowerCase() === c.hex.toLowerCase();
                     return (
                       <button
                         key={c.id}
+                        type="button"
                         onClick={() => {
+                          const newHex = c.hex;
+                          setSelectedPalette((prev) => ({
+                            ...prev,
+                            [colorLayerTarget]: newHex,
+                          }));
                           if (colorLayerTarget === 'primary') {
-                            setPrimaryColorId(c.id);
-                          } else {
-                            setSecondaryColorId(c.id);
+                            setActiveColorHex(newHex);
                           }
                           SoundFx.playClickTone?.();
                         }}
@@ -938,56 +1365,53 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
                           flexDirection: 'column',
                           alignItems: 'center',
                           gap: '6px',
-                          background: 'transparent',
-                          border: 'none',
+                          background: isSelected ? 'rgba(245, 158, 11, 0.16)' : 'rgba(15, 23, 42, 0.65)',
+                          border: isSelected ? '2px solid #F59E0B' : '1px solid rgba(255, 255, 255, 0.15)',
+                          borderRadius: '14px',
+                          padding: '10px 6px',
                           cursor: 'pointer',
+                          boxShadow: isSelected ? '0 0 16px rgba(245, 158, 11, 0.45)' : 'none',
+                          transform: isSelected ? 'scale(1.04)' : 'scale(1)',
+                          transition: 'all 0.18s ease',
                         }}
                       >
                         <div
                           style={{
                             position: 'relative',
-                            width: '54px',
-                            height: '54px',
+                            width: '48px',
+                            height: '48px',
                             borderRadius: '50%',
                             background: c.hex,
                             border: isSelected ? '3px solid #FFFFFF' : '2px solid rgba(255, 255, 255, 0.4)',
                             boxShadow: isSelected
-                              ? `0 0 20px ${c.hex}, 0 6px 14px rgba(0,0,0,0.5)`
-                              : '0 4px 10px rgba(0,0,0,0.3)',
-                            transform: isSelected ? 'scale(1.12)' : 'scale(1)',
-                            transition: 'all 0.2s ease',
+                              ? `0 0 16px ${c.hex}, 0 4px 10px rgba(0,0,0,0.5)`
+                              : '0 3px 8px rgba(0,0,0,0.3)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                           }}
                         >
                           {isSelected && (
-                            <div
+                            <span
                               style={{
-                                position: 'absolute',
-                                top: '-2px',
-                                right: '-2px',
-                                width: '18px',
-                                height: '18px',
-                                borderRadius: '50%',
-                                background: '#00F2FE',
-                                color: '#070B19',
-                                fontSize: '11px',
+                                color: '#FFFFFF',
+                                fontSize: '16px',
                                 fontWeight: '900',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
+                                textShadow: '0 1px 3px rgba(0,0,0,0.6)',
                               }}
                             >
                               ✓
-                            </div>
+                            </span>
                           )}
                         </div>
-                        <span style={{ fontSize: '12px', fontWeight: '700', color: '#F8FAFC' }}>{c.name}</span>
-                        <span style={{ fontSize: '11px', color: '#94A3B8', fontStyle: 'italic' }}>{c.meaning}</span>
+                        <span style={{ fontSize: '13px', fontWeight: '800', color: isSelected ? '#FEF08A' : '#F8FAFC', textAlign: 'center' }}>
+                          {c.name}
+                        </span>
                       </button>
                     );
                   })}
                 </div>
 
-                {/* Bottom Actions: Geri & Renkleri Uygula */}
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <button
                     onClick={handlePrevStep}
@@ -1026,106 +1450,282 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
               </>
             )}
 
-            {/* STEP 4: DESENİ UYGULA PANEL */}
+            {/* STEP 4: SIMPLIFIED ACTION PANEL (NO BRUSHES, NO SCROLLBAR, EXACT 6 CANONICAL COLORS) */}
             {currentStep === 4 && (
               <>
-                <div>
-                  <div style={{ fontSize: '13px', fontWeight: '800', color: '#F59E0B' }}>4. ADIM</div>
-                  <h2 style={{ fontSize: '22px', fontWeight: '800', margin: '2px 0 6px 0' }}>DESENİ UYGULA</h2>
-                  <p style={{ fontSize: '13px', color: '#94A3B8', margin: 0 }}>
-                    Seçtiğin deseni ve renkleri esere işliyoruz.
-                  </p>
-                </div>
-
-                {/* Interactive Status & Progress */}
+                {/* 0. BOYAMA SIRASI (Sequential Progress Guidance Card) */}
                 <div
                   style={{
-                    background: 'rgba(15, 23, 42, 0.7)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%)',
+                    border: '1.5px solid #F59E0B',
                     borderRadius: '14px',
-                    padding: '16px',
+                    padding: '10px 14px',
                     display: 'flex',
-                    flexDirection: 'column',
-                    gap: '12px',
-                    textAlign: 'center',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    boxShadow: '0 4px 14px rgba(0, 0, 0, 0.35)',
+                    flexShrink: 0,
                   }}
                 >
-                  <div style={{ fontSize: '14px', color: '#E2E8F0', fontWeight: '600' }}>
-                    {progressPercent === 100
-                      ? 'Eserin ustalıkla tamamlandı!'
-                      : 'Tabağın üzerindeki parlayan noktalara dokunarak fırçayı yönlendir!'}
-                  </div>
-
-                  {/* Progress bar */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ fontSize: '20px' }}>🖌️</span>
+                  <div>
                     <div
                       style={{
-                        flex: 1,
-                        height: '14px',
-                        background: 'rgba(255, 255, 255, 0.1)',
-                        borderRadius: '9999px',
-                        overflow: 'hidden',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        fontSize: '11px',
+                        fontWeight: '800',
+                        color: '#F59E0B',
+                        letterSpacing: '0.8px',
+                        textTransform: 'uppercase',
                       }}
                     >
-                      <div
-                        style={{
-                          width: `${progressPercent}%`,
-                          height: '100%',
-                          background: 'linear-gradient(90deg, #06B6D4 0%, #F59E0B 100%)',
-                          borderRadius: '9999px',
-                          transition: 'width 0.4s ease-out',
-                        }}
-                      />
+                      BOYAMA SIRASI
                     </div>
-                    <span style={{ fontSize: '16px', fontWeight: '800', color: '#FEF08A' }}>
-                      %{progressPercent}
+                    <div
+                      style={{
+                        fontSize: '13.5px',
+                        fontWeight: '700',
+                        color: '#FEF08A',
+                        marginTop: '2px',
+                      }}
+                    >
+                      {activeRegionDef
+                        ? `${activeRegionDef.order} numaralı motife dokun.`
+                        : '✓ Tüm motifler boyandı!'}
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      background: 'rgba(245, 158, 11, 0.2)',
+                      border: '1px solid #F59E0B',
+                      borderRadius: '9999px',
+                      padding: '4px 12px',
+                      fontSize: '13px',
+                      fontWeight: '900',
+                      color: '#FFFFFF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <span style={{ color: '#F59E0B', fontSize: '10px' }}>●</span>
+                    <span>
+                      {activeRegionDef ? activeRegionDef.order : totalRegionCount} / {totalRegionCount}
                     </span>
                   </div>
                 </div>
 
-                {/* Cultural Tip Card */}
-                <div
-                  style={{
-                    background: 'rgba(217, 119, 6, 0.12)',
-                    border: '1px solid rgba(217, 119, 6, 0.35)',
-                    borderRadius: '12px',
-                    padding: '12px 16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    fontSize: '13px',
-                    color: '#FEF3C7',
-                    lineHeight: '1.4',
-                  }}
-                >
-                  <span style={{ fontSize: '22px' }}>💡</span>
-                  <div>
-                    <strong>İpucu:</strong> Her fırça darbesi, Anadolu’nun kadim mirasını yaşatır.
+                {/* 1. RENK SEÇ */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '18px' }}>🎨</span>
+                      <span style={{ fontSize: '15px', fontWeight: '800', color: '#FFFFFF', letterSpacing: '0.3px' }}>
+                        RENK SEÇ
+                      </span>
+                    </div>
+
+                    {/* Active Color Name Badge */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        background: 'rgba(15, 23, 42, 0.8)',
+                        border: `1.5px solid ${activeColorHex}`,
+                        borderRadius: '9999px',
+                        padding: '3px 10px',
+                        fontSize: '11.5px',
+                        fontWeight: '700',
+                        color: '#F8FAFC',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '10px',
+                          height: '10px',
+                          borderRadius: '50%',
+                          background: activeColorHex,
+                          boxShadow: `0 0 6px ${activeColorHex}`,
+                        }}
+                      />
+                      <span>{activeColorItem.name}</span>
+                    </div>
+                  </div>
+
+                  {/* 6 Renk (3x2 Grid) */}
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(3, 1fr)',
+                      gap: '8px',
+                    }}
+                  >
+                    {CINI_COLORS.map((color) => {
+                      const isSelected = activeColorHex.toLowerCase() === color.hex.toLowerCase();
+                      return (
+                        <button
+                          key={color.id}
+                          type="button"
+                          onClick={() => {
+                            setActiveColorHex(color.hex);
+                            SoundFx.playClickTone?.();
+                          }}
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '5px',
+                            background: isSelected
+                              ? 'rgba(245, 158, 11, 0.18)'
+                              : 'rgba(15, 23, 42, 0.65)',
+                            border: isSelected
+                              ? '2px solid #F59E0B'
+                              : '1px solid rgba(255, 255, 255, 0.15)',
+                            borderRadius: '12px',
+                            padding: '8px 4px',
+                            cursor: 'pointer',
+                            boxShadow: isSelected
+                              ? '0 0 14px rgba(245, 158, 11, 0.45)'
+                              : 'none',
+                            transform: isSelected ? 'scale(1.03)' : 'scale(1)',
+                            transition: 'all 0.18s ease',
+                          }}
+                        >
+                          <div
+                            style={{
+                              position: 'relative',
+                              width: '42px',
+                              height: '42px',
+                              borderRadius: '50%',
+                              background: color.hex,
+                              border: isSelected
+                                ? '3px solid #FFFFFF'
+                                : '2px solid rgba(255, 255, 255, 0.35)',
+                              boxShadow: isSelected
+                                ? `0 0 14px ${color.hex}, 0 3px 8px rgba(0,0,0,0.5)`
+                                : '0 2px 6px rgba(0,0,0,0.3)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            {isSelected && (
+                              <span
+                                style={{
+                                  color: '#FFFFFF',
+                                  fontSize: '15px',
+                                  fontWeight: '900',
+                                  textShadow: '0 1px 3px rgba(0,0,0,0.6)',
+                                }}
+                              >
+                                ✓
+                              </span>
+                            )}
+                          </div>
+                          <span
+                            style={{
+                              fontSize: '12.5px',
+                              fontWeight: isSelected ? '800' : '700',
+                              color: isSelected ? '#FEF08A' : '#F8FAFC',
+                              textAlign: 'center',
+                            }}
+                          >
+                            {color.name}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                {/* Direct complete button if all painted */}
-                {progressPercent === 100 && (
+                {/* 2. GERİ AL & TEMİZLE ACTIONS */}
+                <div style={{ display: 'flex', gap: '8px' }}>
                   <button
-                    onClick={() => setCurrentStep(5)}
+                    type="button"
+                    onClick={handleUndo}
+                    disabled={paintHistory.length === 0}
                     style={{
-                      width: '100%',
-                      padding: '16px',
-                      borderRadius: '14px',
-                      border: 'none',
-                      background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                      color: '#FFFFFF',
-                      fontSize: '18px',
-                      fontWeight: '900',
-                      cursor: 'pointer',
-                      boxShadow: '0 8px 24px rgba(16, 185, 129, 0.45)',
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      padding: '9px 12px',
+                      borderRadius: '12px',
+                      background: 'rgba(30, 41, 59, 0.7)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      color: paintHistory.length === 0 ? '#64748B' : '#E2E8F0',
+                      fontSize: '13px',
+                      fontWeight: '700',
+                      cursor: paintHistory.length === 0 ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.18s ease',
+                      opacity: paintHistory.length === 0 ? 0.5 : 1,
                     }}
                   >
-                    ✓ Eseri Tamamla
+                    <span>↺</span>
+                    <span>Geri Al</span>
                   </button>
-                )}
+
+                  <button
+                    type="button"
+                    onClick={() => setShowClearConfirmModal(true)}
+                    disabled={paintedCount === 0}
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      padding: '9px 12px',
+                      borderRadius: '12px',
+                      background: 'rgba(30, 41, 59, 0.7)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      color: paintedCount === 0 ? '#64748B' : '#FCA5A5',
+                      fontSize: '13px',
+                      fontWeight: '700',
+                      cursor: paintedCount === 0 ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.18s ease',
+                      opacity: paintedCount === 0 ? 0.5 : 1,
+                    }}
+                  >
+                    <span>🗑</span>
+                    <span>Temizle</span>
+                  </button>
+                </div>
+
+                {/* 3. DESENİ TAMAMLA PRIMARY CTA */}
+                <button
+                  type="button"
+                  onClick={handleCompletePattern}
+                  style={{
+                    width: '100%',
+                    padding: '13px 18px',
+                    borderRadius: '14px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #FDE68A 0%, #F59E0B 50%, #D97706 100%)',
+                    color: '#291705',
+                    fontSize: '16.5px',
+                    fontWeight: '900',
+                    cursor: 'pointer',
+                    boxShadow: '0 6px 20px rgba(245, 158, 11, 0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s ease',
+                    flexShrink: 0,
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.02)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                >
+                  <span style={{ fontSize: '18px' }}>✓</span>
+                  <span>Deseni Tamamla</span>
+                </button>
               </>
             )}
 
@@ -1142,7 +1742,7 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
                   </p>
                 </div>
 
-                {/* 3 Accomplishment Badges */}
+                {/* Accomplishment Badges */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {[
                     { icon: '⭐', label: 'Kültürel Mirası Yaşattın' },
@@ -1213,6 +1813,160 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
       </main>
 
       {/* =========================================================================
+          CONFIRMATION MODALS
+          ========================================================================= */}
+      {/* 1. Clear All Confirmation Modal */}
+      {showClearConfirmModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(5, 10, 20, 0.8)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100,
+          }}
+          onClick={() => setShowClearConfirmModal(false)}
+        >
+          <div
+            style={{
+              background: 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)',
+              border: '2px solid #F59E0B',
+              borderRadius: '20px',
+              padding: '28px',
+              maxWidth: '380px',
+              textAlign: 'center',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
+              color: '#FFFFFF',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: '36px', marginBottom: '10px' }}>🗑️</div>
+            <h3 style={{ fontSize: '20px', fontWeight: '800', margin: '0 0 8px 0' }}>Tüm Boyamayı Temizle?</h3>
+            <p style={{ fontSize: '14px', color: '#CBD5E1', margin: '0 0 20px 0', lineHeight: '1.5' }}>
+              Boyadığın tüm desenleri baştan boyamak için temizlemek istiyor musun?
+            </p>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setShowClearConfirmModal(false)}
+                style={{
+                  flex: 1,
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.25)',
+                  color: '#F8FAFC',
+                  fontWeight: '700',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                }}
+              >
+                Vazgeç
+              </button>
+              <button
+                type="button"
+                onClick={handleClearAll}
+                style={{
+                  flex: 1,
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #EF4444 0%, #B91C1C 100%)',
+                  border: 'none',
+                  color: '#FFFFFF',
+                  fontWeight: '800',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                }}
+              >
+                Evet, Temizle
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Incomplete Completion Gentle Prompt Modal */}
+      {showIncompleteModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(5, 10, 20, 0.8)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100,
+          }}
+          onClick={() => setShowIncompleteModal(false)}
+        >
+          <div
+            style={{
+              background: 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)',
+              border: '2px solid #F59E0B',
+              borderRadius: '20px',
+              padding: '28px',
+              maxWidth: '400px',
+              textAlign: 'center',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
+              color: '#FFFFFF',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: '36px', marginBottom: '10px' }}>🎨</div>
+            <h3 style={{ fontSize: '20px', fontWeight: '800', margin: '0 0 8px 0' }}>Birkaç Bölge Daha Boyamak İster misin?</h3>
+            <p style={{ fontSize: '14px', color: '#CBD5E1', margin: '0 0 20px 0', lineHeight: '1.5' }}>
+              Eserinde henüz renklendirilmeyi bekleyen kısımlar var. Yine de eseri bu haliyle tamamlamak ister misin?
+            </p>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setShowIncompleteModal(false)}
+                style={{
+                  flex: 1,
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #FDE68A 0%, #F59E0B 100%)',
+                  border: 'none',
+                  color: '#291705',
+                  fontWeight: '800',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                }}
+              >
+                Boyamaya Devam Et
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowIncompleteModal(false);
+                  setIsHandVisible(false);
+                  setCurrentStep(5);
+                  SoundFx.playSuccessTone();
+                }}
+                style={{
+                  flex: 1,
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.25)',
+                  color: '#F8FAFC',
+                  fontWeight: '700',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                }}
+              >
+                Böyle Tamamla ✓
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
           BOTTOM STEP PROGRESS BAR (Common across all 5 stages)
           ========================================================================= */}
       <footer
@@ -1228,7 +1982,7 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
           borderTop: '1px solid rgba(255, 255, 255, 0.08)',
         }}
       >
-        {/* 5-Step Indicators */}
+        {/* 5-Step Stepper */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
           {[
             { step: 1, label: 'Eser Seç' },
@@ -1293,14 +2047,27 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
         {/* Right Quote matching the current step */}
         <div
           style={{
-            fontStyle: 'italic',
-            fontSize: '14px',
+            textAlign: 'right',
             color: '#E2E8F0',
-            opacity: 0.85,
             fontFamily: "'Cinzel', Georgia, serif",
           }}
         >
-          {STEP_QUOTES[currentStep - 1]}
+          <div
+            style={{
+              fontStyle: 'italic',
+              fontSize: '13px',
+              fontWeight: '700',
+              opacity: 0.9,
+              letterSpacing: '0.4px',
+            }}
+          >
+            {STEP_QUOTES[currentStep - 1].toUpperCase()}
+          </div>
+          {currentStep === 4 && (
+            <div style={{ fontSize: '12px', fontWeight: '800', color: '#F59E0B', marginTop: '2px' }}>
+              K. Atatürk
+            </div>
+          )}
         </div>
       </footer>
     </div>

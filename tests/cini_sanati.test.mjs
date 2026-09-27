@@ -4,7 +4,7 @@ import { CINI_OBJECTS, CINI_MOTIFS, CINI_COLORS, STEP_QUOTES } from '../src/data
 
 test('CINI_OBJECTS: contains exactly 3 ceramic forms with valid metadata', () => {
   assert.equal(CINI_OBJECTS.length, 3, 'Should have exactly 3 ceramic objects');
-  const expectedIds = ['tabak', 'vazo', 'karo'];
+  const expectedIds = ['tabak', 'pano', 'karo'];
   assert.deepEqual(CINI_OBJECTS.map(o => o.id), expectedIds);
   CINI_OBJECTS.forEach(obj => {
     assert.ok(obj.name.length > 0, `Object ${obj.id} must have a name`);
@@ -26,7 +26,7 @@ test('CINI_MOTIFS: contains 6 traditional Anatolian motifs with complete metadat
 
 test('CINI_COLORS: contains all 6 authentic Anatolian ceramic pigment colors with meanings', () => {
   assert.equal(CINI_COLORS.length, 6, 'Should have exactly 6 colors');
-  const expectedColors = ['kobalt', 'turkuaz', 'mercan', 'zumrut', 'toprak', 'krem'];
+  const expectedColors = ['kirmizi', 'sari', 'yesil', 'mavi', 'turkuaz', 'mor'];
   assert.deepEqual(CINI_COLORS.map(c => c.id), expectedColors);
   CINI_COLORS.forEach(c => {
     assert.match(c.hex, /^#[0-9A-Fa-f]{6}$/, `Color hex "${c.hex}" must be valid`);
@@ -60,7 +60,7 @@ test('CINI_MOTIF_TARGETS: each of the 6 motifs defines 6 valid interactive paint
 
 test('DECORATION_AREAS: defines dedicated safe decoration surfaces and clipPaths for each ceramic object', async () => {
   const { DECORATION_AREAS } = await import('../src/data/ciniData.ts');
-  const expectedObjects = ['tabak', 'vazo', 'karo'];
+  const expectedObjects = ['tabak', 'pano', 'karo'];
   expectedObjects.forEach(objId => {
     const area = DECORATION_AREAS[objId];
     assert.ok(area, `Decoration area for ${objId} must exist`);
@@ -69,5 +69,41 @@ test('DECORATION_AREAS: defines dedicated safe decoration surfaces and clipPaths
     assert.ok(area.transform.length > 0, `transform for ${objId} must not be empty`);
   });
 });
+
+test('CINI_EXPANDED_PALETTE: contains all 6 rich ceramic pigments with valid names and hex codes', async () => {
+  const { CINI_EXPANDED_PALETTE } = await import('../src/data/ciniData.ts');
+  assert.equal(CINI_EXPANDED_PALETTE.length, 6, 'Should have exactly 6 palette colors');
+  CINI_EXPANDED_PALETTE.forEach(c => {
+    assert.match(c.hex, /^#[0-9A-Fa-f]{6}$/, `Color hex "${c.hex}" must be valid`);
+    assert.ok(c.name.length > 0, `Color name for ${c.id} must not be empty`);
+    assert.ok(c.meaning.length > 0, `Color meaning for ${c.id} must not be empty`);
+  });
+});
+
+test('CINI_BRUSHES: contains all 4 traditional brushes with valid identifiers and labels', async () => {
+  const { CINI_BRUSHES } = await import('../src/data/ciniData.ts');
+  assert.equal(CINI_BRUSHES.length, 4, 'Should have exactly 4 brushes');
+  const brushIds = CINI_BRUSHES.map(b => b.id);
+  assert.deepEqual(brushIds, ['ince', 'orta', 'genis', 'sunger']);
+});
+
+test('MOTIF_REGION_DEFINITIONS: defines stable region IDs and centers for all 6 traditional motifs', async () => {
+  const { MOTIF_REGION_DEFINITIONS } = await import('../src/data/ciniData.ts');
+  const expectedMotifs = ['lale', 'karanfil', 'rumi', 'hatayi', 'geometrik', 'yaprak'];
+  expectedMotifs.forEach(motifId => {
+    const regions = MOTIF_REGION_DEFINITIONS[motifId];
+    assert.ok(Array.isArray(regions), `Regions array for ${motifId} must exist`);
+    assert.ok(regions.length >= 8, `Motif ${motifId} must have at least 8 distinct stable regions`);
+    const ids = new Set();
+    regions.forEach(r => {
+      assert.ok(r.id.length > 0, `Region ID in ${motifId} must not be empty`);
+      assert.ok(!ids.has(r.id), `Region ID ${r.id} must be unique in ${motifId}`);
+      ids.add(r.id);
+      assert.ok(r.center.x >= 100 && r.center.x <= 500, `Region center X must be in bounds for ${r.id}`);
+      assert.ok(r.center.y >= 50 && r.center.y <= 550, `Region center Y must be in bounds for ${r.id}`);
+    });
+  });
+});
+
 
 

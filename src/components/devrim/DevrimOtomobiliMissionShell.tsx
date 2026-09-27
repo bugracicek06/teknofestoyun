@@ -30,12 +30,19 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
   // Step State: 1 = Tanış, 2 = Kaput, 3 = İnşa Et, 4 = Çalıştır, 5 = Tamamla
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1);
 
-  // Step 2 Hood Animation State
-  const [isHoodOpening, setIsHoodOpening] = useState(false);
+  // Mechanical hood opening animation state (Step 1 -> Step 2)
+  const [isOpeningHood, setIsOpeningHood] = useState(false);
+
 
   // Step 4 Ignition State
   const [isStartingEngine, setIsStartingEngine] = useState(false);
   const [isEngineRunning, setIsEngineRunning] = useState(false);
+
+  // Step 5 Car Driving Animation State: 'idle' -> 'driving' -> 'completed'
+  const [step5Phase, setStep5Phase] = useState<'idle' | 'driving' | 'completed'>('idle');
+  const step5StartedRef = useRef<boolean>(false);
+  const step5Timer1Ref = useRef<number | null>(null);
+  const step5Timer2Ref = useRef<number | null>(null);
 
   const startTimeRef = useRef<number>(Date.now());
   const completedRef = useRef<boolean>(false);
@@ -43,30 +50,83 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
   const ignitionTimer1Ref = useRef<number | null>(null);
   const ignitionTimer2Ref = useRef<number | null>(null);
   const ignitionTimer3Ref = useRef<number | null>(null);
+  const hoodTimerRef = useRef<number | null>(null);
 
   // Clean up any pending ignition timers on unmount
   useEffect(() => {
     return () => {
-      if (ignitionTimer1Ref.current) window.clearTimeout(ignitionTimer1Ref.current);
-      if (ignitionTimer2Ref.current) window.clearTimeout(ignitionTimer2Ref.current);
-      if (ignitionTimer3Ref.current) window.clearTimeout(ignitionTimer3Ref.current);
+      const t1 = ignitionTimer1Ref.current;
+      const t2 = ignitionTimer2Ref.current;
+      const t3 = ignitionTimer3Ref.current;
+      const tHood = hoodTimerRef.current;
+      const tStep5_1 = step5Timer1Ref.current;
+      const tStep5_2 = step5Timer2Ref.current;
+      if (t1) window.clearTimeout(t1);
+      if (t2) window.clearTimeout(t2);
+      if (t3) window.clearTimeout(t3);
+      if (tHood) window.clearTimeout(tHood);
+      if (tStep5_1) window.clearTimeout(tStep5_1);
+      if (tStep5_2) window.clearTimeout(tStep5_2);
     };
   }, []);
 
+  // Step 2: Brief transition (~1100ms) with open hood and Kaşif speech, then auto-advance to Step 3
+  useEffect(() => {
+    if (currentStep === 2) {
+      const timer = window.setTimeout(() => {
+        setCurrentStep(3);
+      }, 1100);
+      return () => window.clearTimeout(timer);
+    }
+  }, [currentStep]);
+
+  // Step 5: Realistic Vehicle Departure Animation sequence
+  useEffect(() => {
+    if (currentStep === 5 && !step5StartedRef.current) {
+      step5StartedRef.current = true;
+      setStep5Phase('idle');
+
+      // 1. Play warm ignition purr at start
+      SoundFx.playCarStart?.();
+
+      // 2. Wait ~850ms, then start driving
+      step5Timer1Ref.current = window.setTimeout(() => {
+        setStep5Phase('driving');
+        SoundFx.playCarDrive?.();
+
+        // 3. After 3.0s car departure finishes, show celebration card
+        step5Timer2Ref.current = window.setTimeout(() => {
+          setStep5Phase('completed');
+          SoundFx.playVictoryFanfare?.();
+        }, 3000);
+      }, 850);
+    }
+  }, [currentStep]);
+
   const stepConfig = DEVRIM_STEPS[currentStep];
 
-  // Step 2: User clicks or swipes hood to open
-  const handleOpenHood = () => {
-    if (isHoodOpening) return;
-    setIsHoodOpening(true);
-    SoundFx.playLockSound?.();
+  // Step 1: User taps the Hotspot on the Hood
+  const handleOpenHood = useCallback(() => {
+    if (isOpeningHood || currentStep !== 1) return;
+    setIsOpeningHood(true);
 
-    setTimeout(() => {
-      SoundFx.playSuccessTone?.();
-      setCurrentStep(3);
-      setIsHoodOpening(false);
-    }, 800);
-  };
+    // Play authentic mechanical release SFX
+    if (SoundFx.playLockSound) {
+      SoundFx.playLockSound();
+    } else if (SoundFx.playLeverPull) {
+      SoundFx.playLeverPull();
+    } else {
+      SoundFx.playClickTone?.();
+    }
+
+    // Smooth cinematic crossfade transition: 750ms
+    hoodTimerRef.current = window.setTimeout(() => {
+      setCurrentStep(2);
+      setIsOpeningHood(false);
+      SoundFx.playClickTone?.();
+    }, 750);
+  }, [isOpeningHood, currentStep]);
+
 
   // Step 3 -> 4: Assembly complete callback
   const handleAssemblyComplete = useCallback(() => {
@@ -127,14 +187,16 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
-        background: '#070B14',
+        background: '#050811',
         color: '#FFFFFF',
         fontFamily: "'Outfit', 'Segoe UI', sans-serif",
         overflow: 'hidden',
         userSelect: 'none',
       }}
     >
-      {/* 1961 Turkish Automotive Engineering Workshop Background (Clean, No UI) */}
+      {/* =========================================================================
+          1960s WORKSHOP ATMOSPHERE BACKGROUND
+          ========================================================================= */}
       <div
         style={{
           position: 'absolute',
@@ -142,48 +204,63 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
           backgroundImage: "url('/assets/devrim/devrim_workshop_bg.jpg')",
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          filter: currentStep === 3 ? 'brightness(0.55)' : 'brightness(0.75)',
-          transition: 'filter 0.5s ease',
+          filter: currentStep === 3 ? 'brightness(0.55) blur(1px)' : 'brightness(0.68) saturate(1.1) blur(1.5px)',
+          transition: 'filter 0.6s ease',
           zIndex: 1,
         }}
       />
 
-      {/* Workshop Atmosphere Dark/Vignette Overlay */}
+      {/* Cinematic Workshop Vignette & Lighting Overlay */}
       <div
         style={{
           position: 'absolute',
           inset: 0,
           background:
-            'linear-gradient(180deg, rgba(7, 11, 20, 0.82) 0%, rgba(7, 11, 20, 0.45) 50%, rgba(7, 11, 20, 0.92) 100%)',
+            'radial-gradient(circle at 60% 50%, transparent 35%, rgba(6, 10, 18, 0.45) 70%, rgba(3, 6, 12, 0.88) 100%)',
           zIndex: 2,
           pointerEvents: 'none',
         }}
       />
 
+      {/* Warm Tungsten Spotlight on Automobile Stage */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background:
+            'radial-gradient(ellipse at 58% 46%, rgba(245, 158, 11, 0.12) 0%, rgba(217, 119, 6, 0.04) 50%, transparent 75%)',
+          zIndex: 3,
+          pointerEvents: 'none',
+          animation: 'devrimTungstenFlicker 6s infinite ease-in-out',
+        }}
+      />
+
       {/* =========================================================================
-          TOP HEADER BAR
+          TOP HUD BAR (Compact, Modern Museum Kiosk Header)
           ========================================================================= */}
       <header
         style={{
           position: 'relative',
-          zIndex: 20,
+          zIndex: 30,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '16px 28px',
-          background: 'rgba(7, 11, 20, 0.75)',
-          backdropFilter: 'blur(8px)',
+          height: '52px',
+          padding: '0 24px',
+          background: 'rgba(7, 11, 20, 0.82)',
+          backdropFilter: 'blur(10px)',
           borderBottom: '1px solid rgba(245, 158, 11, 0.25)',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
         }}
       >
-        {/* Left: Home & Back Nav Buttons */}
+        {/* Left: Navigation & Module Badge */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button
             onClick={onBack}
             aria-label="Geri"
             style={{
-              width: '40px',
-              height: '40px',
+              width: '44px',
+              height: '44px',
               borderRadius: '50%',
               background: 'rgba(15, 23, 42, 0.85)',
               border: '1.5px solid rgba(255, 255, 255, 0.25)',
@@ -195,6 +272,14 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
               fontSize: '18px',
               transition: 'all 0.2s',
             }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = '#F59E0B';
+              e.currentTarget.style.transform = 'scale(1.06)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.25)';
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
           >
             ←
           </button>
@@ -202,8 +287,8 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
             onClick={onHome}
             aria-label="Ana Menü"
             style={{
-              width: '40px',
-              height: '40px',
+              width: '44px',
+              height: '44px',
               borderRadius: '50%',
               background: 'rgba(15, 23, 42, 0.85)',
               border: '1.5px solid rgba(255, 255, 255, 0.25)',
@@ -214,6 +299,14 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
               cursor: 'pointer',
               fontSize: '18px',
               transition: 'all 0.2s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = '#F59E0B';
+              e.currentTarget.style.transform = 'scale(1.06)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.25)';
+              e.currentTarget.style.transform = 'scale(1)';
             }}
           >
             ⌂
@@ -225,16 +318,16 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
               padding: '6px 18px',
               borderRadius: '9999px',
               background: 'rgba(15, 23, 42, 0.85)',
-              border: '1px solid rgba(245, 158, 11, 0.4)',
+              border: '1px solid rgba(245, 158, 11, 0.35)',
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
               boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
             }}
           >
-            <span style={{ color: '#F59E0B', fontWeight: '900', fontSize: '14px' }}>4 / 6</span>
-            <span style={{ color: 'rgba(255, 255, 255, 0.4)' }}>|</span>
-            <span style={{ color: '#E2E8F0', fontWeight: '700', fontSize: '14px', letterSpacing: '0.3px' }}>
+            <span style={{ color: '#F59E0B', fontWeight: '900', fontSize: '13px' }}>4 / 6</span>
+            <span style={{ color: 'rgba(255, 255, 255, 0.35)' }}>|</span>
+            <span style={{ color: '#E2E8F0', fontWeight: '700', fontSize: '13px', letterSpacing: '0.3px' }}>
               Bilim ve Sanayileşme – Geleceği Üreten Türkiye
             </span>
           </div>
@@ -245,7 +338,9 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
           <button
             onClick={onToggleAudio}
             style={{
-              padding: '6px 14px',
+              minWidth: '44px',
+              height: '44px',
+              padding: '0 12px',
               borderRadius: '9999px',
               background: 'rgba(15, 23, 42, 0.85)',
               border: '1px solid rgba(255, 255, 255, 0.2)',
@@ -256,7 +351,10 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
+              transition: 'all 0.2s',
             }}
+            onMouseEnter={e => (e.currentTarget.style.borderColor = '#F59E0B')}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)')}
           >
             <span>{isAudioMuted ? '🔇' : '🔊'}</span>
             <span>Ses: {isAudioMuted ? 'Kapalı' : 'Açık'}</span>
@@ -265,7 +363,9 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
           <button
             onClick={onHelp}
             style={{
-              padding: '6px 14px',
+              minWidth: '44px',
+              height: '44px',
+              padding: '0 12px',
               borderRadius: '9999px',
               background: 'rgba(15, 23, 42, 0.85)',
               border: '1px solid rgba(255, 255, 255, 0.2)',
@@ -273,7 +373,10 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
               fontSize: '13px',
               fontWeight: '600',
               cursor: 'pointer',
+              transition: 'all 0.2s',
             }}
+            onMouseEnter={e => (e.currentTarget.style.borderColor = '#F59E0B')}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)')}
           >
             ? Yardım
           </button>
@@ -281,7 +384,9 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
           <button
             onClick={onPause}
             style={{
-              padding: '6px 14px',
+              minWidth: '44px',
+              height: '44px',
+              padding: '0 12px',
               borderRadius: '9999px',
               background: 'rgba(15, 23, 42, 0.85)',
               border: '1px solid rgba(255, 255, 255, 0.2)',
@@ -289,7 +394,10 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
               fontSize: '13px',
               fontWeight: '600',
               cursor: 'pointer',
+              transition: 'all 0.2s',
             }}
+            onMouseEnter={e => (e.currentTarget.style.borderColor = '#F59E0B')}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)')}
           >
             ⏸ Duraklat
           </button>
@@ -297,7 +405,9 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
           <button
             onClick={onToggleFullscreen}
             style={{
-              padding: '6px 14px',
+              minWidth: '44px',
+              height: '44px',
+              padding: '0 12px',
               borderRadius: '9999px',
               background: 'rgba(15, 23, 42, 0.85)',
               border: '1px solid rgba(255, 255, 255, 0.2)',
@@ -305,7 +415,10 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
               fontSize: '13px',
               fontWeight: '600',
               cursor: 'pointer',
+              transition: 'all 0.2s',
             }}
+            onMouseEnter={e => (e.currentTarget.style.borderColor = '#F59E0B')}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)')}
           >
             ⛶ {fullscreen ? 'Küçült' : 'Tam Ekran'}
           </button>
@@ -313,59 +426,79 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
       </header>
 
       {/* =========================================================================
-          TOP STEP TITLE BANNER
+          CINEMATIC STEP MISSION TITLE (Floating Minimal Backdrop, No Big Box)
           ========================================================================= */}
       <div
         style={{
           position: 'relative',
-          zIndex: 15,
+          zIndex: 20,
           display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
           justifyContent: 'center',
           marginTop: '6px',
+          pointerEvents: 'none',
         }}
       >
         <div
           style={{
-            position: 'relative',
-            background: 'rgba(10, 16, 28, 0.85)',
-            border: '2px solid #F59E0B',
-            borderRadius: '12px',
-            padding: '8px 36px',
-            textAlign: 'center',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.6), 0 0 20px rgba(245, 158, 11, 0.25)',
-            backdropFilter: 'blur(6px)',
+            color: '#F5A400',
+            fontSize: '11px',
+            fontWeight: '900',
+            letterSpacing: '2.5px',
+            textTransform: 'uppercase',
+            textShadow: '0 0 14px rgba(245, 164, 0, 0.7)',
+            marginBottom: '2px',
+          }}
+        >
+          {currentStep}. ADIM
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px',
           }}
         >
           <div
             style={{
-              color: '#F59E0B',
-              fontSize: '12px',
-              fontWeight: '800',
-              letterSpacing: '2px',
+              height: '1.5px',
+              width: '50px',
+              background: 'linear-gradient(90deg, transparent, #F5A400)',
             }}
-          >
-            — {stepConfig.badge} —
-          </div>
-          <div
+          />
+          <h2
             style={{
-              color: '#FFFFFF',
-              fontSize: '20px',
+              fontSize: '24px',
               fontWeight: '900',
-              letterSpacing: '1px',
-              margin: '2px 0',
+              letterSpacing: '1.5px',
+              color: '#FFFFFF',
+              margin: 0,
+              textShadow: '0 2px 14px rgba(0,0,0,0.8), 0 0 20px rgba(0,0,0,0.5)',
+              textTransform: 'uppercase',
             }}
           >
-            {stepConfig.title}
-          </div>
+            {currentStep === 1 ? 'DEVRİM İLE TANIŞ' : stepConfig.title}
+          </h2>
           <div
             style={{
-              color: '#CBD5E1',
-              fontSize: '13px',
-              fontWeight: '500',
+              height: '1.5px',
+              width: '50px',
+              background: 'linear-gradient(90deg, #F5A400, transparent)',
             }}
-          >
-            {stepConfig.subTitle}
-          </div>
+          />
+        </div>
+        <div
+          style={{
+            color: '#CBD5E1',
+            fontSize: '13px',
+            fontWeight: '500',
+            letterSpacing: '0.4px',
+            marginTop: '2px',
+            textShadow: '0 2px 8px rgba(0,0,0,0.8)',
+          }}
+        >
+          {currentStep === 1 ? "Türkiye'nin ilk yerli ve millî otomobili." : stepConfig.subTitle}
         </div>
       </div>
 
@@ -377,445 +510,501 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
           position: 'relative',
           zIndex: 10,
           flex: 1,
-          display: 'grid',
-          gridTemplateColumns: currentStep === 3 ? '300px 1fr 300px' : '320px 1fr 360px',
+          display: 'flex',
           alignItems: 'center',
-          padding: '0 28px',
-          gap: '24px',
-          maxHeight: 'calc(100vh - 160px)',
+          justifyContent: currentStep === 3 ? 'center' : 'space-between',
+          padding: currentStep === 3 ? '0 16px' : '0 28px',
+          gap: currentStep === 3 ? '0' : '24px',
+          maxHeight: 'calc(100vh - 120px)',
+          overflow: 'hidden',
         }}
       >
         {/* -----------------------------------------------------------------------
-            LEFT: PARCHMENT INFO CARD (Common across all steps)
+            LEFT: SLEEK GAME MISSION PANEL & KAŞİF MASCOT (Steps 1, 2, 4, 5)
             ----------------------------------------------------------------------- */}
-        <div
-          className="devrim-parchment-card"
-          style={{
-            position: 'relative',
-            background: 'linear-gradient(135deg, #FBF6E9 0%, #F2E8D2 60%, #E7DAC1 100%)',
-            border: '2px solid #9A7B56',
-            borderRadius: '16px',
-            padding: '24px 20px',
-            boxShadow: '0 18px 36px rgba(0, 0, 0, 0.5), inset 0 0 40px rgba(180, 130, 80, 0.15)',
-            color: '#2A1806',
-            maxHeight: '480px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            fontFamily: "'Cinzel', Georgia, serif",
-          }}
-        >
-          {/* Top Decorative Pin */}
+        {currentStep !== 3 && (
           <div
             style={{
-              position: 'absolute',
-              top: '12px',
-              left: '14px',
-              width: '14px',
-              height: '14px',
-              borderRadius: '50%',
-              background: '#5B3E25',
-              border: '2px solid #D97706',
-            }}
-          />
-
-          {/* Car / Engine Icon */}
-          <div style={{ textAlign: 'center', fontSize: '32px' }}>
-            {currentStep >= 3 ? '⚙️' : '🚗'}
-          </div>
-
-          <div style={{ textAlign: 'center', margin: '4px 0 10px 0' }}>
-            <h1
-              style={{
-                fontSize: '22px',
-                fontWeight: '900',
-                color: '#1B1204',
-                margin: '0 0 4px 0',
-                letterSpacing: '1px',
-              }}
-            >
-              {stepConfig.parchment.title}
-            </h1>
-            <p
-              style={{
-                fontSize: '12px',
-                fontStyle: 'italic',
-                color: '#854D0E',
-                margin: 0,
-                fontWeight: '600',
-              }}
-            >
-              {stepConfig.parchment.subTitle}
-            </p>
-          </div>
-
-          <div
-            style={{
-              fontSize: '13px',
-              lineHeight: '1.6',
-              color: '#3B230C',
-              textAlign: 'center',
-              fontFamily: "'Outfit', 'Segoe UI', sans-serif",
-              fontWeight: '500',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px',
+              width: '310px',
+              flexShrink: 0,
+              justifyContent: 'center',
+              zIndex: 15,
             }}
           >
-            <p style={{ margin: '0 0 8px 0' }}>{stepConfig.parchment.body1}</p>
-            {stepConfig.parchment.body2 && (
-              <p style={{ margin: 0 }}>{stepConfig.parchment.body2}</p>
-            )}
-          </div>
-
-          {/* Golden Callout Box */}
-          <div
-            style={{
-              marginTop: '12px',
-              fontSize: '12px',
-              lineHeight: '1.5',
-              color: '#2A1806',
-              textAlign: 'center',
-              fontWeight: '700',
-              fontFamily: "'Outfit', 'Segoe UI', sans-serif",
-              background: 'rgba(217, 119, 6, 0.14)',
-              borderRadius: '10px',
-              padding: '10px 12px',
-              border: '1px solid rgba(217, 119, 6, 0.3)',
-            }}
-          >
-            {stepConfig.parchment.callout}
-          </div>
-        </div>
-
-        {/* -----------------------------------------------------------------------
-            CENTER: INTERACTIVE WORKPIECE DISPLAY PER STEP
-            ----------------------------------------------------------------------- */}
-        <div
-          style={{
-            position: 'relative',
-            width: '100%',
-            height: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          {/* STEP 1: Devrim Tanıtım Sahnesi */}
-          {currentStep === 1 && (
+            {/* Game Mission Panel */}
             <div
               style={{
+                position: 'relative',
+                background: 'rgba(8, 14, 26, 0.85)',
+                border: '1.5px solid rgba(245, 164, 0, 0.35)',
+                borderRadius: '16px',
+                padding: '18px 20px',
+                boxShadow: '0 16px 36px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(12px)',
                 display: 'flex',
                 flexDirection: 'column',
-                alignItems: 'center',
-                gap: '20px',
-              }}
-            >
-              {/* Devrim Car Center Stage Frame */}
-              <div
-                style={{
-                  position: 'relative',
-                  width: '640px',
-                  aspectRatio: '16 / 10',
-                  borderRadius: '16px',
-                  overflow: 'hidden',
-                  boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
-                  border: '1.5px solid rgba(245, 158, 11, 0.3)',
-                }}
-              >
-                <img
-                  src="/assets/devrim/devrim_car_closed.jpg"
-                  alt="Devrim Otomobili 1961"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              </div>
-
-              {/* CTA: Motoru İncele / Kaputu Aç */}
-              <button
-                onClick={() => {
-                  SoundFx.playClickTone?.();
-                  setCurrentStep(2);
-                }}
-                style={{
-                  padding: '14px 44px',
-                  borderRadius: '16px',
-                  border: 'none',
-                  background: 'linear-gradient(135deg, #FDE68A 0%, #F59E0B 50%, #D97706 100%)',
-                  color: '#291705',
-                  fontSize: '18px',
-                  fontWeight: '900',
-                  cursor: 'pointer',
-                  boxShadow: '0 8px 24px rgba(245, 158, 11, 0.5)',
-                  transition: 'all 0.2s ease',
-                  minHeight: '48px',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.03)')}
-                onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
-              >
-                Motoru İncele →
-              </button>
-            </div>
-          )}
-
-          {/* STEP 2: Kaputu Aç Etkileşim Sahnesi */}
-          {currentStep === 2 && (
-            <div
-              style={{
-                position: 'relative',
-                width: '640px',
-                aspectRatio: '16 / 10',
-                borderRadius: '16px',
-                overflow: 'hidden',
-                boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
-                border: '2px solid rgba(245, 158, 11, 0.4)',
-              }}
-            >
-              {/* Closed car transitioning smoothly to open car */}
-              <img
-                src="/assets/devrim/devrim_car_closed.jpg"
-                alt="Devrim Otomobili Kapalı"
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  opacity: isHoodOpening ? 0 : 1,
-                  transition: 'opacity 0.7s ease',
-                }}
-              />
-              <img
-                src="/assets/devrim/devrim_car_open.jpg"
-                alt="Devrim Otomobili Açık Kaput"
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  opacity: isHoodOpening ? 1 : 0,
-                  transition: 'opacity 0.7s ease',
-                }}
-              />
-
-              {/* Pulsing Interactive Tap/Drag Zone on Hood */}
-              {!isHoodOpening && (
-                <div
-                  onClick={handleOpenHood}
-                  style={{
-                    position: 'absolute',
-                    top: '40%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    cursor: 'pointer',
-                    padding: '16px 28px',
-                    borderRadius: '20px',
-                    background: 'rgba(15, 23, 42, 0.85)',
-                    border: '2px solid #F59E0B',
-                    boxShadow: '0 0 30px rgba(245, 158, 11, 0.7)',
-                    animation: 'pulseGlow 2s infinite',
-                  }}
-                >
-                  <span style={{ fontSize: '30px', animation: 'bounce 1.5s infinite' }}>⬆️</span>
-                  <span
-                    style={{
-                      color: '#FDE68A',
-                      fontSize: '18px',
-                      fontWeight: '900',
-                      letterSpacing: '1px',
-                      marginTop: '4px',
-                    }}
-                  >
-                    KAPUTU AÇ
-                  </span>
-                  <span style={{ color: '#E2E8F0', fontSize: '11px', marginTop: '2px' }}>
-                    (Dokun veya Tıkla)
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* STEP 3: Motor Parçalarını İnşa Et */}
-          {currentStep === 3 && (
-            <div style={{ width: '100%', height: '100%' }}>
-              <DevrimEngineAssembly onComplete={handleAssemblyComplete} />
-            </div>
-          )}
-
-          {/* STEP 4 & 5: Tamamlanmış Motor ve Çalıştırma */}
-          {(currentStep === 4 || currentStep === 5) && (
-            <div
-              style={{
-                position: 'relative',
-                width: '660px',
-                aspectRatio: '16 / 10',
-                borderRadius: '16px',
-                overflow: 'hidden',
-                boxShadow: '0 20px 45px rgba(0,0,0,0.7)',
-                border: currentStep === 5 ? '3px solid #10B981' : '2px solid #F59E0B',
-                animation: isStartingEngine ? 'engineVibrate 0.1s infinite' : 'none',
-              }}
-            >
-              <img
-                src="/assets/devrim/devrim_car_open.jpg"
-                alt="Devrim Çalışan Motor"
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-
-              {/* Headlight Glowing Flare Effect in Step 5 or when running */}
-              {(currentStep === 5 || isEngineRunning) && (
-                <>
-                  <div
-                    style={{
-                      position: 'absolute',
-                      bottom: '22%',
-                      left: '18%',
-                      width: '90px',
-                      height: '90px',
-                      borderRadius: '50%',
-                      background: 'radial-gradient(circle, rgba(254, 240, 138, 0.8) 0%, rgba(245, 158, 11, 0.3) 50%, transparent 70%)',
-                      boxShadow: '0 0 40px rgba(254, 240, 138, 0.9)',
-                      pointerEvents: 'none',
-                    }}
-                  />
-                  <div
-                    style={{
-                      position: 'absolute',
-                      bottom: '22%',
-                      right: '18%',
-                      width: '90px',
-                      height: '90px',
-                      borderRadius: '50%',
-                      background: 'radial-gradient(circle, rgba(254, 240, 138, 0.8) 0%, rgba(245, 158, 11, 0.3) 50%, transparent 70%)',
-                      boxShadow: '0 0 40px rgba(254, 240, 138, 0.9)',
-                      pointerEvents: 'none',
-                    }}
-                  />
-                </>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* -----------------------------------------------------------------------
-            RIGHT: STEP SPECIFIC CONTROL CARDS
-            ----------------------------------------------------------------------- */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* STEP 2: "NASIL AÇILIR?" Rehber Kartı */}
-          {currentStep === 2 && (
-            <div
-              style={{
-                background: 'rgba(15, 23, 42, 0.88)',
-                border: '1.5px solid rgba(245, 158, 11, 0.35)',
-                borderRadius: '16px',
-                padding: '20px',
-                boxShadow: '0 12px 28px rgba(0,0,0,0.5)',
-              }}
-            >
-              <div
-                style={{
-                  color: '#F59E0B',
-                  fontSize: '13px',
-                  fontWeight: '800',
-                  textAlign: 'center',
-                  letterSpacing: '1px',
-                }}
-              >
-                — NASIL AÇILIR? —
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '16px' }}>
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                  <div
-                    style={{
-                      width: '28px',
-                      height: '28px',
-                      borderRadius: '50%',
-                      background: '#F59E0B',
-                      color: '#0F172A',
-                      fontWeight: '900',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                    }}
-                  >
-                    1
-                  </div>
-                  <span style={{ fontSize: '13px', color: '#E2E8F0', fontWeight: '500' }}>
-                    Kaputun üzerine dokun ve yukarı doğru kaydır.
-                  </span>
-                </div>
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                  <div
-                    style={{
-                      width: '28px',
-                      height: '28px',
-                      borderRadius: '50%',
-                      background: '#F59E0B',
-                      color: '#0F172A',
-                      fontWeight: '900',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                    }}
-                  >
-                    2
-                  </div>
-                  <span style={{ fontSize: '13px', color: '#E2E8F0', fontWeight: '500' }}>
-                    Kaput tamamen açıldığında motor parçalarını monte etmeye başlayacaksın.
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 3: "BİLGİ PİLL" */}
-          {currentStep === 3 && (
-            <div
-              style={{
-                background: 'rgba(15, 23, 42, 0.88)',
-                border: '1.5px solid rgba(245, 158, 11, 0.35)',
-                borderRadius: '16px',
-                padding: '20px',
-                boxShadow: '0 12px 28px rgba(0,0,0,0.5)',
-                display: 'flex',
-                alignItems: 'center',
                 gap: '12px',
               }}
             >
+              {/* Header: 1961 Pill Badge & Vintage Sedan SVG Icon */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div
+                  style={{
+                    padding: '3px 12px',
+                    borderRadius: '9999px',
+                    background: 'rgba(245, 164, 0, 0.2)',
+                    border: '1.2px solid rgba(245, 164, 0, 0.55)',
+                    color: '#FEF08A',
+                    fontSize: '12px',
+                    fontWeight: '900',
+                    letterSpacing: '1px',
+                  }}
+                >
+                  1961
+                </div>
+                <svg width="30" height="18" viewBox="0 0 32 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M3 13L5 7C5.5 5.5 7 4 9 4H20C22 4 23.5 5.5 24.5 7L27 13M3 13H29M3 13C2 13 1 14 1 15V16C1 16.5 1.5 17 2 17H5M29 13C30 13 31 14 31 15V16C31 16.5 30.5 17 30 17H27M5 17C5 18.5 6.5 19.5 8 19.5C9.5 19.5 11 18.5 11 17M27 17C27 18.5 25.5 19.5 24 19.5C22.5 19.5 21 18.5 21 17M11 17H21"
+                    stroke="#FFFFFF"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <circle cx="8" cy="17" r="1.5" fill="#FFFFFF" />
+                  <circle cx="24" cy="17" r="1.5" fill="#FFFFFF" />
+                  <path d="M15 6V13" stroke="#FFFFFF" strokeWidth="1.2" strokeLinecap="round" />
+                </svg>
+              </div>
+
+              <div>
+                <h1
+                  style={{
+                    fontSize: '24px',
+                    fontWeight: '900',
+                    letterSpacing: '1.2px',
+                    color: '#FFFFFF',
+                    margin: '0 0 2px 0',
+                    textShadow: '0 2px 10px rgba(0,0,0,0.5)',
+                  }}
+                >
+                  DEVRİM
+                </h1>
+                <p
+                  style={{
+                    fontSize: '12.5px',
+                    color: '#F5A400',
+                    fontWeight: '700',
+                    margin: 0,
+                    letterSpacing: '0.2px',
+                  }}
+                >
+                  Türkiye'nin ilk yerli otomobili.
+                </p>
+              </div>
+
+              <p
+                style={{
+                  fontSize: '12px',
+                  color: '#CBD5E1',
+                  lineHeight: '1.5',
+                  margin: 0,
+                }}
+              >
+                Türk mühendis ve işçilerinin emeğiyle geliştirilen Devrim, ülkemizin üretim gücünün sembollerindendir.
+              </p>
+
+              {/* Decorative Divider */}
               <div
                 style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  background: '#F59E0B',
-                  color: '#0F172A',
-                  fontWeight: '900',
-                  fontSize: '18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  opacity: 0.5,
+                  margin: '2px 0',
+                }}
+              >
+                <div style={{ height: '1px', flex: 1, background: 'linear-gradient(90deg, transparent, #F5A400)' }} />
+                <span style={{ color: '#F5A400', fontSize: '10px' }}>✦</span>
+                <div style={{ height: '1px', flex: 1, background: 'linear-gradient(90deg, #F5A400, transparent)' }} />
+              </div>
+
+              {/* Compact Mission Goal Box */}
+              <div
+                style={{
+                  background: 'rgba(15, 23, 42, 0.75)',
+                  border: '1px solid rgba(245, 164, 0, 0.3)',
+                  borderRadius: '10px',
+                  padding: '10px 12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px',
+                }}
+              >
+                <div
+                  style={{
+                    color: '#F5A400',
+                    fontSize: '11px',
+                    fontWeight: '900',
+                    letterSpacing: '1px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <span>🎯</span>
+                  <span>GÖREV</span>
+                </div>
+                <div
+                  style={{
+                    color: '#FFFFFF',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    lineHeight: '1.4',
+                  }}
+                >
+                  {currentStep === 1 && "Devrim'in motorunu keşfet."}
+                  {currentStep === 2 && 'Motor bölmesi açılıyor...'}
+                  {currentStep === 4 && 'Kontağa bas ve motoru çalıştır.'}
+                  {currentStep === 5 && (step5Phase === 'completed' ? 'Devrim başarıyla yola çıktı!' : 'Devrim motoru başarıyla çalıştırıldı!')}
+                </div>
+              </div>
+            </div>
+
+            {/* Kaşif Mascot & Natural Scene Speech Bubble */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-end',
+                gap: '12px',
+                padding: '2px 4px',
+                animation: 'devrimKasifFloat 4s ease-in-out infinite',
+              }}
+            >
+              <img
+                src="/assets/devrim/kasif_mascot.png"
+                alt="Kaşif Maskotu"
+                style={{
+                  width: '96px',
+                  height: '110px',
+                  objectFit: 'contain',
+                  flexShrink: 0,
+                  filter: 'drop-shadow(0 10px 18px rgba(0,0,0,0.7))',
+                }}
+              />
+              <div
+                style={{
+                  position: 'relative',
+                  background: 'rgba(8, 14, 26, 0.92)',
+                  border: '1.5px solid rgba(56, 189, 248, 0.65)',
+                  borderRadius: '14px',
+                  padding: '10px 14px',
+                  fontSize: '12px',
+                  color: '#F1F5F9',
+                  lineHeight: '1.45',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+                  flex: 1,
+                  marginBottom: '8px',
+                }}
+              >
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: '-7px',
+                    bottom: '22px',
+                    width: 0,
+                    height: 0,
+                    borderTop: '6px solid transparent',
+                    borderBottom: '6px solid transparent',
+                    borderRight: '7px solid rgba(56, 189, 248, 0.65)',
+                  }}
+                />
+                {currentStep === 1 && (
+                  <>
+                    Merhaba! Ben Kaşif.
+                    <br />
+                    Devrim'in motorunu birlikte keşfedelim.
+                    <br />
+                    <strong style={{ color: '#F5A400', fontWeight: '800' }}>Kaputa dokun.</strong>
+                  </>
+                )}
+                {currentStep === 2 && (
+                  <>
+                    Harika!
+                    <br />
+                    <strong style={{ color: '#38BDF8' }}>Şimdi motoru birlikte tamamlayalım.</strong>
+                  </>
+                )}
+                {currentStep === 4 && (
+                  <>
+                    Her şey hazır! Kontağa bas ve
+                    <br />
+                    <strong style={{ color: '#F5A400' }}>Devrim'in motorunu çalıştır!</strong>
+                  </>
+                )}
+                {currentStep === 5 && (
+                  <>
+                    Harika iş çıkardın!
+                    <br />
+                    <strong style={{ color: '#10B981' }}>Devrim artık yollara hazır.</strong>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* -----------------------------------------------------------------------
+            CENTER / STAGE: DEVRİM AUTOMOBILE (Step 1, 2, 4, 5) OR ASSEMBLY GAME (Step 3)
+            ----------------------------------------------------------------------- */}
+        {currentStep === 3 ? (
+          /* Step 3: Pure Child-Friendly Drag & Drop Motor Montaj Sahnesi */
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <DevrimEngineAssembly onComplete={handleAssemblyComplete} />
+          </div>
+        ) : (
+          /* Steps 1, 2, 4, 5: Interactive Museum Vehicle Scene */
+          <div
+            style={{
+              position: 'relative',
+              flex: 1,
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0 10px',
+              overflow: 'visible',
+            }}
+          >
+            {/* If Step 5 and car has completed departure, show Centered Celebration Card */}
+            {currentStep === 5 && step5Phase === 'completed' ? (
+              <div
+                style={{
+                  position: 'relative',
+                  background: 'rgba(8, 14, 26, 0.94)',
+                  border: '2px solid #10B981',
+                  borderRadius: '24px',
+                  padding: '34px 40px',
+                  boxShadow: '0 24px 60px rgba(0,0,0,0.85), 0 0 35px rgba(16, 185, 129, 0.4)',
+                  backdropFilter: 'blur(16px)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  textAlign: 'center',
+                  maxWidth: '440px',
+                  animation: 'devrimModalPop 320ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
+                  zIndex: 25,
+                }}
+              >
+                {/* Big Green Check Badge */}
+                <div
+                  style={{
+                    width: '74px',
+                    height: '74px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #10B981 0%, #047857 100%)',
+                    border: '3px solid #6EE7B7',
+                    boxShadow: '0 0 25px rgba(16, 185, 129, 0.7)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#FFFFFF',
+                    fontSize: '36px',
+                    fontWeight: '900',
+                    marginBottom: '16px',
+                  }}
+                >
+                  ✓
+                </div>
+
+                <h2
+                  style={{
+                    fontSize: '26px',
+                    fontWeight: '900',
+                    color: '#FEF08A',
+                    letterSpacing: '1.2px',
+                    margin: '0 0 8px 0',
+                    textTransform: 'uppercase',
+                    textShadow: '0 2px 10px rgba(0,0,0,0.5)',
+                  }}
+                >
+                  DEVRİM YOLLARDA!
+                </h2>
+
+                <p
+                  style={{
+                    fontSize: '15px',
+                    fontWeight: '600',
+                    color: '#E2E8F0',
+                    lineHeight: '1.5',
+                    margin: '0 0 24px 0',
+                  }}
+                >
+                  Harika iş çıkardın!
+                  <br />
+                  Devrim’i başarıyla hazırladın.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={handleCompleteAndNext}
+                  style={{
+                    width: '100%',
+                    padding: '16px 28px',
+                    borderRadius: '16px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #FDE68A 0%, #F5A400 50%, #D97706 100%)',
+                    color: '#291705',
+                    fontSize: '17px',
+                    fontWeight: '900',
+                    letterSpacing: '0.8px',
+                    cursor: 'pointer',
+                    boxShadow: '0 8px 25px rgba(245, 164, 0, 0.55)',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.03)')}
+                  onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
+                >
+                  SONRAKİ BÖLÜME GEÇ →
+                </button>
+              </div>
+            ) : (
+              /* The Car Container */
+              <div
+                className={currentStep === 5 && step5Phase === 'driving' ? 'devrim-car-departing' : ''}
+                style={{
+                  position: 'relative',
+                  width: currentStep === 1 ? 'min(1000px, 64vw)' : 'min(880px, 56vw)',
+                  maxHeight: '62vh',
+                  aspectRatio: '1376 / 768',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  flexShrink: 0,
+                  transform: isOpeningHood ? 'scale(1.03)' : 'scale(1)',
+                  transition: 'transform 750ms cubic-bezier(0.25, 1, 0.5, 1), width 0.4s ease',
+                  marginLeft: currentStep === 1 ? '35px' : '10px',
+                  animation:
+                    currentStep === 5 && step5Phase === 'driving'
+                      ? 'devrimCarDeparture 3.0s cubic-bezier(0.25, 0.1, 0.25, 1) forwards'
+                      : isStartingEngine || (currentStep === 5 && step5Phase === 'idle')
+                      ? 'devrimEngineVibrate 0.1s infinite'
+                      : 'none',
+                  willChange: 'transform',
                 }}
               >
-                ℹ
-              </div>
-              <span style={{ fontSize: '13px', color: '#E2E8F0', fontWeight: '600' }}>
-                Parçayı seç, sürükle ve doğru yuvaya bırak.
-              </span>
-            </div>
-          )}
+                {/* Natural Realistic Workshop Floor Contact Shadow (Moves with car) */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: '10%',
+                    left: '12%',
+                    width: '78%',
+                    height: '38px',
+                    borderRadius: '50%',
+                    background:
+                      'radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, 0.88) 0%, rgba(0, 0, 0, 0.45) 50%, transparent 80%)',
+                    filter: 'blur(8px)',
+                    pointerEvents: 'none',
+                    zIndex: 2,
+                  }}
+                />
 
-          {/* STEP 4: "MOTOR HAZIR" + PARÇALAR + BÜYÜK "MOTORU ÇALIŞTIR" BUTONU */}
-          {currentStep === 4 && (
+                {/* Base Open Car Image (Step 2, 4 and during Hood Opening) */}
+                <img
+                  src="/assets/devrim/devrim_car_open_clean.png"
+                  alt="Devrim Otomobili Motor Bölmesi"
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                    zIndex: 5,
+                    opacity: (currentStep === 2 || currentStep === 4 || isOpeningHood) ? 1 : 0,
+                    transition: 'opacity 0.65s ease',
+                    pointerEvents: 'none',
+                  }}
+                />
+
+                {/* Base Closed Car Image (Step 1 and Step 5 Road Departure) */}
+                <img
+                  src="/assets/devrim/devrim_car_closed_clean.png"
+                  alt="Devrim Otomobili 1961"
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                    zIndex: 6,
+                    opacity: ((currentStep === 1 && !isOpeningHood) || currentStep === 5) ? 1 : 0,
+                    transition: 'opacity 0.65s ease',
+                    pointerEvents: 'none',
+                  }}
+                />
+
+                {/* STEP 1: INTERACTIVE HOTSPOT ON THE HOOD */}
+                {currentStep === 1 && !isOpeningHood && (
+                  <div
+                    className="devrim-hood-hotspot"
+                    style={{
+                      left: '37%',
+                      top: '49%',
+                      transform: 'translate(-50%, -50%)',
+                    }}
+                    onClick={handleOpenHood}
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Kaputa Dokun"
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' || e.key === ' ') handleOpenHood();
+                    }}
+                  >
+                    <div className="devrim-hood-badge">
+                      <span>Kaputa Dokun</span>
+                    </div>
+                    <div className="devrim-hood-ring-wrapper">
+                      <div className="devrim-hood-ring-pulse" />
+                      <div className="devrim-hood-ring" />
+                      <span className="devrim-hood-hand">👆</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* -----------------------------------------------------------------------
+            RIGHT: STEP ACTIONS & CONTROLS (Only visible in Step 4)
+            ----------------------------------------------------------------------- */}
+        {currentStep === 4 && (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px',
+              width: '260px',
+              flexShrink: 0,
+              justifyContent: 'center',
+            }}
+          >
             <div
               style={{
-                background: 'rgba(15, 23, 42, 0.94)',
-                border: '2px solid rgba(245, 158, 11, 0.55)',
+                background: 'rgba(8, 14, 26, 0.94)',
+                border: '2px solid rgba(245, 164, 0, 0.55)',
                 borderRadius: '18px',
-                padding: '22px 18px',
+                padding: '20px 16px',
                 boxShadow: '0 16px 36px rgba(0,0,0,0.65)',
                 display: 'flex',
                 flexDirection: 'column',
@@ -824,32 +1013,30 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
                 boxSizing: 'border-box',
               }}
             >
-              {/* MOTOR HAZIR Status Badge */}
               <div
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '8px',
-                  padding: '6px 18px',
+                  padding: '5px 16px',
                   borderRadius: '9999px',
                   background: 'rgba(16, 185, 129, 0.18)',
                   border: '1.5px solid #10B981',
                   color: '#A7F3D0',
-                  fontSize: '14px',
+                  fontSize: '13px',
                   fontWeight: '900',
                   letterSpacing: '1.5px',
-                  marginBottom: '14px',
+                  marginBottom: '12px',
                   boxShadow: '0 0 16px rgba(16, 185, 129, 0.3)',
                 }}
               >
                 <span>✓</span> MOTOR HAZIR
               </div>
 
-              {/* Checklist Title */}
               <div
                 style={{
-                  color: '#F59E0B',
-                  fontSize: '12px',
+                  color: '#F5A400',
+                  fontSize: '11px',
                   fontWeight: '800',
                   letterSpacing: '0.8px',
                   marginBottom: '8px',
@@ -860,14 +1047,13 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
                 MONTE EDİLEN PARÇALAR
               </div>
 
-              {/* Checklist */}
               <div
                 style={{
                   width: '100%',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '6px',
-                  marginBottom: '18px',
+                  gap: '5px',
+                  marginBottom: '16px',
                 }}
               >
                 {DEVRIM_ENGINE_PARTS.map(part => (
@@ -877,11 +1063,11 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
                       display: 'flex',
                       alignItems: 'center',
                       gap: '8px',
-                      fontSize: '12px',
+                      fontSize: '11.5px',
                       color: '#A7F3D0',
                       fontWeight: '600',
                       background: 'rgba(16, 185, 129, 0.08)',
-                      padding: '4px 10px',
+                      padding: '4px 8px',
                       borderRadius: '6px',
                       border: '1px solid rgba(16, 185, 129, 0.25)',
                     }}
@@ -892,7 +1078,6 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
                 ))}
               </div>
 
-              {/* Large MOTORU ÇALIŞTIR Button */}
               <button
                 type="button"
                 id="devrim-ignite-button"
@@ -900,49 +1085,34 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
                 disabled={isStartingEngine || isEngineRunning}
                 style={{
                   width: '100%',
-                  padding: '16px 20px',
-                  borderRadius: '16px',
+                  padding: '14px 16px',
+                  borderRadius: '14px',
                   border: isEngineRunning
                     ? '2px solid #10B981'
-                    : isStartingEngine
-                    ? '2px solid #F59E0B'
-                    : '2px solid #F59E0B',
+                    : '2px solid #F5A400',
                   background: isEngineRunning
                     ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
                     : isStartingEngine
                     ? 'linear-gradient(135deg, #D97706 0%, #B45309 100%)'
-                    : 'linear-gradient(135deg, #FDE68A 0%, #F59E0B 50%, #D97706 100%)',
+                    : 'linear-gradient(135deg, #FDE68A 0%, #F5A400 50%, #D97706 100%)',
                   color: isEngineRunning ? '#FFFFFF' : '#1E1002',
                   boxShadow: isEngineRunning
                     ? '0 0 30px rgba(16, 185, 129, 0.6)'
-                    : '0 8px 25px rgba(245, 158, 11, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
+                    : '0 8px 25px rgba(245, 164, 0, 0.5)',
                   cursor: isEngineRunning || isStartingEngine ? 'default' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '10px',
-                  fontSize: '17px',
+                  gap: '8px',
+                  fontSize: '15px',
                   fontWeight: '900',
                   letterSpacing: '1px',
                   transition: 'all 0.25s ease',
-                  minHeight: '56px',
-                  pointerEvents: 'auto',
-                }}
-                onMouseEnter={e => {
-                  if (!isStartingEngine && !isEngineRunning) {
-                    e.currentTarget.style.transform = 'scale(1.03)';
-                    e.currentTarget.style.boxShadow = '0 12px 30px rgba(245, 158, 11, 0.7)';
-                  }
-                }}
-                onMouseLeave={e => {
-                  if (!isStartingEngine && !isEngineRunning) {
-                    e.currentTarget.style.transform = 'scale(1)';
-                    e.currentTarget.style.boxShadow = '0 8px 25px rgba(245, 158, 11, 0.5)';
-                  }
+                  minHeight: '52px',
                 }}
               >
-                <span style={{ fontSize: '22px' }}>
-                  {isEngineRunning ? '✓' : isStartingEngine ? '⚙️' : '⚡'}
+                <span style={{ fontSize: '20px' }}>
+                  {isEngineRunning ? '✓' : isStartingEngine ? '⚙' : '⚡'}
                 </span>
                 <span>
                   {isEngineRunning
@@ -952,182 +1122,61 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
                     : 'MOTORU ÇALIŞTIR'}
                 </span>
               </button>
-
-              <span
-                style={{
-                  fontSize: '12px',
-                  color: isEngineRunning ? '#10B981' : '#CBD5E1',
-                  fontWeight: '600',
-                  marginTop: '12px',
-                  textAlign: 'center',
-                }}
-              >
-                {isEngineRunning
-                  ? "Devrim'in motoru başarıyla çalıştırıldı!"
-                  : 'Kontağa bas ve motoru çalıştır!'}
-              </span>
             </div>
-          )}
-
-          {/* STEP 5: TEBRİKLER & SONRAKİ BÖLÜM BUTONU */}
-          {currentStep === 5 && (
-            <div
-              style={{
-                background: 'rgba(15, 23, 42, 0.92)',
-                border: '2px solid #10B981',
-                borderRadius: '18px',
-                padding: '24px 20px',
-                boxShadow: '0 16px 36px rgba(0,0,0,0.6)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-              }}
-            >
-              {/* Working Green Badge */}
-              <div
-                style={{
-                  width: '90px',
-                  height: '90px',
-                  borderRadius: '50%',
-                  border: '3px solid #10B981',
-                  background: 'radial-gradient(circle, #059669 0%, #064E3B 100%)',
-                  boxShadow: '0 0 30px rgba(16, 185, 129, 0.8)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <span style={{ fontSize: '26px' }}>⚡</span>
-                <span
-                  style={{
-                    fontSize: '10px',
-                    fontWeight: '900',
-                    color: '#A7F3D0',
-                    letterSpacing: '0.5px',
-                  }}
-                >
-                  ÇALIŞIYOR
-                </span>
-              </div>
-
-              <div
-                style={{
-                  color: '#FDE68A',
-                  fontSize: '18px',
-                  fontWeight: '900',
-                  marginTop: '12px',
-                }}
-              >
-                Tebrikler!
-              </div>
-              <p
-                style={{
-                  color: '#E2E8F0',
-                  fontSize: '12px',
-                  textAlign: 'center',
-                  margin: '4px 0 16px 0',
-                }}
-              >
-                Devrim'in motorunu başarıyla çalıştırdın.
-              </p>
-
-              {/* Next Chapter CTA Button */}
-              <button
-                onClick={handleCompleteAndNext}
-                style={{
-                  width: '100%',
-                  padding: '14px 20px',
-                  borderRadius: '14px',
-                  border: 'none',
-                  background: 'linear-gradient(135deg, #FDE68A 0%, #F59E0B 50%, #D97706 100%)',
-                  color: '#291705',
-                  fontSize: '16px',
-                  fontWeight: '900',
-                  cursor: 'pointer',
-                  boxShadow: '0 6px 20px rgba(245, 158, 11, 0.5)',
-                  transition: 'all 0.2s',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.03)')}
-                onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
-              >
-                Sonraki Bölüme Geç →
-              </button>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </main>
 
       {/* =========================================================================
-          BOTTOM FOOTER: KAŞİF DIALOGUE & 5-STEP PROGRESS BAR
+          BOTTOM CENTER FLOATING 5-STEP PROGRESS DOCK
           ========================================================================= */}
-      <footer
+      <div
         style={{
-          position: 'relative',
-          zIndex: 20,
-          background: 'rgba(7, 11, 20, 0.88)',
-          backdropFilter: 'blur(8px)',
-          borderTop: '1px solid rgba(245, 158, 11, 0.25)',
-          padding: '10px 28px',
+          position: 'absolute',
+          bottom: '18px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 30,
+          background: 'rgba(8, 14, 26, 0.85)',
+          backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(255, 255, 255, 0.14)',
+          borderRadius: '9999px',
+          padding: '6px 24px',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
+          gap: '16px',
+          boxShadow: '0 8px 30px rgba(0,0,0,0.6), 0 0 16px rgba(245, 164, 0, 0.15)',
         }}
       >
-        {/* Left: Kaşif Avatar & Speech Bubble */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', maxWidth: '380px' }}>
-          <div
-            style={{
-              width: '42px',
-              height: '42px',
-              borderRadius: '50%',
-              background: '#F59E0B',
-              border: '2px solid #FEF08A',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '22px',
-              flexShrink: 0,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
-            }}
-          >
-            🧭
-          </div>
-          <div
-            style={{
-              background: 'rgba(15, 23, 42, 0.85)',
-              border: '1px solid rgba(56, 189, 248, 0.4)',
-              borderRadius: '12px',
-              padding: '6px 12px',
-              fontSize: '12px',
-              color: '#BAE6FD',
-              lineHeight: '1.4',
-            }}
-          >
-            {stepConfig.kasifMessage}
-          </div>
-        </div>
+        {[
+          { num: 1, label: 'TANIŞ' },
+          { num: 2, label: 'KAPUT' },
+          { num: 3, label: 'İNŞA ET' },
+          { num: 4, label: 'ÇALIŞTIR' },
+          { num: 5, label: 'TAMAMLA' },
+        ].map((s, idx) => {
+          const isCompleted = currentStep > s.num;
+          const isCurrent = currentStep === s.num;
 
-        {/* Center: 5-Step Progress Indicators */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-          {[
-            { num: 1, label: 'Tanış' },
-            { num: 2, label: 'Kaput' },
-            { num: 3, label: 'İnşa Et' },
-            { num: 4, label: 'Çalıştır' },
-            { num: 5, label: 'Tamamla' },
-          ].map(s => {
-            const isCompleted = currentStep > s.num;
-            const isCurrent = currentStep === s.num;
-
-            return (
+          return (
+            <React.Fragment key={s.num}>
+              {idx > 0 && (
+                <div
+                  style={{
+                    width: '32px',
+                    height: '2px',
+                    background: currentStep > idx
+                      ? '#10B981'
+                      : 'rgba(255, 255, 255, 0.18)',
+                    transition: 'background 0.4s ease',
+                  }}
+                />
+              )}
               <div
-                key={s.num}
                 style={{
                   display: 'flex',
-                  flexDirection: 'column',
                   alignItems: 'center',
-                  gap: '4px',
+                  gap: '8px',
                 }}
               >
                 <div
@@ -1138,16 +1187,24 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
                     background: isCompleted
                       ? '#10B981'
                       : isCurrent
-                      ? '#F59E0B'
-                      : 'rgba(51, 65, 85, 0.6)',
-                    border: isCurrent ? '2px solid #FEF08A' : 'none',
-                    color: isCompleted || isCurrent ? '#0F172A' : '#94A3B8',
-                    fontSize: '13px',
+                      ? 'linear-gradient(135deg, #F5A400 0%, #D97706 100%)'
+                      : 'rgba(255, 255, 255, 0.08)',
+                    border: isCurrent
+                      ? '2px solid #FEF08A'
+                      : isCompleted
+                      ? '1.5px solid #6EE7B7'
+                      : '1.5px solid rgba(255, 255, 255, 0.2)',
+                    color: isCompleted ? '#FFFFFF' : isCurrent ? '#0F172A' : '#94A3B8',
+                    fontSize: '12px',
                     fontWeight: '900',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    boxShadow: isCurrent ? '0 0 12px #F59E0B' : 'none',
+                    boxShadow: isCurrent
+                      ? '0 0 16px rgba(245, 164, 0, 0.9)'
+                      : isCompleted
+                      ? '0 0 10px rgba(16, 185, 129, 0.5)'
+                      : 'none',
                     transition: 'all 0.3s ease',
                   }}
                 >
@@ -1156,35 +1213,45 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
                 <span
                   style={{
                     fontSize: '11px',
-                    fontWeight: isCurrent ? '800' : '600',
-                    color: isCurrent ? '#FDE68A' : isCompleted ? '#A7F3D0' : '#64748B',
+                    fontWeight: isCurrent ? '900' : '700',
+                    color: isCurrent ? '#F5A400' : isCompleted ? '#A7F3D0' : '#64748B',
+                    letterSpacing: '0.6px',
                   }}
                 >
                   {s.label}
                 </span>
               </div>
-            );
-          })}
-        </div>
+            </React.Fragment>
+          );
+        })}
+      </div>
 
-        {/* Right: Atatürk Quote & Signature */}
-        <div style={{ textAlign: 'right', maxWidth: '320px' }}>
-          <div style={{ fontSize: '11px', fontStyle: 'italic', color: '#94A3B8' }}>
-            {ATATURK_QUOTE_DEVRIM.quote}
-          </div>
-          <div
-            style={{
-              fontSize: '12px',
-              fontWeight: '700',
-              color: '#F59E0B',
-              fontFamily: "'Cinzel', Georgia, serif",
-              marginTop: '2px',
-            }}
-          >
-            {ATATURK_QUOTE_DEVRIM.author}
-          </div>
+      {/* Subtle Atatürk Quote & Signature (Bottom Right Floating) */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: '16px',
+          right: '24px',
+          textAlign: 'right',
+          maxWidth: '280px',
+          zIndex: 20,
+          pointerEvents: 'none',
+        }}
+      >
+        <div style={{ fontSize: '10.5px', fontStyle: 'italic', color: '#94A3B8', lineHeight: '1.35' }}>
+          {ATATURK_QUOTE_DEVRIM.quote}
         </div>
-      </footer>
+        <div
+          style={{
+            fontSize: '11px',
+            fontWeight: '700',
+            color: '#F5A400',
+            marginTop: '2px',
+          }}
+        >
+          {ATATURK_QUOTE_DEVRIM.author}
+        </div>
+      </div>
     </div>
   );
 };
