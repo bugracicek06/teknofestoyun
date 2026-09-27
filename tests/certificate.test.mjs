@@ -16,6 +16,22 @@ import {
 import serverlessHandler from '../netlify/functions/certificates.ts';
 import { GameStore } from '../src/game/state/GameStore.ts';
 
+const testBlobsStore = new Map();
+const testContext = {
+  blobs: {
+    getStore: () => ({
+      setJSON: async (key, val) => {
+        testBlobsStore.set(key, structuredClone(val));
+      },
+      get: async (key, _opts) => {
+        const val = testBlobsStore.get(key);
+        if (!val) return null;
+        return structuredClone(val);
+      },
+    }),
+  },
+};
+
 test('Name validation: trims whitespace and collapses multi-spaces', () => {
   const res1 = validateAndCleanFullName('   Ahmet    Yılmaz   ');
   assert.equal(res1.isValid, true);
@@ -177,7 +193,7 @@ test('Netlify Serverless Function: POST create and GET retrieve cross-device flo
     }),
   });
 
-  const createRes = await serverlessHandler(createReq);
+  const createRes = await serverlessHandler(createReq, testContext);
   assert.equal(createRes.status, 201);
   assert.equal(createRes.headers.get('Cache-Control'), 'no-store, no-cache, must-revalidate, proxy-revalidate');
 
@@ -198,7 +214,7 @@ test('Netlify Serverless Function: POST create and GET retrieve cross-device flo
     headers: { 'Accept': 'application/json' },
   });
 
-  const getRes = await serverlessHandler(getReq);
+  const getRes = await serverlessHandler(getReq, testContext);
   assert.equal(getRes.status, 200);
   assert.equal(getRes.headers.get('Cache-Control'), 'no-store, no-cache, must-revalidate, proxy-revalidate');
 
@@ -214,7 +230,7 @@ test('Netlify Serverless Function: POST create and GET retrieve cross-device flo
   const notFoundReq = new Request('https://pauteknofest.netlify.app/api/certificates/00000000-0000-0000-0000-000000000000', {
     method: 'GET',
   });
-  const notFoundRes = await serverlessHandler(notFoundReq);
+  const notFoundRes = await serverlessHandler(notFoundReq, testContext);
   assert.equal(notFoundRes.status, 404);
   const notFoundBody = await notFoundRes.json();
   assert.equal(notFoundBody.success, false);
@@ -279,7 +295,7 @@ test('Module 6 Finale: End-to-end flow from player session to API certificate cr
     }),
   });
 
-  const createRes = await serverlessHandler(createReq);
+  const createRes = await serverlessHandler(createReq, testContext);
   assert.equal(createRes.status, 201);
   const createBody = await createRes.json();
   assert.equal(createBody.success, true);
@@ -317,7 +333,7 @@ test('Module 6 Finale: End-to-end flow from player session to API certificate cr
     method: 'GET',
     headers: { 'Accept': 'application/json' },
   });
-  const fetchRes = await serverlessHandler(fetchReq);
+  const fetchRes = await serverlessHandler(fetchReq, testContext);
   assert.equal(fetchRes.status, 200);
   const fetchBody = await fetchRes.json();
   assert.equal(fetchBody.success, true);
@@ -391,7 +407,7 @@ test('Section 16 End-to-end Test: TEST KAŞİF flow, coordinates, and resolution
     }),
   });
 
-  const createRes = await serverlessHandler(createReq);
+  const createRes = await serverlessHandler(createReq, testContext);
   assert.equal(createRes.status, 201);
   const certRecordBody = await createRes.json();
   assert.equal(certRecordBody.success, true);
@@ -425,7 +441,7 @@ test('Section 16 End-to-end Test: TEST KAŞİF flow, coordinates, and resolution
     method: 'GET',
     headers: { 'Accept': 'application/json' },
   });
-  const getRes = await serverlessHandler(getReq);
+  const getRes = await serverlessHandler(getReq, testContext);
   assert.equal(getRes.status, 200);
   const mobileFetchedBody = await getRes.json();
   assert.equal(mobileFetchedBody.success, true);
@@ -440,7 +456,7 @@ test('ApiCertificateRepository & createCertificateAuthoritative: round-trip atom
   globalThis.fetch = async (url, options) => {
     const fullUrl = typeof url === 'string' && url.startsWith('http') ? url : `https://pauteknofest.netlify.app${url}`;
     const req = new Request(fullUrl, options);
-    return serverlessHandler(req);
+    return serverlessHandler(req, testContext);
   };
 
   try {

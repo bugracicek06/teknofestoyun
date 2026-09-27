@@ -3,7 +3,6 @@
 // Handles cross-device certificate creation (POST) and retrieval (GET)
 
 import { getStore, connectLambda } from '@netlify/blobs';
-import { neon } from '@neondatabase/serverless';
 import crypto from 'node:crypto';
 
 export interface CertificateRecord {
@@ -18,50 +17,16 @@ export interface CertificateRecord {
   results?: Record<string, unknown>;
 }
 
-// In-memory L1 cache fallback for warm serverless instances
-const memoryStore = new Map<string, CertificateRecord>();
-
-// Neon Database Helper (Tier 1 Persistence)
-function getNeonClient() {
-  const dbUrl = process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL || process.env.POSTGRES_URL;
-  if (!dbUrl) return null;
-  try {
-    return neon(dbUrl);
-  } catch (err) {
-    console.warn('[certificate:init] Failed to initialize Neon client:', err);
-    return null;
-  }
-}
-
-let dbInitialized = false;
-async function ensureNeonTable(sql: ReturnType<typeof neon>) {
-  if (dbInitialized) return;
-  try {
-    await sql`
-      CREATE TABLE IF NOT EXISTS certificates (
-        id TEXT PRIMARY KEY,
-        number TEXT NOT NULL,
-        full_name TEXT NOT NULL,
-        completed_at TEXT NOT NULL,
-        data JSONB NOT NULL,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      );
-    `;
-    dbInitialized = true;
-  } catch (err) {
-    console.warn('[certificate:init] Neon table creation error:', err);
-  }
-}
-
 /**
- * Netlify Blobs Helper (Tier 2 Persistence)
- * Supports both Netlify Functions v2 (context.blobs) and Lambda mode (connectLambda)
+ * Netlify Blobs Helper - Canonical Storage Engine
+ * Resolves store across Netlify Functions v2, v1/Lambda, and platform environments.
+ * Avoids consistency: 'strong' which throws BlobsConsistencyError unless uncachedEdgeURL is present.
  */
 function getBlobsStore(req?: any, context?: any) {
   // 1. Netlify Functions v2 context.blobs
   if (context && typeof context.blobs?.getStore === 'function') {
     try {
-      return context.blobs.getStore({ name: 'certificates', consistency: 'strong' });
+      return context.blobs.getStore('certificates');
     } catch (err) {
       console.warn('[certificate:init] context.blobs error:', err);
     }
@@ -76,132 +41,54 @@ function getBlobsStore(req?: any, context?: any) {
     }
   }
 
-  // 3. Global getStore with strong consistency (critical for immediate mobile QR scan)
-  try {
-    return getStore({ name: 'certificates', consistency: 'strong' });
-  } catch {
-    // Outside Netlify environment or Blobs credentials unconfigured
-    return null;
+  // 3. Fallback to siteID & token from process.env if available
+  const siteID = process.env.NETLIFY_SITE_ID || process.env.SITE_ID;
+  const token = process.env.NETLIFY_AUTH_TOKEN || process.env.NETLIFY_API_TOKEN;
+  if (siteID && token) {
+    try {
+      return getStore({ name: 'certificates', siteID, token });
+    } catch (err) {
+      console.warn('[certificate:init] custom credentials getStore error:', err);
+    }
   }
+
+  // 4. Standard auto-injected Netlify Blobs store
+  return getStore('certificates');
 }
 
 /**
- * Persist certificate across persistent storage tiers.
- * Guarantees cross-device durability:
- * 1. Writes to Neon Postgres if available.
- * 2. Writes to Netlify Blobs with strong consistency.
- * 3. Keeps in-memory L1 cache.
- * Throws error if NO durable storage could save the record, preventing false 201 responses.
+ * Persist certificate directly to Netlify Blobs (Canonical Storage).
+ * STRICT: NO IN-MEMORY FALLBACK. Throws immediately if persistence fails.
  */
-async function saveCertificate(record: CertificateRecord, req?: any, context?: any): Promise<{ storageType: string }> {
-  let savedToDurableStorage = false;
-  let usedStorage = 'none';
-
-  // Always update memory L1 cache
-  memoryStore.set(record.certificateId, record);
-
-  // 1. Tier 1: Neon PostgreSQL
-  const sql = getNeonClient();
-  if (sql) {
-    try {
-      await ensureNeonTable(sql);
-      await sql`
-        INSERT INTO certificates (id, number, full_name, completed_at, data)
-        VALUES (${record.certificateId}, ${record.certificateNumber}, ${record.fullName}, ${record.completedAt}, ${JSON.stringify(record)})
-        ON CONFLICT (id) DO UPDATE SET data = ${JSON.stringify(record)};
-      `;
-      savedToDurableStorage = true;
-      usedStorage = 'neon-postgres';
-      console.log(`[certificate:persist] Saved to Neon Postgres: ${record.certificateId}`);
-    } catch (err: any) {
-      console.warn('[certificate:error] Neon save failed, falling back to Blobs:', err?.message || err);
-    }
-  }
-
-  // 2. Tier 2: Netlify Blobs (with strong consistency)
+async function saveCertificate(record: CertificateRecord, req?: any, context?: any): Promise<void> {
   const blobs = getBlobsStore(req, context);
-  if (blobs) {
-    try {
-      await blobs.setJSON(record.certificateId, record);
-      savedToDurableStorage = true;
-      usedStorage = usedStorage === 'neon-postgres' ? 'neon+blobs' : 'netlify-blobs';
-      console.log(`[certificate:persist] Saved to Netlify Blobs: ${record.certificateId}`);
-    } catch (err: any) {
-      console.warn('[certificate:error] Netlify Blobs save failed:', err?.message || err);
-    }
+  if (!blobs) {
+    throw new Error('STORAGE_UNAVAILABLE: Netlify Blobs depolama alanı başlatılamadı.');
   }
 
-  // If in a serverless environment (Netlify) and neither durable store succeeded:
-  const isNetlifyEnv = Boolean(
-    process.env.NETLIFY ||
-    process.env.NETLIFY_BLOBS_CONTEXT ||
-    (req && typeof req === 'object' && req.blobs) ||
-    context?.blobs
-  );
-
-  if (isNetlifyEnv && !savedToDurableStorage) {
-    const errorMsg = 'Kalıcı depolama başarısız oldu (Neon veya Netlify Blobs erişilemedi).';
-    console.error(`[certificate:error] [certificate:persist] FAILED durable storage write for ${record.certificateId}`);
-    throw new Error(errorMsg);
-  }
-
-  // For local development environments outside Netlify without DB:
-  if (!savedToDurableStorage) {
-    usedStorage = 'local-memory';
-    console.log(`[certificate:persist] Saved to local memory store: ${record.certificateId}`);
-  }
-
-  return { storageType: usedStorage };
+  await blobs.setJSON(record.certificateId, record);
+  console.log(`[certificate:persist] Saved to Netlify Blobs: ${record.certificateId}`);
 }
 
 /**
- * Retrieve certificate across available tiers.
- * Immediate read-after-write with strong consistency.
+ * Retrieve certificate directly from Netlify Blobs (Canonical Storage).
+ * STRICT: NO IN-MEMORY MAP. Reads strictly from durable storage.
  */
 async function loadCertificate(id: string, req?: any, context?: any): Promise<CertificateRecord | null> {
   console.log(`[certificate:get] Fetching record for id: ${id}`);
 
-  // 1. Check memory L1 cache
-  const inMem = memoryStore.get(id);
-  if (inMem) {
-    console.log(`[certificate:get] Found in memory L1 cache: ${id}`);
-    return inMem;
-  }
-
-  // 2. Check Neon PostgreSQL
-  const sql = getNeonClient();
-  if (sql) {
-    try {
-      await ensureNeonTable(sql);
-      const rows = await sql`SELECT data FROM certificates WHERE id = ${id} LIMIT 1;`;
-      if (rows && rows.length > 0) {
-        const found = rows[0].data as CertificateRecord;
-        memoryStore.set(id, found);
-        console.log(`[certificate:get] Found in Neon Postgres: ${id}`);
-        return found;
-      }
-    } catch (err: any) {
-      console.warn('[certificate:error] Neon query failed:', err?.message || err);
-    }
-  }
-
-  // 3. Check Netlify Blobs (with strong consistency)
   const blobs = getBlobsStore(req, context);
-  if (blobs) {
-    try {
-      const found = await blobs.get(id, { type: 'json' });
-      if (found) {
-        const parsed = found as CertificateRecord;
-        memoryStore.set(id, parsed);
-        console.log(`[certificate:get] Found in Netlify Blobs: ${id}`);
-        return parsed;
-      }
-    } catch (err: any) {
-      console.warn('[certificate:error] Netlify Blobs query failed:', err?.message || err);
-    }
+  if (!blobs) {
+    throw new Error('STORAGE_UNAVAILABLE: Netlify Blobs depolama alanı başlatılamadı.');
   }
 
-  console.log(`[certificate:not-found] Record not found for id: ${id}`);
+  const found = await blobs.get(id, { type: 'json' });
+  if (found) {
+    console.log(`[certificate:get] Found in Netlify Blobs: ${id}`);
+    return found as CertificateRecord;
+  }
+
+  console.log(`[certificate:not-found] Record not found in Blobs for id: ${id}`);
   return null;
 }
 
@@ -233,13 +120,12 @@ const RESPONSE_HEADERS: Record<string, string> = {
 function extractIdFromUrl(rawUrl: string, headers: Headers | Record<string, string | undefined>): string | null {
   try {
     const urlObj = new URL(rawUrl, 'http://localhost');
-    const path = urlObj.pathname;
 
-    // Check query params (?id=... or ?certificateId=...)
+    // 1. Check query parameter (populated by Netlify redirect: /api/certificates/:id -> ?id=:id)
     const queryId = urlObj.searchParams.get('id') || urlObj.searchParams.get('certificateId');
-    if (queryId && queryId.trim()) return queryId.trim();
+    if (queryId && queryId.trim() && queryId !== ':splat') return queryId.trim();
 
-    // Check header rewrites (x-nf-original-path, x-rewrite-original-url, x-forwarded-uri)
+    // 2. Check header rewrites (x-nf-original-path, x-rewrite-original-url, x-forwarded-uri)
     const origHeader =
       headers instanceof Headers
         ? headers.get('x-nf-original-path') || headers.get('x-rewrite-original-url') || headers.get('x-forwarded-uri')
@@ -247,7 +133,7 @@ function extractIdFromUrl(rawUrl: string, headers: Headers | Record<string, stri
         ? headers['x-nf-original-path'] || headers['x-rewrite-original-url'] || headers['x-forwarded-uri']
         : null;
 
-    const pathToTest = origHeader || path;
+    const pathToTest = origHeader || urlObj.pathname;
     const match = pathToTest.match(/(?:\/api)?\/certificates\/([^/?#]+)/i);
     if (match && match[1] && match[1] !== 'certificates') {
       return decodeURIComponent(match[1]);
@@ -360,7 +246,7 @@ export default async function handler(req: Request | any, context?: any) {
         return { statusCode: 400, headers: RESPONSE_HEADERS, body: errBody };
       }
 
-      console.log(`[certificate:create] Initializing creation for participant (len: ${fullName.length})`);
+      console.log(`[certificate:create] Initializing creation for participant: ${fullName}`);
 
       const completedAt =
         typeof data.completedAt === 'string' && !isNaN(Date.parse(data.completedAt))
@@ -393,16 +279,16 @@ export default async function handler(req: Request | any, context?: any) {
         results: data.results || {},
       };
 
-      // 1. Write to persistent storage
-      const persistResult = await saveCertificate(record, req, context);
+      // 1. Write strictly to persistent Netlify Blobs storage
+      await saveCertificate(record, req, context);
 
-      // 2. Perform read-after-write verification to guarantee readability before 201
+      // 2. Perform immediate read-after-write verification against storage
       const verified = await loadCertificate(certificateId, req, context);
-      if (!verified) {
-        throw new Error('Sertifika depolama sonrası okuma doğrulamasından geçemedi.');
+      if (!verified || (verified.id !== certificateId && verified.certificateId !== certificateId)) {
+        throw new Error('CERTIFICATE_PERSISTENCE_VERIFICATION_FAILED: Kalıcı depolamaya yazıldı ancak okuma doğrulanamadı.');
       }
 
-      console.log(`[certificate:persist] Read-after-write verification PASSED for ${certificateId} via ${persistResult.storageType}`);
+      console.log(`[certificate:persist] Read-after-write verification PASSED for ${certificateId}`);
 
       const resBody = JSON.stringify(createStandardEnvelope(record));
       if (isStandardReq) return new Response(resBody, { status: 201, headers: RESPONSE_HEADERS });

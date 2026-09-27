@@ -11,6 +11,22 @@ import {
 import { DEV_CONFIG } from '../src/config/devConfig.ts';
 import { handler as serverlessHandler } from '../netlify/functions/certificates.ts';
 
+const testBlobsStore = new Map();
+const testContext = {
+  blobs: {
+    getStore: () => ({
+      setJSON: async (key, val) => {
+        testBlobsStore.set(key, structuredClone(val));
+      },
+      get: async (key, _opts) => {
+        const val = testBlobsStore.get(key);
+        if (!val) return null;
+        return structuredClone(val);
+      },
+    }),
+  },
+};
+
 test('Production Config: DEV_UNLOCK_ALL_LEVELS must be false', () => {
   assert.equal(DEV_CONFIG.DEV_UNLOCK_ALL_LEVELS, false, 'DEV_UNLOCK_ALL_LEVELS must be false in production');
 });
@@ -88,7 +104,7 @@ test('Final Comprehensive E2E Flow: Step 1 to 28 with TEST KAŞİF', async () =>
     }),
   });
 
-  const createRes = await serverlessHandler(createReq);
+  const createRes = await serverlessHandler(createReq, testContext);
   assert.equal(createRes.status, 201);
   const createBody = await createRes.json();
   assert.equal(createBody.success, true);
@@ -118,7 +134,7 @@ test('Final Comprehensive E2E Flow: Step 1 to 28 with TEST KAŞİF', async () =>
     method: 'GET',
     headers: { 'Accept': 'application/json' },
   });
-  const mobileGetRes = await serverlessHandler(mobileGetReq);
+  const mobileGetRes = await serverlessHandler(mobileGetReq, testContext);
   assert.equal(mobileGetRes.status, 200);
   const mobileCertBody = await mobileGetRes.json();
   assert.equal(mobileCertBody.success, true);
@@ -174,7 +190,7 @@ test('Final Comprehensive E2E Flow: Step 1 to 28 with TEST KAŞİF', async () =>
     method: 'GET',
     headers: { 'Accept': 'application/json' },
   });
-  const verifyOldRes = await serverlessHandler(verifyOldReq);
+  const verifyOldRes = await serverlessHandler(verifyOldReq, testContext);
   assert.equal(verifyOldRes.status, 200, 'Previous certificate must remain available on backend');
   const verifiedOldBody = await verifyOldRes.json();
   assert.equal(verifiedOldBody.success, true);
