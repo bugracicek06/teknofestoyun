@@ -19,9 +19,6 @@ import {
   type CertificateCreationStatus,
   generateCertificateId,
   generateCertificateNumber,
-  formatCertificateDate,
-  MODULE_DISPLAY_INFO,
-  REQUIRED_MODULE_IDS,
   certificateRepository,
 } from '../game/systems/certificate.ts';
 import { generateCertificateQr } from '../game/systems/qr';
@@ -34,9 +31,9 @@ import { GobeklitepeMissionShell } from './GobeklitepeMissionShell';
 import { CiniSanatiMissionShell } from './CiniSanatiMissionShell';
 import { DevrimOtomobiliMissionShell } from './devrim/DevrimOtomobiliMissionShell';
 import { MilliTeknolojiMissionShell } from './milli/MilliTeknolojiMissionShell';
+import { UzayTeknolojileriMissionShell } from './uzay/UzayTeknolojileriMissionShell';
 import { ModuleIntroScreen } from './ModuleIntroScreen';
 import { getModuleIntroConfig } from '../data/moduleIntros';
-import { DEV_UNLOCK_ALL_LEVELS } from '../config/devConfig';
 
 type Panel = 'intro' | 'help' | 'pause' | 'idle' | 'result' | null;
 
@@ -104,6 +101,15 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
 
   const navigate = (key: string, reset = false) => {
     if (!game || transition.current) return;
+
+    // Route / Scene Level Guard:
+    // If target is a module scene, verify that the module is actually unlocked!
+    const targetModule = GAME_MODULES.find(m => m.sceneKey === key);
+    if (targetModule && !GameStore.isModuleUnlocked(targetModule.id)) {
+      console.warn(`[KioskShell] Access denied to locked module scene: ${targetModule.id}. Redirecting to World Map.`);
+      key = SceneKeys.WORLD_MAP;
+    }
+
     transition.current = true;
     stopNarration();
     game.registry.set('civilMission', civilMission);
@@ -130,11 +136,12 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
   };
 
   const handleStartJourney = () => {
-    const res = GameStore.setPlayerFullName(playerNameInput);
+    const res = GameStore.startNewGame(playerNameInput);
     if (!res.success) {
       setNameError(res.error || 'Lütfen adınızı ve soyadınızı girin.');
       return;
     }
+    setSelected('gobeklitepe');
     SoundFx.playTelemetryBeep();
     navigate(SceneKeys.WORLD_MAP);
   };
@@ -142,9 +149,9 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
   // Idempotent Certificate Creation & QR Generation
   const handleCreateOrFetchCertificate = useCallback(async (forceRetry = false) => {
     if (creatingLockRef.current) return;
-    if (!allComplete) return;
+    if (!GameStore.isAllModulesCompleted()) return;
 
-    const existingCertId = state.playerSession.certificateId;
+    const existingCertId = state.playerSession.certificateId || GameStore.getPlayerSession().certificateId;
 
     // 1. If certificate already exists in session, don't create duplicate!
     if (existingCertId && !forceRetry) {
@@ -156,15 +163,16 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
           if (qrRes.success && qrRes.dataUrl) {
             setQrDataUrl(qrRes.dataUrl);
             setQrTargetUrl(qrRes.targetUrl || null);
-            setCertNumber(state.playerSession.certificateNumber || '');
+            setCertNumber(state.playerSession.certificateNumber || GameStore.getPlayerSession().certificateNumber || '');
             setCreationStatus('created');
           } else {
             setCreationStatus('error');
-            setCreationError(qrRes.error || 'QR kod oluşturulamadı.');
+            setCreationError('Sertifika hazırlanamadı. Tekrar dene.');
           }
         } catch (err: any) {
+          console.error('[Kiosk] QR reload error:', err);
           setCreationStatus('error');
-          setCreationError(err?.message || 'Sertifika bağlantısı şu anda oluşturulamıyor.');
+          setCreationError('Sertifika hazırlanamadı. Tekrar dene.');
         } finally {
           creatingLockRef.current = false;
         }
@@ -182,17 +190,19 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
 
     try {
       const certId = draftRecordRef.current?.certificateId || generateCertificateId();
-      const completedAt = state.playerSession.completedAt || new Date().toISOString();
+      const completedAt = state.playerSession.completedAt || GameStore.getPlayerSession().completedAt || new Date().toISOString();
       const cNumber = draftRecordRef.current?.certificateNumber || generateCertificateNumber(completedAt);
+
+      const participantName = (state.playerSession.fullName || GameStore.getPlayerSession().fullName || '').trim() || 'Genç Kâşif';
 
       const record: CertificateRecord = {
         certificateId: certId,
         certificateNumber: cNumber,
-        fullName: state.playerSession.fullName || 'Genç Kâşif',
+        fullName: participantName,
         completedAt,
-        completedModules: [...state.completedModuleIds],
+        completedModules: [...GameStore.getState().completedModuleIds],
         projectName: 'Medeniyetten Millî Teknolojiye',
-        results: state.results,
+        results: GameStore.getState().results,
       };
 
       draftRecordRef.current = record;
@@ -212,16 +222,16 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
         setCreationStatus('created');
       } else {
         setCreationStatus('error');
-        setCreationError(qrRes.error || 'Sertifika bağlantısı oluşturulamadı.');
+        setCreationError('Sertifika hazırlanamadı. Tekrar dene.');
       }
     } catch (err: any) {
       console.error('[Kiosk] Certificate creation error:', err);
       setCreationStatus('error');
-      setCreationError('Sertifika bağlantısı oluşturulamadı.');
+      setCreationError('Sertifika hazırlanamadı. Tekrar dene.');
     } finally {
       creatingLockRef.current = false;
     }
-  }, [allComplete, creationStatus, state.playerSession, state.completedModuleIds, state.results]);
+  }, [creationStatus, state.playerSession]);
 
   useEffect(() => {
     if (!game) return;
@@ -237,7 +247,7 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
         setPanel('intro');
       } else {
         setPanel(null);
-        setSelected(GAME_MODULES.find(m => !GameStore.isModuleCompleted(m.id))?.id || 'uzay_teknolojileri');
+        setSelected(GAME_MODULES.find(m => !GameStore.isModuleCompleted(m.id) && GameStore.isModuleUnlocked(m.id))?.id || 'gobeklitepe');
       }
     };
     const changed = () => setState(GameStore.getState());
@@ -345,9 +355,9 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
     }
   }, [panel]);
 
-  // Trigger certificate creation once when final screen opens with all 6 modules completed
+  // Automatically trigger certificate creation when all 6 modules are completed and final screen opens
   useEffect(() => {
-    if (panel === 'result' && allComplete && creationStatus === 'idle') {
+    if (panel === 'result' && (allComplete || GameStore.isAllModulesCompleted()) && creationStatus === 'idle') {
       handleCreateOrFetchCertificate();
     }
   }, [panel, allComplete, creationStatus, handleCreateOrFetchCertificate]);
@@ -530,7 +540,7 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
               <div className="mission-grid-container" role="region" aria-label="Görev Seçimi">
                 {GAME_MODULES.map((m, i) => {
                   const completed = state.completedModuleIds.includes(m.id);
-                  const isUnlocked = DEV_UNLOCK_ALL_LEVELS || state.unlockedModuleIds.includes(m.id);
+                  const isUnlocked = GameStore.isModuleUnlocked(m.id);
                   const locked = !isUnlocked;
                   const status = locked
                     ? 'locked'
@@ -557,9 +567,6 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
                       onSelect={() => {
                         if (selected === m.id) {
                           if (isUnlocked) {
-                            if (DEV_UNLOCK_ALL_LEVELS && !state.unlockedModuleIds.includes(m.id)) {
-                              GameStore.unlockModule(m.id);
-                            }
                             navigate(m.sceneKey);
                           }
                         } else {
@@ -635,13 +642,10 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
                 <button
                   type="button"
                   className="primary action-btn-start"
-                  disabled={!DEV_UNLOCK_ALL_LEVELS && !GameStore.isModuleUnlocked(selected)}
+                  disabled={!GameStore.isModuleUnlocked(selected)}
                   onClick={() => {
                     const m = GAME_MODULES.find(m => m.id === selected);
-                    if (m && (DEV_UNLOCK_ALL_LEVELS || GameStore.isModuleUnlocked(m.id))) {
-                      if (DEV_UNLOCK_ALL_LEVELS && !state.unlockedModuleIds.includes(m.id)) {
-                        GameStore.unlockModule(m.id);
-                      }
+                    if (m && GameStore.isModuleUnlocked(m.id)) {
                       navigate(m.sceneKey);
                     }
                   }}
@@ -751,6 +755,26 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
         />
       )}
 
+      {sceneKey === SceneKeys.UZAY_TEKNOLOJILERI && (
+        <UzayTeknolojileriMissionShell
+          isAudioMuted={state.isAudioMuted}
+          fullscreen={fullscreen}
+          onHome={() => navigate(SceneKeys.START, false)}
+          onBack={() => navigate(SceneKeys.WORLD_MAP)}
+          onToggleAudio={() => {
+            GameStore.toggleAudioMuted();
+            stopNarration();
+          }}
+          onHelp={() => pause('help')}
+          onPause={() => pause('pause')}
+          onToggleFullscreen={toggleFullscreen}
+          onCompleteAdventure={() => {
+            setPanel('result');
+            handleCreateOrFetchCertificate();
+          }}
+        />
+      )}
+
       {/* Cinematic Module Intro Screen for modules 2 through 6 */}
       {panel === 'intro' && sceneKey !== SceneKeys.GOBEKLITEPE && introConfig && (
         <ModuleIntroScreen
@@ -762,7 +786,7 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
         />
       )}
 
-      {sceneKey !== SceneKeys.GOBEKLITEPE && sceneKey !== SceneKeys.ANADOLU_USTALIGI && sceneKey !== SceneKeys.SANAYILESME && sceneKey !== SceneKeys.MILLI_TEKNOLOJI && (
+      {sceneKey !== SceneKeys.GOBEKLITEPE && sceneKey !== SceneKeys.ANADOLU_USTALIGI && sceneKey !== SceneKeys.SANAYILESME && sceneKey !== SceneKeys.MILLI_TEKNOLOJI && sceneKey !== SceneKeys.UZAY_TEKNOLOJILERI && (
         <nav
           className={`control-bar ${menu ? 'landing-controls' : 'in-game'}`}
           aria-label="Oyun kontrolleri"
@@ -843,116 +867,90 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
       >
         {panel === 'result' && result ? (
           allComplete ? (
-            /* ALL 6 MODULES COMPLETED: FINAL CELEBRATION & DIGITAL CERTIFICATE SCREEN */
             <div className="final-celebration-container">
-              <div className="final-confetti-badge">🎉 BÜYÜK BAŞARI · 6 GÖREV TAMAMLANDI</div>
+              {/* Başlık: 🏆 MACERA BAŞARIYLA TAMAMLANDI */}
               <h2 className="final-title">
-                Tebrikler, <span className="final-title-name">{state.playerSession.fullName || 'Genç Kâşif'}</span>!
+                🏆 MACERA BAŞARIYLA TAMAMLANDI
               </h2>
-              <p className="final-subtitle">
-                Medeniyetten Millî Teknolojiye yolculuğunu başarıyla tamamladın.
+
+              {/* Altında: Tebrikler, Kaşif! */}
+              <p className="final-subtitle" aria-label="TEBRİKLER, KÂŞİF!">
+                Tebrikler, Kaşif!
               </p>
 
-              {/* 6 Stage Timeline */}
-              <div className="final-timeline" aria-label="6 Aşamalı Keşif Yolculuğu">
-                {REQUIRED_MODULE_IDS.map(modId => {
-                  const info = MODULE_DISPLAY_INFO[modId];
-                  return (
-                    <div key={modId} className="final-timeline-step">
-                      <span className="final-step-badge">{info.step}</span>
-                      <span className="final-step-name">{info.title}</span>
-                      <span className="final-step-check" aria-label="Tamamlandı">✓</span>
-                    </div>
-                  );
-                })}
+              {/* [OYUNCUNUN ADI SOYADI] */}
+              <div className="final-player-name-display">
+                {((state.playerSession.fullName || GameStore.getPlayerSession().fullName || 'Genç Kâşif').trim()).toLocaleUpperCase('tr-TR')}
               </div>
 
-              {/* Digital Certificate Ready Area */}
-              <div className="final-cert-card">
-                <div className="final-cert-content">
-                  <div className="final-cert-info-col">
-                    <h3>Dijital Sertifikan Hazır!</h3>
-                    <p>
-                      Pamukkale Üniversitesi ve TEKNOFEST onaylı resmi başarı sertifikan senin adına oluşturuldu.
-                      Telefonunla QR kodu okutarak sertifikanı yüksek kalitede görüntüleyebilir ve PDF veya görsel olarak indirebilirsin.
-                    </p>
-                    <div className="final-cert-meta-row">
-                      <div className="final-meta-item">
-                        <span>Katılımcı</span>
-                        <strong>{state.playerSession.fullName || 'Genç Kâşif'}</strong>
-                      </div>
-                      <div className="final-meta-item">
-                        <span>Tamamlanma Tarihi</span>
-                        <strong>
-                          {formatCertificateDate(state.playerSession.completedAt || new Date().toISOString())}
-                        </strong>
-                      </div>
+              {/* Metin */}
+              <p className="final-description-text">
+                Medeniyetten Millî Teknolojiye yolculuğundaki 6 bölümün tamamını başarıyla tamamladın.
+              </p>
+
+              {/* 6 / 6 BÖLÜM TAMAMLANDI */}
+              <div className="final-status-pill">
+                <span className="final-status-dot" aria-hidden="true" />
+                <span>6 / 6 BÖLÜM TAMAMLANDI</span>
+              </div>
+
+              {/* Büyük ve rahat okutulabilir QR kod alanı */}
+              <div className="final-qr-section" data-action="SERTİFİKAMI OLUŞTUR">
+                {creationStatus === 'creating' && (
+                  <div className="final-qr-loading-box">
+                    <div className="cert-spinner" aria-hidden="true" />
+                    <span className="final-qr-loading-text">SERTİFİKAN HAZIRLANIYOR...</span>
+                  </div>
+                )}
+
+                {(creationStatus === 'created' || state.playerSession.certificateId) && qrDataUrl && (
+                  <div className="final-qr-ready-card">
+                    <div className="final-qr-code-wrapper" title={qrTargetUrl || 'Sertifika Adresi'}>
+                      <img
+                        src={qrDataUrl}
+                        alt="Sertifika QR Kodu"
+                        className="final-qr-code-img"
+                        width={220}
+                        height={220}
+                      />
+                    </div>
+                    <div className="final-qr-info-column">
+                      <h3 className="final-qr-heading">SERTİFİKAN HAZIR</h3>
+                      <p className="final-qr-instruction">
+                        Sana özel hazırlanan başarı sertifikanı görüntülemek için QR kodu telefonunla okut.
+                      </p>
                       {certNumber && (
-                        <div className="final-meta-item">
-                          <span>Sertifika No</span>
-                          <strong className="final-meta-code">{certNumber}</strong>
-                        </div>
+                        <span className="final-cert-number-tag">
+                          Belge No: {certNumber}
+                        </span>
                       )}
                     </div>
                   </div>
+                )}
 
-                  {/* QR Code Section (ONLY ON FINAL SCREEN, NOT ON CERTIFICATE) */}
-                  <div className="final-qr-col">
-                    {creationStatus === 'creating' && (
-                      <div className="final-cert-qr-placeholder">
-                        <div className="cert-spinner" />
-                        <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Sertifikan hazırlanıyor…</span>
-                      </div>
-                    )}
-
-                    {creationStatus === 'created' && qrDataUrl && (
-                      <>
-                        <div className="final-qr-box" title={qrTargetUrl || 'Sertifika İndirme Adresi'}>
-                          <img
-                            src={qrDataUrl}
-                            alt="Sertifika İndirme QR Kodu"
-                            className="final-qr-image"
-                          />
-                        </div>
-                        <p className="final-qr-caption">
-                          Telefonunla QR kodu okut ve sertifikanı indir.
-                        </p>
-                        {certNumber && (
-                          <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
-                            {certNumber}
-                          </span>
-                        )}
-                      </>
-                    )}
-
-                    {creationStatus === 'error' && (
-                      <div className="final-cert-error-box">
-                        <p>{creationError || 'Sertifika bağlantısı oluşturulamadı.'}</p>
-                        <button
-                          type="button"
-                          className="btn-retry-cert"
-                          onClick={() => handleCreateOrFetchCertificate(true)}
-                        >
-                          Tekrar Dene
-                        </button>
-                      </div>
-                    )}
+                {creationStatus === 'error' && (
+                  <div className="final-cert-error-box">
+                    <p>{creationError || 'Sertifika hazırlanamadı.'}</p>
+                    <button
+                      type="button"
+                      className="btn-retry-cert"
+                      onClick={() => handleCreateOrFetchCertificate(true)}
+                    >
+                      TEKRAR DENE
+                    </button>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Actions */}
               <div className="final-actions-row">
-                <button type="button" onClick={() => navigate(SceneKeys.WORLD_MAP)}>
-                  Görev Haritası
-                </button>
                 <button
                   type="button"
-                  className="primary"
+                  className="final-btn-secondary"
                   onClick={() => navigate(SceneKeys.START, true)}
-                  aria-label="Yeni Oyuncu Başlat"
+                  aria-label="Yeni Kaşif Başlat"
                 >
-                  Yeni Kâşif / Çıkış
+                  YENİ KAŞİF BAŞLAT
                 </button>
               </div>
             </div>

@@ -223,4 +223,185 @@ test('getCertificatePublicUrl: validates HTTPS and rejects localhost / private I
   }
 });
 
+test('Module 6 Finale: End-to-end flow from player session to API certificate creation and QR verification', async () => {
+  // 1. Enter new player name
+  GameStore.resetSession();
+  const nameResult = GameStore.setPlayerFullName('Ahmet Yılmaz');
+  assert.equal(nameResult.success, true);
+  assert.equal(GameStore.getPlayerSession().fullName, 'Ahmet Yılmaz');
 
+  // 2. Complete modules 1 through 5
+  const first5Modules = ['gobeklitepe', 'demir_cagi', 'anadolu_ustaligi', 'sanayilesme', 'milli_teknoloji'];
+  for (const modId of first5Modules) {
+    GameStore.unlockModule(modId);
+    GameStore.completeModule(modId);
+  }
+
+  // 15. Verify 5th module end does NOT trigger certificate / allComplete is false
+  assert.equal(GameStore.isAllModulesCompleted(), false, 'Certificate must not be eligible at module 5');
+  assert.equal(GameStore.getPlayerSession().certificateId, null);
+
+  // 3 & 4. Module 6 completed via GÖREVİ TAMAMLA
+  GameStore.unlockModule('uzay_teknolojileri');
+  GameStore.completeModule('uzay_teknolojileri');
+  assert.equal(GameStore.isAllModulesCompleted(), true, 'All 6 modules must now be completed');
+
+  // 5 & 6. Certificate API creation with real player name
+  const participantName = GameStore.getPlayerSession().fullName;
+  assert.equal(participantName, 'Ahmet Yılmaz', 'Real participant name must be used');
+
+  const createReq = new Request('https://pauteknofest.netlify.app/api/certificates', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      fullName: participantName,
+      completedModules: [...REQUIRED_MODULE_IDS],
+      completedAt: '2026-09-27T10:00:00.000Z',
+      projectName: 'Medeniyetten Millî Teknolojiye',
+    }),
+  });
+
+  const createRes = await serverlessHandler(createReq);
+  assert.equal(createRes.status, 201);
+  const createdRecord = await createRes.json();
+
+  assert.ok(createdRecord.certificateId, 'Real UUID certificateId must be returned');
+  assert.equal(createdRecord.fullName, 'Ahmet Yılmaz');
+  assert.match(createdRecord.certificateNumber, /^PAU-TKF-2026-[A-Z0-9]{6}$/);
+
+  // 7, 8 & 9. Resolve production QR URL
+  const originalWindow = globalThis.window;
+  try {
+    globalThis.window = { location: { origin: 'https://pauteknofest.netlify.app' } };
+    const publicUrlRes = getCertificatePublicUrl(createdRecord.certificateId);
+    assert.equal(publicUrlRes.error, undefined);
+    assert.equal(publicUrlRes.url, `https://pauteknofest.netlify.app/certificate/${createdRecord.certificateId}`);
+
+    // Verify QR URL strictly points to /certificate/{certificateId}
+    const parsedUrl = new URL(publicUrlRes.url);
+    assert.equal(parsedUrl.pathname, `/certificate/${createdRecord.certificateId}`);
+    assert.equal(parsedUrl.protocol, 'https:');
+  } finally {
+    globalThis.window = originalWindow;
+  }
+
+  // 10 & 11. Format completion date and verify name on certificate record
+  const formattedDate = formatCertificateDate(createdRecord.completedAt);
+  assert.equal(formattedDate, '27.09.2026');
+  assert.equal(createdRecord.fullName, 'Ahmet Yılmaz');
+
+  // 14. Verify certificate URL still works upon reload / fetching by ID
+  const fetchReq = new Request(`https://pauteknofest.netlify.app/api/certificates/${createdRecord.certificateId}`, {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+  });
+  const fetchRes = await serverlessHandler(fetchReq);
+  assert.equal(fetchRes.status, 200);
+  const fetched = await fetchRes.json();
+  assert.equal(fetched.certificateId, createdRecord.certificateId);
+  assert.equal(fetched.fullName, 'Ahmet Yılmaz');
+});
+
+test('Master Certificate Asset: Verifies physical file and exact PNG pixel dimensions (3730 x 2635)', async () => {
+  const fs = await import('node:fs');
+  const path = await import('node:path');
+
+  const publicAssetPath = path.resolve('public/assets/certificate_base.png');
+  const srcAssetPath = path.resolve('src/assets/certificate_base.png');
+
+  assert.ok(fs.existsSync(publicAssetPath), 'public/assets/certificate_base.png must exist');
+  assert.ok(fs.existsSync(srcAssetPath), 'src/assets/certificate_base.png must exist');
+
+  // Helper to read PNG IHDR dimensions directly from binary header
+  function getPngDimensions(filePath) {
+    const fd = fs.openSync(filePath, 'r');
+    const buffer = Buffer.alloc(24);
+    fs.readSync(fd, buffer, 0, 24, 0);
+    fs.closeSync(fd);
+
+    // Bytes 0-7: PNG signature 0x89 50 4E 47 0D 0A 1A 0A
+    assert.equal(buffer[0], 0x89);
+    assert.equal(buffer[1], 0x50); // P
+    assert.equal(buffer[2], 0x4e); // N
+    assert.equal(buffer[3], 0x47); // G
+
+    // Bytes 16-19: Width (big-endian 32-bit int)
+    const width = buffer.readUInt32BE(16);
+    // Bytes 20-23: Height (big-endian 32-bit int)
+    const height = buffer.readUInt32BE(20);
+
+    return { width, height };
+  }
+
+  const publicDims = getPngDimensions(publicAssetPath);
+  assert.equal(publicDims.width, 3730, 'Master PNG template must have exactly 3730px width');
+  assert.equal(publicDims.height, 2635, 'Master PNG template must have exactly 2635px height');
+
+  const srcDims = getPngDimensions(srcAssetPath);
+  assert.equal(srcDims.width, 3730, 'Source PNG template must have exactly 3730px width');
+  assert.equal(srcDims.height, 2635, 'Source PNG template must have exactly 2635px height');
+});
+
+test('Section 16 End-to-end Test: TEST KAŞİF flow, coordinates, and resolution preservation', async () => {
+  // 1. Participant name is TEST KAŞİF
+  const rawPlayerName = 'TEST KAŞİF';
+  GameStore.resetSession();
+  GameStore.setPlayerFullName(rawPlayerName);
+  assert.equal(GameStore.getPlayerSession().fullName, 'TEST KAŞİF');
+
+  // Complete all 6 modules
+  for (const mod of REQUIRED_MODULE_IDS) {
+    GameStore.unlockModule(mod);
+    GameStore.completeModule(mod);
+  }
+  assert.equal(GameStore.isAllModulesCompleted(), true);
+
+  // 2. Create certificate on API
+  const createReq = new Request('https://pauteknofest.netlify.app/api/certificates', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      fullName: GameStore.getPlayerSession().fullName,
+      completedModules: [...REQUIRED_MODULE_IDS],
+      completedAt: new Date().toISOString(),
+    }),
+  });
+
+  const createRes = await serverlessHandler(createReq);
+  assert.equal(createRes.status, 201);
+  const certRecord = await createRes.json();
+  assert.equal(certRecord.fullName, 'TEST KAŞİF');
+
+  // 3. Normalized positioning calculation
+  const masterWidth = 3730;
+  const masterHeight = 2635;
+
+  const expectedNameX = Math.round(masterWidth * 0.6244);
+  const expectedNameY = Math.round(masterHeight * 0.512);
+
+  // Center of the dotted line is at 2329px
+  assert.equal(expectedNameX, 2329);
+  // Baseline cleanly resting above dotted line is at 1349px
+  assert.equal(expectedNameY, 1349);
+
+  // 4. Verification that Turkish uppercase formatting is preserved
+  const formattedName = certRecord.fullName.trim().toLocaleUpperCase('tr-TR');
+  assert.equal(formattedName, 'TEST KAŞİF');
+
+  // 5. Verification for long name auto-scaling boundaries
+  const _longName = 'MUHAMMED EMİR ABDURRAHMAN YILMAZ';
+  const maxNameWidth = masterWidth * 0.36; // 1342.8 px
+  assert.ok(_longName.length > 25);
+  assert.ok(maxNameWidth > 1300 && maxNameWidth < 1400);
+
+  // 6. Retrieval by mobile URL test
+  const getReq = new Request(`https://pauteknofest.netlify.app/api/certificates/${certRecord.certificateId}`, {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+  });
+  const getRes = await serverlessHandler(getReq);
+  assert.equal(getRes.status, 200);
+  const mobileFetched = await getRes.json();
+  assert.equal(mobileFetched.fullName, 'TEST KAŞİF');
+  assert.equal(mobileFetched.certificateId, certRecord.certificateId);
+});

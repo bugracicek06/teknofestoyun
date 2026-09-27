@@ -6,7 +6,7 @@ import {
   REQUIRED_MODULE_IDS,
 } from '../game/systems/certificate';
 import { ApiCertificateRepository } from '../game/systems/certificate';
-import { exportCertificateAsPdf, exportCertificateAsImage, renderCertificateToCanvas } from '../game/systems/certificateRenderer';
+import { exportCertificateAsImage, renderCertificateToCanvas } from '../game/systems/certificateRenderer';
 import pauLogo from '../assets/logos/pau_logo.png';
 import teknofestLogo from '../assets/logos/teknofest_logo.png';
 
@@ -21,7 +21,6 @@ export const CertificateViewPage: React.FC<CertificateViewPageProps> = ({ certif
   const [loading, setLoading] = useState(true);
   const [errorType, setErrorType] = useState<PageErrorType>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadingImg, setDownloadingImg] = useState(false);
   const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
 
@@ -38,7 +37,7 @@ export const CertificateViewPage: React.FC<CertificateViewPageProps> = ({ certif
     setErrorMessage(null);
 
     try {
-      // Authoritative remote API fetch (no localStorage dependency)
+      // Authoritative remote API fetch (cross-device, no localStorage dependency)
       const apiRepo = new ApiCertificateRepository();
       const record = await apiRepo.getById(certificateId.trim());
 
@@ -51,10 +50,10 @@ export const CertificateViewPage: React.FC<CertificateViewPageProps> = ({ certif
 
       setCert(record);
 
-      // Generate high quality preview canvas
+      // Generate preview canvas at full master resolution (3730x2635)
       try {
         const canvas = await renderCertificateToCanvas(record);
-        setPreviewDataUrl(canvas.toDataURL('image/jpeg', 0.9));
+        setPreviewDataUrl(canvas.toDataURL('image/png'));
       } catch (renderErr) {
         console.warn('[CertificateView] Could not generate preview canvas:', renderErr);
       }
@@ -81,19 +80,6 @@ export const CertificateViewPage: React.FC<CertificateViewPageProps> = ({ certif
       document.body.classList.remove('cert-route-active');
     };
   }, []);
-
-  const handleDownloadPdf = async () => {
-    if (!cert || downloadingPdf) return;
-    try {
-      setDownloadingPdf(true);
-      await exportCertificateAsPdf(cert);
-    } catch (err) {
-      console.error('PDF export error:', err);
-      alert('PDF oluşturulurken bir hata oluştu.');
-    } finally {
-      setDownloadingPdf(false);
-    }
-  };
 
   const handleDownloadImage = async () => {
     if (!cert || downloadingImg) return;
@@ -159,17 +145,17 @@ export const CertificateViewPage: React.FC<CertificateViewPageProps> = ({ certif
           <div className="cert-brand-sep" aria-hidden="true" />
           <img className="cert-teknofest-logo" src={teknofestLogo} alt="TEKNOFEST" />
         </div>
-        <div className="cert-badge">TEKNOFEST DİJİTAL BAŞARI SERTİFİKASI</div>
+        <div className="cert-badge">TEKNOFEST 2026 ŞANLIURFA</div>
         <h1 className="cert-page-title">
-          Tebrikler, <span>{cert.fullName}</span>!
+          BAŞARI SERTİFİKASI
         </h1>
-        <p className="cert-page-subtitle">
-          “Medeniyetten Millî Teknolojiye” interaktif eğitim oyununu başarıyla tamamladın.
+        <p className="cert-page-subtitle" style={{ maxWidth: '680px', margin: '0 auto', lineHeight: 1.6 }}>
+          Tebrikler, <strong>{cert.fullName}</strong>! Medeniyetten Millî Teknolojiye yolculuğundaki tüm görevleri başarıyla tamamladın.
         </p>
       </header>
 
       <main className="cert-main">
-        {/* Interactive Certificate Preview */}
+        {/* Interactive Master Certificate Preview */}
         <section className="cert-preview-section" aria-label="Sertifika Önizleme">
           <div className="cert-preview-frame">
             {previewDataUrl ? (
@@ -177,6 +163,7 @@ export const CertificateViewPage: React.FC<CertificateViewPageProps> = ({ certif
                 src={previewDataUrl}
                 alt={`${cert.fullName} Başarı Sertifikası`}
                 className="cert-preview-image"
+                style={{ width: '100%', height: 'auto', display: 'block', borderRadius: '12px' }}
               />
             ) : (
               <div className="cert-preview-placeholder">
@@ -186,45 +173,30 @@ export const CertificateViewPage: React.FC<CertificateViewPageProps> = ({ certif
           </div>
         </section>
 
-        {/* Download Actions: Positioned directly beneath the certificate preview */}
-        <section className="cert-actions-section" aria-label="İndirme Seçenekleri">
+        {/* Download Action: Pure Lossless PNG in Full Master Resolution */}
+        <section className="cert-actions-section" aria-label="İndirme Seçenekleri" style={{ justifyContent: 'center' }}>
           <button
             type="button"
             className="cert-btn-primary"
-            onClick={handleDownloadPdf}
-            disabled={downloadingPdf}
-            aria-label="Sertifikayı PDF Olarak İndir"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-              <line x1="12" y1="18" x2="12" y2="12" />
-              <line x1="9" y1="15" x2="15" y2="15" />
-            </svg>
-            <span>{downloadingPdf ? 'PDF Hazırlanıyor…' : 'Sertifikayı PDF Olarak İndir'}</span>
-          </button>
-
-          <button
-            type="button"
-            className="cert-btn-secondary"
             onClick={handleDownloadImage}
             disabled={downloadingImg}
-            aria-label="Görsel Olarak İndir"
+            aria-label="Sertifikayı İndir"
+            style={{ minWidth: '280px', fontSize: '17px', padding: '16px 36px' }}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-              <circle cx="8.5" cy="8.5" r="1.5" />
-              <polyline points="21 15 16 10 5 21" />
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
-            <span>{downloadingImg ? 'Görsel Hazırlanıyor…' : 'Görsel Olarak İndir (PNG)'}</span>
+            <span>{downloadingImg ? 'Görsel Hazırlanıyor…' : 'SERTİFİKAYI İNDİR (PNG)'}</span>
           </button>
         </section>
 
         {/* Certificate Metadata Badges */}
         <section className="cert-meta-grid" aria-label="Sertifika Bilgileri">
           <div className="cert-meta-item">
-            <span className="cert-meta-label">Katılımcı</span>
-            <strong className="cert-meta-value">{cert.fullName}</strong>
+            <span className="cert-meta-label">Kaşif</span>
+            <strong className="cert-meta-value">{cert.fullName.toLocaleUpperCase('tr-TR')}</strong>
           </div>
           <div className="cert-meta-item">
             <span className="cert-meta-label">Tamamlanma Tarihi</span>
@@ -258,7 +230,7 @@ export const CertificateViewPage: React.FC<CertificateViewPageProps> = ({ certif
       </main>
 
       <footer className="cert-footer">
-        <p>Pamukkale Üniversitesi · TEKNOFEST</p>
+        <p>Pamukkale Üniversitesi · Pamukkale Teknokent · TEKNOFEST 2026 Şanlıurfa</p>
         <p className="cert-footer-sub">Bilgi · İnsan · Toplum · Daha Güçlü Yarınlar</p>
       </footer>
     </div>

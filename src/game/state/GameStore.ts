@@ -46,7 +46,7 @@ class GameStoreManager {
     return {
       ...this.state,
       results: structuredClone(this.state.results),
-      unlockedModuleIds: [...this.state.unlockedModuleIds],
+      unlockedModuleIds: this.getUnlockedModuleIds(),
       completedModuleIds: [...this.state.completedModuleIds],
       playerSession: structuredClone(this.state.playerSession),
     };
@@ -78,9 +78,18 @@ class GameStoreManager {
     return areAllModulesCompleted(this.state.completedModuleIds);
   }
 
+  public getUnlockedModuleIds(): string[] {
+    return this.moduleOrder.filter(id => this.isModuleUnlocked(id));
+  }
+
   public isModuleUnlocked(moduleId: string): boolean {
     const normalizedId = moduleId === 'serinhisar_bicakciligi' ? 'sanayilesme' : moduleId;
-    return this.state.unlockedModuleIds.includes(normalizedId);
+    const index = this.moduleOrder.indexOf(normalizedId);
+    if (index === -1) return false;
+    if (index === 0) return true; // 1. Bölüm her zaman açık
+    // 2. Bölüm için 1. tamamlanmalı, 3. için 2., 4. için 3., 5. için 4., 6. için 5.
+    const previousModuleId = this.moduleOrder[index - 1];
+    return this.isModuleCompleted(previousModuleId);
   }
 
   public isModuleCompleted(moduleId: string): boolean {
@@ -94,6 +103,19 @@ class GameStoreManager {
       this.state.unlockedModuleIds.push(normalizedId);
       this.persistAndNotify();
     }
+  }
+
+  public startNewGame(rawName: string): { success: boolean; cleanedName: string; error?: string } {
+    const { isValid, cleanedName, error } = validateAndCleanFullName(rawName);
+    if (!isValid) {
+      return { success: false, cleanedName, error };
+    }
+
+    this.resetSession();
+    this.state.playerSession.fullName = cleanedName;
+    this.state.playerSession.startedAt = new Date().toISOString();
+    this.persistAndNotify();
+    return { success: true, cleanedName };
   }
 
   public saveResult(moduleId: string, result: MissionResult): void {

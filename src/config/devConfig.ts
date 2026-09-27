@@ -14,7 +14,7 @@
  * - Standart kiosk kilit ve aşamalı ilerleme sistemine anında geri döner.
  */
 export const DEV_CONFIG = {
-  DEV_UNLOCK_ALL_LEVELS: true,
+  DEV_UNLOCK_ALL_LEVELS: false,
 };
 
 export const DEV_UNLOCK_ALL_LEVELS = DEV_CONFIG.DEV_UNLOCK_ALL_LEVELS;

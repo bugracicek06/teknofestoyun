@@ -1,10 +1,9 @@
-// High-Resolution Certificate Renderer & Export Engine
-// Pamukkale University & TEKNOFEST Medeniyetten Millî Teknolojiye
+// High-Resolution Master Certificate Renderer & Export Engine
+// Pamukkale University & TEKNOFEST 2026 Şanlıurfa Medeniyetten Millî Teknolojiye
 
 import { jsPDF } from 'jspdf';
 import type { CertificateRecord } from './certificate';
-import { formatCertificateDate } from './certificate';
-import certBaseUrl from '../../assets/certificate_base.jpg';
+import certBaseUrl from '../../assets/certificate_base.png';
 
 /**
  * Ensures required web fonts are downloaded and ready before rendering.
@@ -27,28 +26,28 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => resolve(img);
-    img.onerror = (e) => reject(new Error(`Failed to load certificate template: ${e}`));
+    img.onerror = (e) => reject(new Error(`Failed to load master certificate template: ${e}`));
     img.src = src;
   });
 }
 
 /**
- * Renders the certificate onto a high-resolution 2x Canvas (2048x1448)
+ * Renders the certificate onto full natural-resolution Canvas (3730x2635 px)
  * strictly superimposing:
- * 1. Player Full Name (centered, dynamically scaled)
- * 2. Completion Date (above TAMAMLANMA TARİHİ)
- * 3. Certificate Number (above SERTİFİKA NUMARASI)
- * NO QR code is rendered onto the certificate.
+ * 1. Master Certificate Template (100% full uncompressed quality)
+ * 2. Player Full Name (centered above the dotted line, dynamically auto-scaled)
+ * NO QR code is rendered onto the certificate canvas.
  */
 export async function renderCertificateToCanvas(cert: CertificateRecord): Promise<HTMLCanvasElement> {
   await ensureFontsReady();
 
-  // Load the static base image
+  // Load the master template image
   const baseImg = await loadImage(certBaseUrl);
 
-  // Target 2x print resolution
-  const canvasWidth = 2048;
-  const canvasHeight = 1448;
+  // CRITICAL: Master template resolution preservation
+  // Strictly use natural dimensions (3730 x 2635)
+  const canvasWidth = baseImg.naturalWidth || 3730;
+  const canvasHeight = baseImg.naturalHeight || 2635;
 
   const canvas = document.createElement('canvas');
   canvas.width = canvasWidth;
@@ -61,66 +60,59 @@ export async function renderCertificateToCanvas(cert: CertificateRecord): Promis
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
 
-  // 1. Draw static background
+  // 1. Draw Master Template at 100% full resolution
   ctx.drawImage(baseImg, 0, 0, canvasWidth, canvasHeight);
 
-  // 2. Render Player Full Name
-  const name = (cert.fullName || 'Genç Kâşif').toLocaleUpperCase('tr-TR');
-  const nameLen = name.length;
+  // 2. Render Player Full Name in uppercase right above the dotted line
+  const name = (cert.fullName || 'GENÇ KAŞİF').trim().toLocaleUpperCase('tr-TR');
 
-  let fontSize = 48;
-  if (nameLen > 35) {
-    fontSize = 32;
-  } else if (nameLen > 25) {
-    fontSize = 40;
+  // Dynamic Font Sizing & Auto-Shrink for long names
+  const maxNameWidth = canvasWidth * 0.36;
+  let fontSize = Math.round(canvasWidth * 0.030); // ~112px on 3730px template
+  const minFontSize = Math.round(canvasWidth * 0.015); // ~56px
+
+  ctx.font = `800 ${fontSize}px 'Outfit', 'Montserrat', 'Segoe UI', -apple-system, sans-serif`;
+  while (ctx.measureText(name).width > maxNameWidth && fontSize > minFontSize) {
+    fontSize -= 2;
+    ctx.font = `800 ${fontSize}px 'Outfit', 'Montserrat', 'Segoe UI', -apple-system, sans-serif`;
   }
 
   ctx.save();
+  ctx.fillStyle = '#0b2d64'; // Deep royal navy matching TEKNOFEST title and text
   ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.font = `700 ${fontSize}px 'Cinzel', 'Outfit', 'Plus Jakarta Sans', Georgia, serif`;
-  ctx.fillStyle = '#0b233a';
+  ctx.textBaseline = 'bottom';
 
-  // Position relative to template (50% width, ~44% height)
-  const nameX = canvasWidth * 0.5;
-  const nameY = canvasHeight * 0.44;
+  // Normalized coordinates:
+  // x is exact center of dotted line (0.6244)
+  // y is baseline resting cleanly above dotted line (0.512)
+  const nameX = Math.round(canvasWidth * 0.6244);
+  const nameY = Math.round(canvasHeight * 0.512);
 
   ctx.fillText(name, nameX, nameY);
-  ctx.restore();
-
-  // 3. Render Completion Date (Turkish format: DD.MM.YYYY)
-  const formattedDate = formatCertificateDate(cert.completedAt) || new Intl.DateTimeFormat('tr-TR').format(new Date());
-
-  ctx.save();
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'bottom';
-  ctx.font = `600 24px 'Outfit', 'Plus Jakarta Sans', -apple-system, sans-serif`;
-  ctx.fillStyle = '#17304a';
-
-  const dateX = canvasWidth * 0.404;
-  const dateY = canvasHeight * 0.774;
-  ctx.fillText(formattedDate, dateX, dateY);
-  ctx.restore();
-
-  // 4. Render Certificate Number (e.g. PAU-TKF-2026-XXXXXX)
-  const certNumber = cert.certificateNumber || 'PAU-TKF-GEN';
-
-  ctx.save();
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'bottom';
-  ctx.font = `600 24px 'Outfit', 'Plus Jakarta Sans', -apple-system, sans-serif`;
-  ctx.fillStyle = '#17304a';
-
-  const certNumX = canvasWidth * 0.588;
-  const certNumY = canvasHeight * 0.774;
-  ctx.fillText(certNumber, certNumX, certNumY);
   ctx.restore();
 
   return canvas;
 }
 
 /**
- * Exports certificate as high quality A4 Landscape PDF (297 x 210 mm)
+ * Exports certificate as high quality lossless PNG image (3730 x 2635 px)
+ */
+export async function exportCertificateAsImage(cert: CertificateRecord, customFilename?: string): Promise<void> {
+  const canvas = await renderCertificateToCanvas(cert);
+
+  const cleanName = cert.fullName.trim().replace(/[^a-zA-Z0-9çğıöşüÇĞİÖŞÜ]/g, '-').toLowerCase();
+  const filename = customFilename || `certificate-${cleanName || 'kasif'}.png`;
+
+  const link = document.createElement('a');
+  link.download = filename;
+  link.href = canvas.toDataURL('image/png');
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+/**
+ * Legacy PDF helper retained for backwards compatibility
  */
 export async function exportCertificateAsPdf(cert: CertificateRecord, customFilename?: string): Promise<void> {
   const canvas = await renderCertificateToCanvas(cert);
@@ -132,31 +124,13 @@ export async function exportCertificateAsPdf(cert: CertificateRecord, customFile
     compress: true,
   });
 
-  // A4 Landscape is exactly 297mm x 210mm
   const pdfWidth = 297;
   const pdfHeight = 210;
 
-  const imgData = canvas.toDataURL('image/jpeg', 0.96);
-  pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
+  const imgData = canvas.toDataURL('image/png');
+  pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
 
-  const cleanName = cert.fullName.trim().replace(/[^a-zA-Z0-9çğıöşüÇĞİÖŞÜ]/g, '_');
-  const filename = customFilename || `Basari_Sertifikasi_${cleanName || 'Katilimci'}.pdf`;
+  const cleanName = cert.fullName.trim().replace(/[^a-zA-Z0-9çğıöşüÇĞİÖŞÜ]/g, '-').toLowerCase();
+  const filename = customFilename || `certificate-${cleanName || 'kasif'}.pdf`;
   pdf.save(filename);
-}
-
-/**
- * Exports certificate as high quality PNG image
- */
-export async function exportCertificateAsImage(cert: CertificateRecord, customFilename?: string): Promise<void> {
-  const canvas = await renderCertificateToCanvas(cert);
-
-  const cleanName = cert.fullName.trim().replace(/[^a-zA-Z0-9çğıöşüÇĞİÖŞÜ]/g, '_');
-  const filename = customFilename || `Basari_Sertifikasi_${cleanName || 'Katilimci'}.png`;
-
-  const link = document.createElement('a');
-  link.download = filename;
-  link.href = canvas.toDataURL('image/png');
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
 }
