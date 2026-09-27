@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { MILLI_STAGES, MISSION_SENSORS, WAYPOINTS, type WaypointPoint, type MilliSensorId } from '../../data/milliData';
 import { MilliStage1Assembly } from './MilliStage1Assembly';
 import { MilliStage2Payload } from './MilliStage2Payload';
@@ -7,6 +7,7 @@ import { MilliStage4Flight } from './MilliStage4Flight';
 import { SoundFx } from '../../game/utils/audio';
 import { GameStore } from '../../game/state/GameStore';
 import { calculateResult } from '../../game/systems/scoring';
+import { GameTopBar, GameAssistant } from '../game-ui';
 
 interface MilliTeknolojiMissionShellProps {
   isAudioMuted: boolean;
@@ -43,6 +44,17 @@ export const MilliTeknolojiMissionShell: React.FC<MilliTeknolojiMissionShellProp
   const [stage3TriggerFlight, setStage3TriggerFlight] = useState<boolean>(false);
   const [isModuleFinished, setIsModuleFinished] = useState<boolean>(false);
   const [stage1PlacedCount, setStage1PlacedCount] = useState<number>(0);
+  const [assistantOpen, setAssistantOpen] = useState<boolean>(false);
+
+  const handleHelpToggle = () => {
+    setAssistantOpen((prev) => !prev);
+    onHelp?.();
+  };
+
+  // Etap değiştiğinde asistan tüyo balonunu otomatik kapat
+  useEffect(() => {
+    setAssistantOpen(false);
+  }, [currentStage]);
 
   const startTimeRef = useRef<number>(Date.now());
   const completedRef = useRef<boolean>(false);
@@ -171,185 +183,47 @@ export const MilliTeknolojiMissionShell: React.FC<MilliTeknolojiMissionShellProp
       {/* =========================================================================
           TOP NAVIGATION & HUD BAR
           ========================================================================= */}
-      <header
-        style={{
-          position: 'relative',
-          height: '68px',
-          padding: '0 24px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          background: 'linear-gradient(180deg, rgba(6, 15, 32, 0.92) 0%, rgba(4, 10, 22, 0.82) 100%)',
-          backdropFilter: 'blur(16px)',
-          borderBottom: '1px solid rgba(0, 242, 254, 0.25)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6)',
-          zIndex: 30,
-        }}
-      >
-        {/* Left: Back Arrow + Module Title */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <button
-            onClick={() => {
-              SoundFx.playClickTone();
-              onBack();
-            }}
-            title="Haritaya Dön"
-            style={{
-              width: '42px',
-              height: '42px',
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(10, 25, 50, 0.8))',
-              border: '1px solid rgba(0, 242, 254, 0.4)',
-              color: '#00F2FE',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              fontSize: '18px',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            ←
-          </button>
+      {/* STANDARDIZED TOP BAR */}
+      <GameTopBar
+        moduleNumber={5}
+        moduleTitle="Millî Teknoloji"
+        moduleSubtitle="Gökyüzüne Yüksel"
+        missionTitle={
+          currentStage === 1
+            ? 'İHA parçalarını gövde üzerindeki yuvalarına yerleştir'
+            : currentStage === 2
+            ? 'Görevin için elektro-optik veya radar sensörünü seç'
+            : currentStage === 3
+            ? 'Uçuş kontrol noktalarını belirle ve rotanı çiz'
+            : 'Otonom uçuşu başlat ve görevini başarıyla tamamla'
+        }
+        progressText={`${currentStage} / 4`}
+        accentKey="milli_teknoloji"
+        isAudioMuted={isAudioMuted}
+        isFullscreen={fullscreen}
+        onBack={onBack}
+        onToggleAudio={onToggleAudio}
+        onHelp={handleHelpToggle}
+        onPause={onPause}
+        onToggleFullscreen={onToggleFullscreen}
+      />
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div
-              style={{
-                width: '38px',
-                height: '38px',
-                borderRadius: '10px',
-                background: 'rgba(0, 242, 254, 0.15)',
-                border: '1px solid rgba(0, 242, 254, 0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '20px',
-              }}
-            >
-              ✈️
-            </div>
-            <div>
-              <div
-                style={{
-                  fontSize: '15px',
-                  fontWeight: 900,
-                  color: '#FFFFFF',
-                  letterSpacing: '0.8px',
-                }}
-              >
-                5 / 6 | Millî Teknoloji – Gökyüzüne Yüksel
-              </div>
-              <div
-                style={{
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  color: '#00F2FE',
-                  letterSpacing: '0.5px',
-                }}
-              >
-                {currentStage === 1
-                  ? "1. ETAP: İHA'NI TASARLA"
-                  : currentStage === 2
-                  ? '2. ETAP: GÖREV MODÜLÜNÜ SEÇ'
-                  : currentStage === 3
-                  ? '3. ETAP: ROTANI BELİRLE VE GÖKYÜZÜNE YÜKSEL'
-                  : '4. ETAP: GÖREVİ TAMAMLA'}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right: Kiosk Top Action Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button
-            onClick={() => {
-              SoundFx.playClickTone();
-              onToggleAudio();
-            }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 14px',
-              borderRadius: '10px',
-              background: 'rgba(255, 255, 255, 0.08)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              color: '#FFFFFF',
-              fontSize: '12px',
-              cursor: 'pointer',
-            }}
-          >
-            <span>{isAudioMuted ? '🔇' : '🔊'}</span>
-            <span>Ses: {isAudioMuted ? 'Kapalı' : 'Açık'}</span>
-          </button>
-
-          <button
-            onClick={() => {
-              SoundFx.playClickTone();
-              onHelp();
-            }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 14px',
-              borderRadius: '10px',
-              background: 'rgba(255, 255, 255, 0.08)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              color: '#FFFFFF',
-              fontSize: '12px',
-              cursor: 'pointer',
-            }}
-          >
-            <span>❓</span>
-            <span>Yardım</span>
-          </button>
-
-          <button
-            onClick={() => {
-              SoundFx.playClickTone();
-              onPause();
-            }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 14px',
-              borderRadius: '10px',
-              background: 'rgba(255, 255, 255, 0.08)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              color: '#FFFFFF',
-              fontSize: '12px',
-              cursor: 'pointer',
-            }}
-          >
-            <span>⏸</span>
-            <span>Duraklat</span>
-          </button>
-
-          <button
-            onClick={() => {
-              SoundFx.playClickTone();
-              onToggleFullscreen();
-            }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 14px',
-              borderRadius: '10px',
-              background: 'rgba(255, 255, 255, 0.08)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              color: '#FFFFFF',
-              fontSize: '12px',
-              cursor: 'pointer',
-            }}
-          >
-            <span>⛶</span>
-            <span>{fullscreen ? 'Tam Ekrandan Çık' : 'Tam Ekran'}</span>
-          </button>
-        </div>
-      </header>
+      {/* STANDARDIZED GUIDE ROBOT ASSISTANT */}
+      <GameAssistant
+        message={
+          currentStage === 1
+            ? "Gövde, kanat ve kuyruk parçalarını doğru yuvalara yerleştir."
+            : currentStage === 2
+            ? 'Görev hedefine en uygun sensör veya kamera modülünü seç.'
+            : currentStage === 3
+            ? 'Rüzgâr ve batarya analizine göre en optimum uçuş rotasını onayla.'
+            : 'Tüm sistemler devrede! Uçuşu tamamla ve üsse dön.'
+        }
+        isOpen={assistantOpen}
+        onToggle={setAssistantOpen}
+        placement="bottom-left"
+        accentKey="milli_teknoloji"
+      />
 
       {/* =========================================================================
           CONTENT ROW: LEFT PARCHMENT PANEL + STAGE INTERACTIVE CANVAS
@@ -540,26 +414,29 @@ export const MilliTeknolojiMissionShell: React.FC<MilliTeknolojiMissionShellProp
               }
             }}
             style={{
-              padding: '10px 22px',
-              borderRadius: '10px',
-              border: stage1PlacedCount === 4 ? '1px solid #FDE68A' : '1px solid rgba(255, 255, 255, 0.15)',
+              minHeight: '48px',
+              padding: '0 clamp(18px, 1.8vw, 26px)',
+              borderRadius: '12px',
+              border: stage1PlacedCount === 4 ? '1.5px solid #FDE68A' : '1px solid rgba(255, 255, 255, 0.15)',
               background: stage1PlacedCount === 4
                 ? 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)'
                 : 'rgba(55, 65, 81, 0.55)',
               color: stage1PlacedCount === 4 ? '#FFFFFF' : 'rgba(255, 255, 255, 0.45)',
               fontWeight: 800,
-              fontSize: '13px',
-              letterSpacing: '0.4px',
+              fontSize: '14px',
+              letterSpacing: '0.5px',
               cursor: stage1PlacedCount === 4 ? 'pointer' : 'not-allowed',
               boxShadow: stage1PlacedCount === 4 ? '0 0 20px rgba(245, 158, 11, 0.5)' : 'none',
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: '8px',
+              whiteSpace: 'nowrap',
               transition: 'all 0.3s ease',
             }}
           >
             <span>Görev Modülünü Seç</span>
-            <span style={{ fontSize: '15px' }}>→</span>
+            <span style={{ fontSize: '16px' }}>→</span>
           </button>
         ) : currentStage === 2 ? (
           <button
@@ -573,26 +450,29 @@ export const MilliTeknolojiMissionShell: React.FC<MilliTeknolojiMissionShellProp
               }
             }}
             style={{
-              padding: '10px 22px',
-              borderRadius: '10px',
-              border: stage2SelectedSensorId ? '1px solid #FDE68A' : '1px solid rgba(255, 255, 255, 0.15)',
+              minHeight: '48px',
+              padding: '0 clamp(18px, 1.8vw, 26px)',
+              borderRadius: '12px',
+              border: stage2SelectedSensorId ? '1.5px solid #FDE68A' : '1px solid rgba(255, 255, 255, 0.15)',
               background: stage2SelectedSensorId
                 ? 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)'
                 : 'rgba(55, 65, 81, 0.55)',
               color: stage2SelectedSensorId ? '#FFFFFF' : 'rgba(255, 255, 255, 0.45)',
               fontWeight: 800,
-              fontSize: '13px',
-              letterSpacing: '0.4px',
+              fontSize: '14px',
+              letterSpacing: '0.5px',
               cursor: stage2SelectedSensorId ? 'pointer' : 'not-allowed',
               boxShadow: stage2SelectedSensorId ? '0 0 20px rgba(245, 158, 11, 0.5)' : 'none',
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: '8px',
+              whiteSpace: 'nowrap',
               transition: 'all 0.3s ease',
             }}
           >
             <span>Rotanı Belirle</span>
-            <span style={{ fontSize: '15px' }}>→</span>
+            <span style={{ fontSize: '16px' }}>→</span>
           </button>
         ) : currentStage === 3 ? (
           stage3FlightState.isCompleted ? (
@@ -603,24 +483,27 @@ export const MilliTeknolojiMissionShell: React.FC<MilliTeknolojiMissionShellProp
                 handleFinishModule();
               }}
               style={{
-                padding: '10px 22px',
-                borderRadius: '10px',
-                border: '1px solid #6EE7B7',
+                minHeight: '48px',
+                padding: '0 clamp(18px, 1.8vw, 26px)',
+                borderRadius: '12px',
+                border: '1.5px solid #6EE7B7',
                 background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
                 color: '#FFFFFF',
                 fontWeight: 800,
-                fontSize: '13px',
-                letterSpacing: '0.4px',
+                fontSize: '14px',
+                letterSpacing: '0.5px',
                 cursor: 'pointer',
                 boxShadow: '0 0 20px rgba(16, 185, 129, 0.5)',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '8px',
+                whiteSpace: 'nowrap',
                 transition: 'all 0.3s ease',
               }}
             >
               <span>6. Bölüme Geç</span>
-              <span style={{ fontSize: '15px' }}>→</span>
+              <span style={{ fontSize: '16px' }}>→</span>
             </button>
           ) : (
             <button
@@ -632,18 +515,19 @@ export const MilliTeknolojiMissionShell: React.FC<MilliTeknolojiMissionShellProp
                 }
               }}
               style={{
-                padding: '10px 22px',
-                borderRadius: '10px',
+                minHeight: '48px',
+                padding: '0 clamp(18px, 1.8vw, 26px)',
+                borderRadius: '12px',
                 border: stage3FlightState.isReady
-                  ? '1px solid #FDE68A'
+                  ? '1.5px solid #FDE68A'
                   : '1px solid rgba(255, 255, 255, 0.15)',
                 background: stage3FlightState.isReady
                   ? 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)'
                   : 'rgba(55, 65, 81, 0.55)',
                 color: stage3FlightState.isReady ? '#FFFFFF' : 'rgba(255, 255, 255, 0.45)',
                 fontWeight: 800,
-                fontSize: '13px',
-                letterSpacing: '0.4px',
+                fontSize: '14px',
+                letterSpacing: '0.5px',
                 cursor:
                   stage3FlightState.isReady && !stage3FlightState.isFlying
                     ? 'pointer'
@@ -651,9 +535,11 @@ export const MilliTeknolojiMissionShell: React.FC<MilliTeknolojiMissionShellProp
                 boxShadow: stage3FlightState.isReady
                   ? '0 0 20px rgba(245, 158, 11, 0.5)'
                   : 'none',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '8px',
+                whiteSpace: 'nowrap',
                 transition: 'all 0.3s ease',
               }}
             >
@@ -662,7 +548,7 @@ export const MilliTeknolojiMissionShell: React.FC<MilliTeknolojiMissionShellProp
                   ? 'Uçuş Devam Ediyor...'
                   : 'Rotayı Onayla ve Uçuşa Geç'}
               </span>
-              <span style={{ fontSize: '15px' }}>→</span>
+              <span style={{ fontSize: '16px' }}>→</span>
             </button>
           )
         ) : (
@@ -670,24 +556,27 @@ export const MilliTeknolojiMissionShell: React.FC<MilliTeknolojiMissionShellProp
             id="milli-stage4-finish-btn"
             onClick={handleFinishModule}
             style={{
-              padding: '10px 22px',
-              borderRadius: '10px',
-              border: '1px solid #6EE7B7',
+              minHeight: '48px',
+              padding: '0 clamp(18px, 1.8vw, 26px)',
+              borderRadius: '12px',
+              border: '1.5px solid #6EE7B7',
               background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
               color: '#FFFFFF',
               fontWeight: 800,
-              fontSize: '13px',
-              letterSpacing: '0.4px',
+              fontSize: '14px',
+              letterSpacing: '0.5px',
               cursor: 'pointer',
               boxShadow: '0 0 20px rgba(16, 185, 129, 0.5)',
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: '8px',
+              whiteSpace: 'nowrap',
               transition: 'all 0.3s ease',
             }}
           >
             <span>6. Bölüme Geç</span>
-            <span style={{ fontSize: '15px' }}>→</span>
+            <span style={{ fontSize: '16px' }}>→</span>
           </button>
         )}
       </footer>

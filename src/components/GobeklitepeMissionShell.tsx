@@ -3,6 +3,7 @@ import { EventBus } from '../game/state/EventBus';
 import { MODULE_NARRATIONS } from '../data/narrations';
 import { stopNarration } from '../game/systems/narration';
 import stageBg from '../assets/gobeklitepe_cinematic_stage.jpg';
+import { GameTopBar, GameAssistant } from './game-ui';
 import {
   GOBEKLITEPE_ANIMALS,
   shuffleAnimals,
@@ -49,6 +50,13 @@ export const GobeklitepeMissionShell: React.FC<GobeklitepeMissionShellProps> = (
   onToggleFullscreen,
   onSelectAnimal,
 }) => {
+  const [assistantOpen, setAssistantOpen] = useState<boolean>(false);
+
+  const handleHelpToggle = () => {
+    setAssistantOpen((prev) => !prev);
+    onHelp?.();
+  };
+
   // Fisher-Yates shuffle initialized once per session start
   const [shuffledAnimals, setShuffledAnimals] = useState<AnimalItem[]>(() =>
     shuffleAnimals(GOBEKLITEPE_ANIMALS)
@@ -61,6 +69,8 @@ export const GobeklitepeMissionShell: React.FC<GobeklitepeMissionShellProps> = (
       setShuffledAnimals(shuffleAnimals(GOBEKLITEPE_ANIMALS));
     }
     prevPlacedCountRef.current = placedCount;
+    // Parça başarıyla yerleştiğinde tüyoyu otomatik kapat
+    setAssistantOpen(false);
   }, [placedCount]);
 
   useEffect(() => {
@@ -159,113 +169,43 @@ export const GobeklitepeMissionShell: React.FC<GobeklitepeMissionShellProps> = (
 
   return (
     <div className={`gobeklitepe-shell ${isIntro ? 'is-intro-mode' : 'is-play-mode'}`}>
-      {/* 1. TOP HUD */}
-      <header className="gobeklitepe-hud">
-        <button
-          type="button"
-          className="hud-back-btn"
-          onClick={onBack}
-          title="Görev Haritasına Dön"
-          aria-label="Görev Haritasına Dön"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </button>
+      {/* 1. STANDARDIZED TOP BAR */}
+      <GameTopBar
+        moduleNumber={1}
+        moduleTitle="Göbeklitepe"
+        moduleSubtitle="Taşın Hafızası"
+        missionTitle="Hayvan kabartmalarını T-biçimli dikilitaştaki doğru yerlerine yerleştir"
+        progressText={`${placedCount} / 6`}
+        accentKey="gobeklitepe"
+        isAudioMuted={isAudioMuted}
+        isFullscreen={fullscreen}
+        onBack={onBack}
+        onToggleAudio={onToggleAudio}
+        onHelp={handleHelpToggle}
+        onPause={onPause}
+        onToggleFullscreen={onToggleFullscreen}
+      />
 
-        <div className="hud-mission-pill">
-          <span className="hud-mission-title">Göbeklitepe – Taşın Hafızası</span>
-          <span className="hud-pill-divider" aria-hidden="true" />
-          <span className="hud-progress-counter">{placedCount}/6</span>
-          <div className="hud-progress-dots" aria-label={`${placedCount} / 6 hayvan yerleştirildi`}>
-            {[0, 1, 2, 3, 4, 5].map((idx) => (
-              <span
-                key={idx}
-                className={`hud-dot ${idx < placedCount ? 'is-filled' : ''}`}
-                aria-hidden="true"
-              />
-            ))}
-          </div>
-        </div>
-
-        <nav className="hud-controls" aria-label="Oyun kontrolleri">
-          <button
-            type="button"
-            className="hud-ctrl-btn"
-            onClick={onToggleAudio}
-            title={isAudioMuted ? 'Sesi Aç' : 'Sesi Kapat'}
-            aria-pressed={!isAudioMuted}
-          >
-            {isAudioMuted ? (
-              <svg className="control-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                <line x1="23" y1="9" x2="17" y2="15" />
-                <line x1="17" y1="9" x2="23" y2="15" />
-              </svg>
-            ) : (
-              <svg className="control-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-                <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-              </svg>
-            )}
-            <span>{isAudioMuted ? 'Ses: Kapalı' : 'Ses: Açık'}</span>
-          </button>
-
-          <button
-            type="button"
-            className="hud-ctrl-btn"
-            onClick={onHelp}
-            title="Yardım ve Oyun Bilgisi"
-          >
-            <svg className="control-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-              <line x1="12" y1="17" x2="12.01" y2="17" />
-            </svg>
-            <span>Yardım</span>
-          </button>
-
-          <button
-            type="button"
-            className="hud-ctrl-btn"
-            onClick={onPause}
-            title="Oyunu Duraklat"
-          >
-            <svg className="control-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <rect x="6" y="4" width="4" height="16" />
-              <rect x="14" y="4" width="4" height="16" />
-            </svg>
-            <span>Duraklat</span>
-          </button>
-
-          <button
-            type="button"
-            className="hud-ctrl-btn"
-            onClick={onToggleFullscreen}
-            title={fullscreen ? 'Ekranı Küçült' : 'Tam Ekran'}
-          >
-            <svg className="control-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              {fullscreen ? (
-                <>
-                  <polyline points="4 14 10 14 10 20" />
-                  <polyline points="20 10 14 10 14 4" />
-                  <line x1="14" y1="10" x2="21" y2="3" />
-                  <line x1="3" y1="21" x2="10" y2="14" />
-                </>
-              ) : (
-                <>
-                  <polyline points="15 3 21 3 21 9" />
-                  <polyline points="9 21 3 21 3 15" />
-                  <line x1="21" y1="3" x2="14" y2="10" />
-                  <line x1="3" y1="21" x2="10" y2="14" />
-                </>
-              )}
-            </svg>
-            <span>{fullscreen ? 'Ekranı Küçült' : 'Tam Ekran'}</span>
-          </button>
-        </nav>
-      </header>
+      {/* STANDARDIZED GUIDE ROBOT ASISTANT */}
+      {!isIntro && (
+        <GameAssistant
+          message={
+            placedCount === 6
+              ? 'Tebrikler! Taşın hafızasındaki tüm figürleri doğru yerleştirdin.'
+              : selectedId
+              ? 'Şimdi dikilitaş üzerindeki parlayan yuvasına dokunarak veya sürükleyerek yerleştir.'
+              : placedCount > 0
+              ? `${placedCount}/6 figür yerleşti. Alttan bir hayvan seç veya sürükle.`
+              : 'Önce bir hayvana, sonra taş üzerindeki doğru yerine dokun.'
+          }
+          isOpen={assistantOpen}
+          onToggle={setAssistantOpen}
+          placement="bottom-left"
+          accentKey="gobeklitepe"
+          isNarrating={isNarrating}
+          onListenNarration={onListenInstruction}
+        />
+      )}
 
       {/* 2. MAIN GAME STAGE & INTEGRATED MISSION INTRO */}
       <section

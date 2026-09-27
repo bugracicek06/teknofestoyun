@@ -349,6 +349,24 @@ export class DemirCagiScene extends BaseScene {
     this.bgImage.setDepth(0);
   }
 
+  private emitHudUpdate(): void {
+    const mins = Math.floor(this.elapsedSeconds / 60);
+    const secs = this.elapsedSeconds % 60;
+    const timeFormatted = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    const cleanMissionTitle = this.objectiveText?.text?.replace(/^GÖREV:\s*/i, '') || 'Demir Cevheri ve Kömürü Ocağa Sürükle';
+    const rawProgress = this.counterText?.text || '';
+    const cleanProgress = rawProgress.replace(/^[A-ZÇĞİÖŞÜ\s]+:\s*/i, '').replace(/(\d+)\/(\d+)/, '$1 / $2');
+
+    EventBus.emit('module-hud-update', {
+      moduleNumber: 2,
+      moduleTitle: 'Demir Çağı',
+      moduleSubtitle: 'Ateşe Hükmet',
+      missionTitle: cleanMissionTitle,
+      progressText: cleanProgress,
+      timeText: timeFormatted,
+    });
+  }
+
   private createHeaderUI(): void {
     const headerBg = this.add.graphics();
     headerBg.fillStyle(0x180d05, 0.94);
@@ -356,8 +374,9 @@ export class DemirCagiScene extends BaseScene {
     headerBg.lineStyle(2, 0xd97706, 0.9);
     headerBg.strokeRoundedRect(this.GAME_WIDTH / 2 - 620, 15, 1240, 64, 14);
     headerBg.setDepth(100);
+    headerBg.setVisible(false); // Standart React GameTopBar kullanılıyor
 
-    // 1. Left: Stage Title - Strictly BÖLÜM 2 / 6 per user specification
+    // 1. Left: Stage Title
     this.phaseTitleText = this.createText(this.GAME_WIDTH / 2 - 450, 47, 'BÖLÜM 2 / 6', {
       fontSize: '20px',
       fontStyle: '900',
@@ -365,6 +384,7 @@ export class DemirCagiScene extends BaseScene {
     });
     this.phaseTitleText.setOrigin(0.5);
     this.phaseTitleText.setDepth(101);
+    this.phaseTitleText.setVisible(false);
 
     // 2. Center: Objective Caption
     this.objectiveText = this.createText(this.GAME_WIDTH / 2 + 10, 47, 'GÖREV: Demir Cevheri ve Kömürü Ocağa Sürükle', {
@@ -374,6 +394,7 @@ export class DemirCagiScene extends BaseScene {
     });
     this.objectiveText.setOrigin(0.5);
     this.objectiveText.setDepth(101);
+    this.objectiveText.setVisible(false);
 
     // 3. Right: Progress Counter & Elapsed Time
     this.counterText = this.createText(this.GAME_WIDTH / 2 + 380, 47, 'İLERLEME: 0/2', {
@@ -383,6 +404,7 @@ export class DemirCagiScene extends BaseScene {
     });
     this.counterText.setOrigin(0.5);
     this.counterText.setDepth(101);
+    this.counterText.setVisible(false);
 
     this.timerText = this.createText(this.GAME_WIDTH / 2 + 520, 47, '00:00', {
       fontSize: '18px',
@@ -391,6 +413,9 @@ export class DemirCagiScene extends BaseScene {
     });
     this.timerText.setOrigin(0.5);
     this.timerText.setDepth(101);
+    this.timerText.setVisible(false);
+
+    this.emitHudUpdate();
   }
 
   private updateTimerUI(): void {
@@ -399,6 +424,7 @@ export class DemirCagiScene extends BaseScene {
     const secs = this.elapsedSeconds % 60;
     const formatted = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     this.timerText.setText(formatted);
+    this.emitHudUpdate();
   }
 
   // ==========================================
@@ -604,6 +630,7 @@ export class DemirCagiScene extends BaseScene {
     if (this.counterText) {
       this.counterText.setText(`İLERLEME: ${this.fedMaterialsCount}/2`);
     }
+    this.emitHudUpdate();
 
     if (this.fedMaterialsCount === 1) {
       this.pusula?.setMessage('Demir cevheri ateşe girdi! Şimdi yüksek ısı için kömürü ekle.');
@@ -636,6 +663,7 @@ export class DemirCagiScene extends BaseScene {
     if (this.phaseTitleText) this.phaseTitleText.setText('BÖLÜM 2 / 6');
     if (this.objectiveText) this.objectiveText.setText('GÖREV: Ahşap Körük Kolunu Pompalayarak Ocağı Tavında Tut');
     if (this.counterText) this.counterText.setText('TAVLANMA: %0');
+    this.emitHudUpdate();
 
     this.stage2Container = this.add.container(0, 0);
     this.stage2Container.setDepth(10);
@@ -1778,6 +1806,9 @@ export class DemirCagiScene extends BaseScene {
     if (this.counterText) {
       this.counterText.setText(`TAVLANMA: %${Math.floor(this.heatingProgress)}`);
     }
+    if (Math.floor(this.heatingProgress) % 10 === 0) {
+      this.emitHudUpdate();
+    }
 
     // 10. Goal Reached! Metal is incandescent and ready for forging!
     if (this.heatingProgress >= 100) {
@@ -1834,6 +1865,7 @@ export class DemirCagiScene extends BaseScene {
     if (this.phaseTitleText) this.phaseTitleText.setText('BÖLÜM 2 / 6');
     if (this.objectiveText) this.objectiveText.setText('GÖREV: İbre Yeşil Alana Geldiğinde Ekrana Dokun ve Çekiç Vur');
     if (this.counterText) this.counterText.setText(`VURUŞ: 0/${this.targetStrikes}`);
+    this.emitHudUpdate();
 
     this.stage3Container = this.add.container(0, 0);
     this.stage3Container.setDepth(10);
@@ -2462,6 +2494,7 @@ export class DemirCagiScene extends BaseScene {
     if (this.counterText) {
       this.counterText.setText(`VURUŞ: ${this.hammerStrikes}/${this.targetStrikes}`);
     }
+    this.emitHudUpdate();
     if (this.strikeCounterBadgeText) {
       this.strikeCounterBadgeText.setText(`${this.hammerStrikes} / ${this.targetStrikes}`);
     }
@@ -2600,6 +2633,7 @@ export class DemirCagiScene extends BaseScene {
     if (this.phaseTitleText) this.phaseTitleText.setText('BÖLÜM 2 / 6');
     if (this.objectiveText) this.objectiveText.setText('GÖREV: Parçaları Doğru Yuvalara Yerleştirerek Eseri Tamamla');
     if (this.counterText) this.counterText.setText('MONTAJ: 0/4');
+    this.emitHudUpdate();
 
     this.stage4Container = this.add.container(0, 0);
     this.stage4Container.setDepth(10);
@@ -3417,6 +3451,7 @@ export class DemirCagiScene extends BaseScene {
       if (this.counterText) {
         this.counterText.setText(`MONTAJ: ${this.swordAssembledCount}/4`);
       }
+      this.emitHudUpdate();
 
       // Responsive Pusula narrative guidance
       if (this.swordAssembledCount === 1) {
@@ -3745,6 +3780,7 @@ export class DemirCagiScene extends BaseScene {
   private createCornerBackButton(): void {
     const btn = this.add.container(65, 47);
     btn.setDepth(100);
+    btn.setVisible(false); // Standart React GameTopBar geri butonu kullanılıyor
 
     const bg = this.add.graphics();
     bg.fillStyle(0x181008, 0.9);

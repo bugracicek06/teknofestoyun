@@ -27,21 +27,13 @@ export const UzayStage3Orbit: React.FC<UzayStage3OrbitProps> = ({
 
   const handleSelectOrbit = (orbit: OrbitOption) => {
     setSelectedOrbitId(orbit.id);
-    onOrbitSelected?.(orbit.id, orbit.isCorrect);
+    onOrbitSelected?.(orbit.id, true);
 
-    if (orbit.isCorrect) {
-      SoundFx.playSuccessTone();
-      setFeedbackMessage({
-        text: '✓ HARİKA! DOĞRU YÖRÜNGEYİ BULDUN.',
-        type: 'success',
-      });
-    } else {
-      SoundFx.playClickTone();
-      setFeedbackMessage({
-        text: 'Bu görev için daha uygun bir yörünge olabilir. Tekrar dene.',
-        type: 'hint',
-      });
-    }
+    SoundFx.playSuccessTone();
+    setFeedbackMessage({
+      text: `✓ ${orbit.code}: ${orbit.name.toUpperCase()} SEÇİLDİ.`,
+      type: 'success',
+    });
   };
 
   // Satellite position calculations (staging position when no orbit chosen yet)
@@ -205,58 +197,6 @@ export const UzayStage3Orbit: React.FC<UzayStage3OrbitProps> = ({
                   ? selectedOrbit.hint
                   : 'Görev yükünün yaptığı gözlemi en iyi yapabileceği yörüngeyi seç!'}
               </div>
-            </div>
-          </div>
-
-          {/* Mascot Kaşif */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              background: 'rgba(6, 15, 30, 0.82)',
-              border: '1px solid rgba(56, 189, 248, 0.25)',
-              borderRadius: '16px',
-              padding: '12px 14px',
-              backdropFilter: 'blur(8px)',
-            }}
-          >
-            <div
-              style={{
-                width: '56px',
-                height: '56px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #0284C7, #0F172A)',
-                border: '2px solid #38BDF8',
-                boxShadow: '0 0 16px rgba(56, 189, 248, 0.4)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '28px',
-                flexShrink: 0,
-              }}
-            >
-              🤖
-            </div>
-            <div
-              style={{
-                position: 'relative',
-                background: 'rgba(15, 23, 42, 0.95)',
-                border: isCorrectOrbit ? '1.5px solid #34D399' : '1px solid #38BDF8',
-                borderRadius: '12px',
-                padding: '9px 12px',
-                fontSize: '12px',
-                lineHeight: 1.45,
-                color: isCorrectOrbit ? '#A7F3D0' : '#E0F2FE',
-                boxShadow: '0 4px 16px rgba(56, 189, 248, 0.15)',
-                transition: 'all 0.25s ease',
-              }}
-            >
-              {isCorrectOrbit
-                ? 'Harika seçim! LEO yörüngesinde uydumuz yeryüzünün en ayrıntılı fotoğraflarını çekebilir!'
-                : selectedOrbit
-                ? selectedOrbit.hint
-                : 'Aşağıdaki 3 yörüngeden birine tıkla. Uydunun Dünya çevresindeki hareketini izle!'}
             </div>
           </div>
         </div>
@@ -717,18 +657,16 @@ export const UzayStage3Orbit: React.FC<UzayStage3OrbitProps> = ({
                 marginTop: '12px',
                 padding: '8px 10px',
                 borderRadius: '8px',
-                background: isCorrectOrbit ? 'rgba(16, 185, 129, 0.15)' : 'rgba(15, 23, 42, 0.7)',
-                border: isCorrectOrbit ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(255, 255, 255, 0.08)',
+                background: selectedOrbit ? 'rgba(16, 185, 129, 0.15)' : 'rgba(15, 23, 42, 0.7)',
+                border: selectedOrbit ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(255, 255, 255, 0.08)',
                 fontSize: '11px',
-                color: isCorrectOrbit ? '#A7F3D0' : '#94A3B8',
+                color: selectedOrbit ? '#A7F3D0' : '#94A3B8',
                 textAlign: 'center',
                 fontWeight: 700,
               }}
             >
-              {isCorrectOrbit
-                ? 'Hedef yörünge başarıyla onaylandı! Devam edebilirsin.'
-                : selectedOrbit
-                ? 'Gözlem uydusunun amacını düşünerek tekrar dene.'
+              {selectedOrbit
+                ? `${selectedOrbit.name} başarıyla belirlendi! Devam edebilirsin.`
                 : 'Aşağıdaki kartlardan uygun yörüngeyi seç.'}
             </div>
           </div>

@@ -36,7 +36,7 @@ export const UzayStage1Assembly: React.FC<UzayStage1AssemblyProps> = ({
   const [nearTargetPartId, setNearTargetPartId] = useState<SpacecraftPartId | null>(null);
   const [justSnappedPartId, setJustSnappedPartId] = useState<SpacecraftPartId | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
-  const [orderHint, setOrderHint] = useState<boolean>(false);
+  const [, setOrderHint] = useState<boolean>(false);
 
   const assemblySvgRef = useRef<SVGSVGElement | null>(null);
   const dragAvatarRef = useRef<HTMLDivElement | null>(null);
@@ -118,20 +118,27 @@ export const UzayStage1Assembly: React.FC<UzayStage1AssemblyProps> = ({
     }, 220);
   }, []);
 
+  // Helper to convert screen coordinates to exact SVG viewBox coordinates
+  const getLocalSvgPoint = (clientX: number, clientY: number) => {
+    const svg = assemblySvgRef.current;
+    if (!svg) return null;
+    const pt = svg.createSVGPoint();
+    pt.x = clientX;
+    pt.y = clientY;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return null;
+    return pt.matrixTransform(ctm.inverse());
+  };
+
   // Pointer Down on draggable card
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>, part: SpacecraftPart) => {
     if (placedPartIds.includes(part.id)) return;
 
     e.preventDefault();
-    const target = e.currentTarget;
-    target.setPointerCapture(e.pointerId);
-
-    // If body is not placed and child picks up another part, show friendly reminder
-    if (!isBodyPlaced && part.id !== 'body') {
-      setOrderHint(true);
-      SoundFx.playClickTone();
-    } else {
-      setOrderHint(false);
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // Safe fallback
     }
 
     const session: DragSession = {
@@ -163,29 +170,24 @@ export const UzayStage1Assembly: React.FC<UzayStage1AssemblyProps> = ({
       dragAvatarRef.current.style.transform = `translate3d(${curX}px, ${curY}px, 0) translate(-50%, -50%)`;
     }
 
-    // Hit test with SVG assembly canvas (viewBox: 0 0 1000 700)
+    // Hit test with SVG assembly canvas using inverse CTM
     if (assemblySvgRef.current) {
-      const svgRect = assemblySvgRef.current.getBoundingClientRect();
-      const normX = ((curX - svgRect.left) / svgRect.width) * 1000;
-      const normY = ((curY - svgRect.top) / svgRect.height) * 700;
+      const localPt = getLocalSvgPoint(curX, curY);
+      if (localPt) {
+        const normX = localPt.x;
+        const normY = localPt.y;
+        const part = dragSessionRef.current.part;
 
-      const part = dragSessionRef.current.part;
+        const dx = normX - part.targetX;
+        const dy = normY - part.targetY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
 
-      // If body is not placed, only body slot accepts snap!
-      if (!isBodyPlaced && part.id !== 'body') {
-        setNearTargetPartId(null);
-        return;
-      }
-
-      const dx = normX - part.targetX;
-      const dy = normY - part.targetY;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-
-      // Generous kid-friendly proximity detection
-      if (dist <= part.snapRadius * 1.35) {
-        setNearTargetPartId(part.id);
-      } else {
-        setNearTargetPartId(null);
+        // Generous kid-friendly proximity detection
+        if (dist <= part.snapRadius * 1.35) {
+          setNearTargetPartId(part.id);
+        } else {
+          setNearTargetPartId(null);
+        }
       }
     }
   };
@@ -204,26 +206,21 @@ export const UzayStage1Assembly: React.FC<UzayStage1AssemblyProps> = ({
     const session = dragSessionRef.current;
     const part = session.part;
 
-    // Rule: if body not placed, guide to body
-    if (!isBodyPlaced && part.id !== 'body') {
-      setOrderHint(true);
-      handleCancelDrag();
-      return;
-    }
-
     if (assemblySvgRef.current) {
-      const svgRect = assemblySvgRef.current.getBoundingClientRect();
-      const normX = ((e.clientX - svgRect.left) / svgRect.width) * 1000;
-      const normY = ((e.clientY - svgRect.top) / svgRect.height) * 700;
+      const localPt = getLocalSvgPoint(e.clientX, e.clientY);
+      if (localPt) {
+        const normX = localPt.x;
+        const normY = localPt.y;
 
-      const dx = normX - part.targetX;
-      const dy = normY - part.targetY;
-      const dist = Math.sqrt(dx * dx + dy * dy);
+        const dx = normX - part.targetX;
+        const dy = normY - part.targetY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
 
-      // Generous kid snap tolerance (broad hit area)
-      if (dist <= part.snapRadius * 1.15) {
-        handleSnapPart(part);
-        return;
+        // Generous kid snap tolerance (broad hit area)
+        if (dist <= part.snapRadius * 1.35) {
+          handleSnapPart(part);
+          return;
+        }
       }
     }
 
@@ -234,6 +231,12 @@ export const UzayStage1Assembly: React.FC<UzayStage1AssemblyProps> = ({
   const handlePointerCancel = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!dragSessionRef.current || dragSessionRef.current.pointerId !== e.pointerId) return;
     handleCancelDrag();
+  };
+
+  // Direct click / tap fallback
+  const handleCardClick = (part: SpacecraftPart) => {
+    if (placedPartIds.includes(part.id)) return;
+    handleSnapPart(part);
   };
 
   // Check if a part slot is the current active target
@@ -415,63 +418,6 @@ export const UzayStage1Assembly: React.FC<UzayStage1AssemblyProps> = ({
                     : `${currentSuggestedPart.name} parçasını yuvaya sürükle.`}
                 </span>
               </div>
-            </div>
-          </div>
-
-          {/* Kaşif Mascot & Speech Bubble */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              background: 'rgba(6, 15, 30, 0.82)',
-              border: '1px solid rgba(56, 189, 248, 0.25)',
-              borderRadius: '16px',
-              padding: '12px 14px',
-              backdropFilter: 'blur(8px)',
-            }}
-          >
-            {/* Mascot Avatar */}
-            <div
-              style={{
-                width: '56px',
-                height: '56px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #0284C7, #0F172A)',
-                border: '2px solid #38BDF8',
-                boxShadow: '0 0 16px rgba(56, 189, 248, 0.4)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '28px',
-                flexShrink: 0,
-              }}
-            >
-              🤖
-            </div>
-
-            {/* Speech Bubble */}
-            <div
-              style={{
-                position: 'relative',
-                background: 'rgba(15, 23, 42, 0.95)',
-                border: orderHint ? '1.5px solid #F59E0B' : '1px solid #38BDF8',
-                borderRadius: '12px',
-                padding: '9px 12px',
-                fontSize: '12px',
-                lineHeight: 1.45,
-                color: orderHint ? '#FDE68A' : '#E0F2FE',
-                boxShadow: '0 4px 16px rgba(56, 189, 248, 0.15)',
-                transition: 'all 0.25s ease',
-              }}
-            >
-              {orderHint
-                ? 'Önce Ana Gövdeyi yerleştirmeliyiz. Diğer sistemler gövdeye bağlanacak!'
-                : isAllPlaced
-                ? 'Tebrikler Kaşif! Uzay aracımız hazır, harika bir iş çıkardın!'
-                : !isBodyPlaced
-                ? 'İlk olarak Ana Gövdeyi merkezdeki yuvaya yerleştir!'
-                : `Çok iyi gidiyorsun! Şimdi ${currentSuggestedPart.name} parçasını takalım.`}
             </div>
           </div>
         </div>
@@ -957,6 +903,7 @@ export const UzayStage1Assembly: React.FC<UzayStage1AssemblyProps> = ({
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
                 onPointerCancel={handlePointerCancel}
+                onClick={() => handleCardClick(part)}
                 style={{
                   position: 'relative',
                   height: '118px',
@@ -985,6 +932,7 @@ export const UzayStage1Assembly: React.FC<UzayStage1AssemblyProps> = ({
                   justifyContent: 'space-between',
                   cursor: isPlaced ? 'default' : 'grab',
                   touchAction: 'none',
+                  pointerEvents: isPlaced ? 'none' : 'auto',
                   opacity: isBeingDragged ? 0.35 : 1,
                   transition: 'border 0.2s ease, box-shadow 0.2s ease, background 0.3s ease',
                   animation: isTargetHighlight ? 'cardPulseGlow 2.5s infinite ease-in-out' : 'none',

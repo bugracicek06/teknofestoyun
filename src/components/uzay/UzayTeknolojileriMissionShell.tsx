@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { UZAY_STAGES, type OrbitId } from '../../data/uzayData';
 import { UzayStage1Assembly } from './UzayStage1Assembly';
 import { UzayStage3Orbit } from './UzayStage3Orbit';
@@ -7,6 +7,7 @@ import { SoundFx } from '../../game/utils/audio';
 import { GameStore } from '../../game/state/GameStore';
 import { calculateResult } from '../../game/systems/scoring';
 import { EventBus } from '../../game/state/EventBus';
+import { GameTopBar, GameAssistant } from '../game-ui';
 
 interface UzayTeknolojileriMissionShellProps {
   isAudioMuted: boolean;
@@ -37,6 +38,17 @@ export const UzayTeknolojileriMissionShell: React.FC<UzayTeknolojileriMissionShe
   const [selectedOrbitId, setSelectedOrbitId] = useState<OrbitId>('leo');
   const [stage2Completed, setStage2Completed] = useState<boolean>(false);
   const [stage3Completed, setStage3Completed] = useState<boolean>(false);
+  const [assistantOpen, setAssistantOpen] = useState<boolean>(false);
+
+  const handleHelpToggle = () => {
+    setAssistantOpen((prev) => !prev);
+    onHelp?.();
+  };
+
+  // Etap değiştiğinde asistan tüyo balonunu otomatik kapat
+  useEffect(() => {
+    setAssistantOpen(false);
+  }, [currentStage]);
 
   const adventureCompletedRef = useRef<boolean>(false);
   const startTimeRef = useRef<number>(Date.now());
@@ -108,192 +120,47 @@ export const UzayTeknolojileriMissionShell: React.FC<UzayTeknolojileriMissionShe
       {/* =========================================================================
           TOP NAVIGATION & CONTROLS BAR
           ========================================================================= */}
-      <header
-        style={{
-          position: 'relative',
-          height: '66px',
-          padding: '0 24px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          background: 'linear-gradient(180deg, rgba(8, 18, 38, 0.95) 0%, rgba(4, 10, 22, 0.88) 100%)',
-          backdropFilter: 'blur(16px)',
-          borderBottom: '1px solid rgba(56, 189, 248, 0.25)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6)',
-          zIndex: 30,
-        }}
-      >
-        {/* Left: Back Arrow + Module Title */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <button
-            onClick={() => {
-              SoundFx.playClickTone();
-              onBack();
-            }}
-            title="Haritaya Dön"
-            style={{
-              width: '42px',
-              height: '42px',
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(10, 25, 50, 0.8))',
-              border: '1px solid rgba(56, 189, 248, 0.4)',
-              color: '#38BDF8',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              fontSize: '18px',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            ←
-          </button>
+      {/* STANDARDIZED TOP BAR */}
+      <GameTopBar
+        moduleNumber={6}
+        moduleTitle="Uzay Teknolojileri"
+        moduleSubtitle={activeStageInfo.title}
+        missionTitle={
+          currentStage === 1
+            ? 'Uydu parçalarını montaj gövdesindeki yuvalarına yerleştir'
+            : currentStage === 2
+            ? 'Uydun için en uygun hedef yörüngeyi belirle'
+            : currentStage === 3
+            ? 'Roket fırlatmasını başlat ve yörünge telemetrisini izle'
+            : 'Görevi tamamla ve kâşif sertifikanı oluştur'
+        }
+        progressText={`${currentStage} / 4`}
+        accentKey="uzay_teknolojileri"
+        isAudioMuted={isAudioMuted}
+        isFullscreen={fullscreen}
+        onBack={onBack}
+        onToggleAudio={onToggleAudio}
+        onHelp={handleHelpToggle}
+        onPause={onPause}
+        onToggleFullscreen={onToggleFullscreen}
+      />
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div
-              style={{
-                width: '38px',
-                height: '38px',
-                borderRadius: '10px',
-                background: 'rgba(56, 189, 248, 0.15)',
-                border: '1px solid rgba(56, 189, 248, 0.35)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '20px',
-                boxShadow: '0 0 12px rgba(56, 189, 248, 0.3)',
-              }}
-            >
-              🚀
-            </div>
-            <div>
-              <div
-                style={{
-                  fontSize: '15px',
-                  fontWeight: 900,
-                  color: '#FFFFFF',
-                  letterSpacing: '0.8px',
-                }}
-              >
-                6 / 6 | UZAY TEKNOLOJİLERİ
-              </div>
-              <div
-                style={{
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  color: '#38BDF8',
-                  letterSpacing: '0.5px',
-                }}
-              >
-                {activeStageInfo.id}. ETAP: {activeStageInfo.title}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right: Audio, Help, Pause, Fullscreen Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {/* Audio Button */}
-          <button
-            onClick={() => {
-              SoundFx.playClickTone();
-              onToggleAudio();
-            }}
-            title={isAudioMuted ? 'Sesi Aç' : 'Sesi Kapat'}
-            style={{
-              padding: '8px 14px',
-              borderRadius: '8px',
-              border: '1px solid rgba(56, 189, 248, 0.3)',
-              background: 'rgba(15, 23, 42, 0.75)',
-              color: '#E0F2FE',
-              fontSize: '12px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <span>{isAudioMuted ? '🔇' : '🔊'}</span>
-            <span>Ses: {isAudioMuted ? 'Kapalı' : 'Açık'}</span>
-          </button>
-
-          {/* Help Button */}
-          <button
-            onClick={() => {
-              SoundFx.playClickTone();
-              onHelp();
-            }}
-            title="Yardım"
-            style={{
-              padding: '8px 14px',
-              borderRadius: '8px',
-              border: '1px solid rgba(56, 189, 248, 0.3)',
-              background: 'rgba(15, 23, 42, 0.75)',
-              color: '#E0F2FE',
-              fontSize: '12px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <span>❓</span>
-            <span>Yardım</span>
-          </button>
-
-          {/* Pause Button */}
-          <button
-            onClick={() => {
-              SoundFx.playClickTone();
-              onPause();
-            }}
-            title="Duraklat"
-            style={{
-              padding: '8px 14px',
-              borderRadius: '8px',
-              border: '1px solid rgba(56, 189, 248, 0.3)',
-              background: 'rgba(15, 23, 42, 0.75)',
-              color: '#E0F2FE',
-              fontSize: '12px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <span>⏸</span>
-            <span>Duraklat</span>
-          </button>
-
-          {/* Fullscreen Button */}
-          <button
-            onClick={() => {
-              SoundFx.playClickTone();
-              onToggleFullscreen();
-            }}
-            title={fullscreen ? 'Tam Ekrandan Çık' : 'Tam Ekran'}
-            style={{
-              padding: '8px 14px',
-              borderRadius: '8px',
-              border: '1px solid rgba(56, 189, 248, 0.3)',
-              background: 'rgba(15, 23, 42, 0.75)',
-              color: '#E0F2FE',
-              fontSize: '12px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <span>⛶</span>
-            <span>Tam Ekran</span>
-          </button>
-        </div>
-      </header>
+      {/* STANDARDIZED GUIDE ROBOT ASSISTANT */}
+      <GameAssistant
+        message={
+          currentStage === 1
+            ? 'Önce ana gövdeyi yerleştir, ardından diğer sistemleri ekle.'
+            : currentStage === 2
+            ? 'Güneş panelleri, anten ve itki sistemlerini kontrol et.'
+            : currentStage === 3
+            ? 'Yeryüzü gözlemi için en ideal yörüngeyi (LEO) seçerek uyduyu yerleştir.'
+            : 'Tüm görevleri başarıyla tamamladın, sertifikan hazır!'
+        }
+        isOpen={assistantOpen}
+        onToggle={setAssistantOpen}
+        placement="bottom-left"
+        accentKey="uzay_teknolojileri"
+      />
 
       {/* =========================================================================
           STAGE CONTENT AREA
@@ -323,10 +190,10 @@ export const UzayTeknolojileriMissionShell: React.FC<UzayTeknolojileriMissionShe
           />
         ) : currentStage === 2 ? (
           <UzayStage3Orbit
-            onOrbitSelected={(orbitId, isCorrect) => {
-              if (orbitId) setSelectedOrbitId(orbitId);
-              setStage2Completed(isCorrect);
-              if (isCorrect) {
+            onOrbitSelected={(orbitId) => {
+              if (orbitId) {
+                setSelectedOrbitId(orbitId);
+                setStage2Completed(true);
                 setMaxUnlockedStage(prev => Math.max(prev, 3) as 1 | 2 | 3 | 4);
               }
             }}
@@ -545,27 +412,30 @@ export const UzayTeknolojileriMissionShell: React.FC<UzayTeknolojileriMissionShe
                 }
               }}
               style={{
-                padding: '11px 26px',
-                borderRadius: '10px',
+                minHeight: '48px',
+                padding: '0 clamp(18px, 1.8vw, 28px)',
+                borderRadius: '12px',
                 border: stage1PlacedCount === 6 ? '1.5px solid #38BDF8' : '1px solid rgba(255, 255, 255, 0.15)',
                 background: stage1PlacedCount === 6
                   ? 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)'
                   : 'rgba(51, 65, 85, 0.55)',
                 color: stage1PlacedCount === 6 ? '#FFFFFF' : 'rgba(255, 255, 255, 0.4)',
                 fontWeight: 800,
-                fontSize: '13.5px',
+                fontSize: '14px',
                 letterSpacing: '0.6px',
                 cursor: stage1PlacedCount === 6 ? 'pointer' : 'not-allowed',
                 boxShadow: stage1PlacedCount === 6 ? '0 0 24px rgba(56, 189, 248, 0.5)' : 'none',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '8px',
+                whiteSpace: 'nowrap',
                 transition: 'all 0.3s ease',
                 animation: stage1PlacedCount === 6 ? 'pulseGlowCyan 2s infinite ease-in-out' : 'none',
               }}
             >
               <span>DEVAM ET</span>
-              <span style={{ fontSize: '15px' }}>→</span>
+              <span style={{ fontSize: '16px' }}>→</span>
             </button>
           )}
 
@@ -582,7 +452,8 @@ export const UzayTeknolojileriMissionShell: React.FC<UzayTeknolojileriMissionShe
                 }
               }}
               style={{
-                padding: '11px 28px',
+                minHeight: '48px',
+                padding: '0 clamp(18px, 1.8vw, 28px)',
                 borderRadius: '12px',
                 border: stage2Completed ? '1.5px solid #C084FC' : '1px solid rgba(255, 255, 255, 0.15)',
                 background: stage2Completed
@@ -594,15 +465,17 @@ export const UzayTeknolojileriMissionShell: React.FC<UzayTeknolojileriMissionShe
                 letterSpacing: '0.8px',
                 cursor: stage2Completed ? 'pointer' : 'not-allowed',
                 boxShadow: stage2Completed ? '0 0 25px rgba(168, 85, 247, 0.65)' : 'none',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '8px',
+                whiteSpace: 'nowrap',
                 transition: 'all 0.3s ease',
                 animation: stage2Completed ? 'pulseGlowPurple 2s infinite ease-in-out' : 'none',
               }}
             >
               <span>DEVAM ET</span>
-              <span style={{ fontSize: '15px' }}>→</span>
+              <span style={{ fontSize: '16px' }}>→</span>
             </button>
           )}
 
@@ -619,7 +492,8 @@ export const UzayTeknolojileriMissionShell: React.FC<UzayTeknolojileriMissionShe
                 }
               }}
               style={{
-                padding: '11px 28px',
+                minHeight: '48px',
+                padding: '0 clamp(18px, 1.8vw, 28px)',
                 borderRadius: '12px',
                 border: stage3Completed ? '1.5px solid #C084FC' : '1px solid rgba(255, 255, 255, 0.15)',
                 background: stage3Completed
@@ -631,15 +505,17 @@ export const UzayTeknolojileriMissionShell: React.FC<UzayTeknolojileriMissionShe
                 letterSpacing: '0.8px',
                 cursor: stage3Completed ? 'pointer' : 'not-allowed',
                 boxShadow: stage3Completed ? '0 0 25px rgba(168, 85, 247, 0.65)' : 'none',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '8px',
+                whiteSpace: 'nowrap',
                 transition: 'all 0.3s ease',
                 animation: stage3Completed ? 'pulseGlowPurple 2s infinite ease-in-out' : 'none',
               }}
             >
               <span>DEVAM ET</span>
-              <span style={{ fontSize: '15px' }}>→</span>
+              <span style={{ fontSize: '16px' }}>→</span>
             </button>
           )}
 
@@ -651,7 +527,8 @@ export const UzayTeknolojileriMissionShell: React.FC<UzayTeknolojileriMissionShe
               data-action="MACERAYI TAMAMLA"
               title="Görevi Tamamla"
               style={{
-                padding: '12px 32px',
+                minHeight: '48px',
+                padding: '0 clamp(20px, 2vw, 32px)',
                 borderRadius: '12px',
                 border: '1.5px solid #34D399',
                 background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
@@ -661,14 +538,16 @@ export const UzayTeknolojileriMissionShell: React.FC<UzayTeknolojileriMissionShe
                 letterSpacing: '0.8px',
                 cursor: 'pointer',
                 boxShadow: '0 0 25px rgba(16, 185, 129, 0.65)',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '8px',
+                whiteSpace: 'nowrap',
                 transition: 'all 0.3s ease',
               }}
             >
               <span>GÖREVİ TAMAMLA</span>
-              <span style={{ fontSize: '15px' }}>→</span>
+              <span style={{ fontSize: '16px' }}>→</span>
             </button>
           )}
         </div>

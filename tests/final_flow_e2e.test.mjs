@@ -145,10 +145,10 @@ test('Final Comprehensive E2E Flow: Step 1 to 28 with TEST KAŞİF', async () =>
   // Step 21 & 22: Master PNG template & name positioning
   const masterWidth = 3730;
   const masterHeight = 2635;
-  const expectedNameX = Math.round(masterWidth * 0.6244);
-  const expectedNameY = Math.round(masterHeight * 0.512);
-  assert.equal(expectedNameX, 2329);
-  assert.equal(expectedNameY, 1349);
+  const expectedNameX = Math.round(masterWidth * (1898 / 3730));
+  const expectedNameY = Math.round(masterHeight * (1335 / 2635));
+  assert.equal(expectedNameX, 1898);
+  assert.equal(expectedNameY, 1335);
 
   // Step 23, 24, 25 & 26: Physical Master Asset Verification
   const publicAssetPath = path.resolve('public/assets/certificate_base.png');

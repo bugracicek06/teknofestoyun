@@ -309,7 +309,7 @@ export const MOTIF_REGION_DEFINITIONS: Record<string, MotifRegionDef[]> = {
     { id: 'motif-yaprak-left-saz', name: 'Sol Tırtıklı Yaprak', order: 2, center: { x: 220, y: 330 }, defaultColor: '#1E9B50', paletteRole: 'secondary' },
     { id: 'motif-yaprak-saz-vein', name: 'Saz Yaprağı Damarı', order: 3, center: { x: 310, y: 190 }, defaultColor: '#16B6C8', paletteRole: 'accent' },
     { id: 'motif-yaprak-left-blossom', name: 'Sol Bahar Çiçeği', order: 4, center: { x: 205, y: 215 }, defaultColor: '#E53935', paletteRole: 'primary' },
-    { id: 'motif-yaprak-right-blossom', name: 'Sağ Bahar Çiçeği', order: 4, center: { x: 395, y: 205 }, defaultColor: '#E53935', paletteRole: 'primary' },
+    { id: 'motif-yaprak-right-blossom', name: 'Sağ Bahar Çiçeği', order: 5, center: { x: 395, y: 205 }, defaultColor: '#E53935', paletteRole: 'primary' },
     { id: 'motif-yaprak-right-saz', name: 'Sağ Tırtıklı Yaprak', order: 6, center: { x: 380, y: 305 }, defaultColor: '#1E9B50', paletteRole: 'secondary' },
     { id: 'motif-yaprak-blossom-cores', name: 'Çiçek Tohumlukları', order: 7, center: { x: 205, y: 260 }, defaultColor: '#F5B700', paletteRole: 'accent' },
     { id: 'motif-yaprak-stem', name: 'Kıvrımlı Saz Dalı', order: 8, center: { x: 300, y: 420 }, defaultColor: '#1E9B50', paletteRole: 'secondary' },

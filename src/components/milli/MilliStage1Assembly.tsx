@@ -29,7 +29,7 @@ export const MilliStage1Assembly: React.FC<MilliStage1AssemblyProps> = ({
   onComplete: _onComplete,
   onProgressChange,
 }) => {
-  const [placedKeys, setPlacedKeys] = useState<string[]>([]);
+  const [placedParts, setPlacedParts] = useState<Set<string>>(new Set());
   const [dragSession, setDragSession] = useState<DragSession | null>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [justSnappedKey, setJustSnappedKey] = useState<string | null>(null);
@@ -43,11 +43,12 @@ export const MilliStage1Assembly: React.FC<MilliStage1AssemblyProps> = ({
   const activePointerIdRef = useRef<number | null>(null);
   const cardBoundsRef = useRef<Map<string, DOMRect>>(new Map());
 
-  const isAllPlaced = placedKeys.length === IHA_PARTS.length;
+  const placedCount = IHA_PARTS.filter(p => placedParts.has(p.stableKey) || placedParts.has(p.id)).length;
+  const isAllPlaced = placedCount === IHA_PARTS.length;
 
   useEffect(() => {
-    onProgressChange?.(placedKeys.length);
-  }, [placedKeys, onProgressChange]);
+    onProgressChange?.(placedCount);
+  }, [placedCount, onProgressChange]);
 
   useEffect(() => {
     return () => {
@@ -73,14 +74,19 @@ export const MilliStage1Assembly: React.FC<MilliStage1AssemblyProps> = ({
 
   // Snap part into place
   const handleSnapPart = useCallback((part: IhaPart) => {
-    if (placedKeys.includes(part.stableKey)) return;
+    if (placedParts.has(part.stableKey) || placedParts.has(part.id)) return;
 
     SoundFx.playGearSnap();
     setJustSnappedKey(part.stableKey);
     setTimeout(() => setJustSnappedKey(null), 700);
 
-    const next = [...placedKeys, part.stableKey];
-    setPlacedKeys(next);
+    setPlacedParts(prev => {
+      const next = new Set(prev);
+      next.add(part.stableKey);
+      next.add(part.id);
+      return next;
+    });
+
     setSelectedKey(null);
     setDragSession(null);
     dragSessionRef.current = null;
@@ -88,12 +94,12 @@ export const MilliStage1Assembly: React.FC<MilliStage1AssemblyProps> = ({
     setIsSnapping(false);
     setIsNearTargetZone(false);
 
-    if (next.length === IHA_PARTS.length) {
+    if (placedCount + 1 === IHA_PARTS.length) {
       setTimeout(() => {
         SoundFx.playSuccessTone();
       }, 350);
     }
-  }, [placedKeys]);
+  }, [placedParts, placedCount]);
 
   // Cancel drag: smooth return to card without error popups or screen shake
   const handleCancelDrag = useCallback(() => {
@@ -138,7 +144,7 @@ export const MilliStage1Assembly: React.FC<MilliStage1AssemblyProps> = ({
 
   // Pointer Down on Part Card
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>, part: IhaPart) => {
-    if (placedKeys.includes(part.stableKey) || isSnapping) return;
+    if (placedParts.has(part.stableKey) || placedParts.has(part.id) || isSnapping) return;
 
     e.preventDefault();
     e.stopPropagation();
@@ -262,13 +268,13 @@ export const MilliStage1Assembly: React.FC<MilliStage1AssemblyProps> = ({
 
   // Direct Click / Touch on Ghost Mold (accessible kiosk fallback)
   const handleMoldClick = (part: IhaPart) => {
-    if (placedKeys.includes(part.stableKey) || isSnapping) return;
+    if (placedParts.has(part.stableKey) || placedParts.has(part.id) || isSnapping) return;
     handleSnapPart(part);
   };
 
   // Direct Click on Card: select or snap if already selected
   const handleCardClick = (part: IhaPart) => {
-    if (placedKeys.includes(part.stableKey)) return;
+    if (placedParts.has(part.stableKey) || placedParts.has(part.id)) return;
     if (selectedKey === part.stableKey) {
       handleSnapPart(part);
     } else {
@@ -440,7 +446,7 @@ export const MilliStage1Assembly: React.FC<MilliStage1AssemblyProps> = ({
               textShadow: '0 0 10px rgba(0, 242, 254, 0.6)',
             }}
           >
-            {placedKeys.length} / 4 Parça Yerleştirildi
+            {placedCount} / 4 Parça Yerleştirildi
           </div>
           {/* Step line with 4 dots */}
           <div
@@ -461,14 +467,14 @@ export const MilliStage1Assembly: React.FC<MilliStage1AssemblyProps> = ({
                 left: 0,
                 top: 0,
                 bottom: 0,
-                width: `${(placedKeys.length / 4) * 100}%`,
+                width: `${(placedCount / 4) * 100}%`,
                 background: 'linear-gradient(90deg, #00F2FE, #10B981)',
                 borderRadius: '2px',
                 transition: 'width 0.3s ease',
               }}
             />
             {[1, 2, 3, 4].map(stepIndex => {
-              const isDone = stepIndex <= placedKeys.length;
+              const isDone = stepIndex <= placedCount;
               return (
                 <div
                   key={stepIndex}
@@ -530,7 +536,7 @@ export const MilliStage1Assembly: React.FC<MilliStage1AssemblyProps> = ({
             <ellipse cx="460" cy="423" rx="230" ry="12" fill="rgba(1, 3, 8, 0.85)" filter="blur(4px)" />
 
             {/* Sharp Wheel Contact Shadows when landing gear is fitted */}
-            {(placedKeys.includes('landingGear') || isAllPlaced) && (
+            {(placedParts.has('landingGear') || placedParts.has('inis_takimi') || isAllPlaced) && (
               <>
                 <ellipse cx="275" cy="425" rx="16" ry="4" fill="rgba(0, 1, 4, 0.95)" filter="blur(1px)" />
                 <ellipse cx="468" cy="425" rx="18" ry="4.5" fill="rgba(0, 1, 4, 0.95)" filter="blur(1px)" />
@@ -539,7 +545,7 @@ export const MilliStage1Assembly: React.FC<MilliStage1AssemblyProps> = ({
             )}
 
             {/* Temporary Maintenance Stands before landing gear is fitted */}
-            {!placedKeys.includes('landingGear') && !isAllPlaced && (
+            {!placedParts.has('landingGear') && !placedParts.has('inis_takimi') && !isAllPlaced && (
               <g id="maintenance-stands">
                 <rect x="330" y="328" width="16" height="96" rx="3" fill="#475569" stroke="#334155" strokeWidth="1.2" />
                 <polygon points="322,424 354,424 348,428 328,428" fill="#334155" />
@@ -549,11 +555,11 @@ export const MilliStage1Assembly: React.FC<MilliStage1AssemblyProps> = ({
             )}
 
             {/* LAYER 1: Right Wing (behind fuselage) */}
-            {placedKeys.includes('wing') && <DroneWingGeometry section="right" />}
+            {(placedParts.has('wing') || placedParts.has('kanat')) && <DroneWingGeometry section="right" />}
 
             {/* LAYER 2: Tail Assembly */}
-            {placedKeys.includes('tail') ? (
-              <g style={{ filter: justSnappedKey === 'tail' ? 'drop-shadow(0 0 20px #00F2FE)' : 'none', transition: 'filter 0.5s ease' }}>
+            {placedParts.has('tail') || placedParts.has('kuyruk') ? (
+              <g style={{ filter: justSnappedKey === 'tail' || justSnappedKey === 'kuyruk' ? 'drop-shadow(0 0 20px #00F2FE)' : 'none', transition: 'filter 0.5s ease' }}>
                 <DroneTailGeometry />
               </g>
             ) : (
@@ -577,8 +583,8 @@ export const MilliStage1Assembly: React.FC<MilliStage1AssemblyProps> = ({
             <DroneFuselageGeometry />
 
             {/* LAYER 4: Landing Gear Assembly (Rendered over belly sockets for crisp attachment) */}
-            {placedKeys.includes('landingGear') ? (
-              <g style={{ filter: justSnappedKey === 'landingGear' ? 'drop-shadow(0 0 20px #00F2FE)' : 'none', transition: 'filter 0.5s ease' }}>
+            {placedParts.has('landingGear') || placedParts.has('inis_takimi') ? (
+              <g style={{ filter: justSnappedKey === 'landingGear' || justSnappedKey === 'inis_takimi' ? 'drop-shadow(0 0 20px #00F2FE)' : 'none', transition: 'filter 0.5s ease' }}>
                 <DroneLandingGearGeometry />
               </g>
             ) : (
@@ -599,10 +605,10 @@ export const MilliStage1Assembly: React.FC<MilliStage1AssemblyProps> = ({
             )}
 
             {/* LAYER 5: Wing Assembly (Left Wing in foreground, or full mold when unplaced) */}
-            {placedKeys.includes('wing') ? (
+            {placedParts.has('wing') || placedParts.has('kanat') ? (
               <g
                 id="left-wing-front"
-                style={{ filter: justSnappedKey === 'wing' ? 'drop-shadow(0 0 20px #00F2FE)' : 'none', transition: 'filter 0.5s ease' }}
+                style={{ filter: justSnappedKey === 'wing' || justSnappedKey === 'kanat' ? 'drop-shadow(0 0 20px #00F2FE)' : 'none', transition: 'filter 0.5s ease' }}
               >
                 <DroneWingGeometry section="left" />
               </g>
@@ -625,8 +631,8 @@ export const MilliStage1Assembly: React.FC<MilliStage1AssemblyProps> = ({
             )}
 
             {/* LAYER 6: Motor Assembly (Top Spine) */}
-            {placedKeys.includes('engine') ? (
-              <g style={{ filter: justSnappedKey === 'engine' ? 'drop-shadow(0 0 20px #00F2FE)' : 'none', transition: 'filter 0.5s ease' }}>
+            {placedParts.has('engine') || placedParts.has('motor') ? (
+              <g style={{ filter: justSnappedKey === 'engine' || justSnappedKey === 'motor' ? 'drop-shadow(0 0 20px #00F2FE)' : 'none', transition: 'filter 0.5s ease' }}>
                 <DroneMotorGeometry />
               </g>
             ) : (
@@ -696,7 +702,7 @@ export const MilliStage1Assembly: React.FC<MilliStage1AssemblyProps> = ({
         }}
       >
         {IHA_PARTS.map(part => {
-          const isPlaced = placedKeys.includes(part.stableKey);
+          const isPlaced = placedParts.has(part.stableKey) || placedParts.has(part.id);
           const isDragging = dragSession?.part.stableKey === part.stableKey;
           const isSelected = selectedKey === part.stableKey;
 
@@ -740,6 +746,7 @@ export const MilliStage1Assembly: React.FC<MilliStage1AssemblyProps> = ({
                 transform: isSelected && !isPlaced ? 'translateY(-4px)' : 'none',
                 transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
                 touchAction: 'none',
+                pointerEvents: isPlaced ? 'none' : 'auto',
                 overflow: 'hidden',
               }}
             >

@@ -20,6 +20,7 @@ import { GameStore } from '../game/state/GameStore';
 import { calculateResult } from '../game/systems/scoring';
 import { EventBus } from '../game/state/EventBus';
 import ciniWorkshopBg from '../assets/cini_workshop_bg.jpg';
+import { GameTopBar, GameAssistant } from './game-ui';
 
 interface CiniSanatiMissionShellProps {
   isAudioMuted: boolean;
@@ -35,15 +36,25 @@ interface CiniSanatiMissionShellProps {
 export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
   isAudioMuted,
   fullscreen,
-  onHome,
+  onHome: _onHome,
   onBack,
   onToggleAudio,
   onHelp,
   onPause,
   onToggleFullscreen,
 }) => {
-  // Current Step: 1 = Eser Seç, 2 = Desen Seç, 3 = Renk Seç, 4 = Deseni Uygula, 5 = Tamamla
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1);
+  const [assistantOpen, setAssistantOpen] = useState<boolean>(false);
+
+  const handleHelpToggle = () => {
+    setAssistantOpen((prev) => !prev);
+    onHelp?.();
+  };
+
+  // Etap değiştiğinde asistan tüyo balonunu otomatik kapat
+  useEffect(() => {
+    setAssistantOpen(false);
+  }, [currentStep]);
 
   // Selected State
   const [selectedObjectId, setSelectedObjectId] = useState<'tabak' | 'pano' | 'karo'>('tabak');
@@ -72,7 +83,7 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
   const [justPaintedRegion, setJustPaintedRegion] = useState<string | null>(null);
   const [showStep4Hint, setShowStep4Hint] = useState<boolean>(true);
   const [shakingRegionId, setShakingRegionId] = useState<string | null>(null);
-  const [wrongStepWarning, setWrongStepWarning] = useState<string | null>(null);
+  const [, setWrongStepWarning] = useState<string | null>(null);
 
   // Brush Animation State & Interaction Lock
   const [brushPos, setBrushPos] = useState<{ x: number; y: number }>({ x: 300, y: 300 });
@@ -448,206 +459,51 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
       {/* =========================================================================
           TOP GAME HEADER
           ========================================================================= */}
-      <header
-        style={{
-          position: 'relative',
-          zIndex: 10,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '16px 28px',
-          background:
-            'linear-gradient(180deg, rgba(10, 16, 28, 0.88) 0%, rgba(10, 16, 28, 0.4) 70%, transparent 100%)',
-        }}
-      >
-        {/* Left: Back & Home Buttons & Section Title */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button
-            onClick={handlePrevStep}
-            title="Geri Dön"
-            aria-label="Geri Dön"
-            style={{
-              width: '46px',
-              height: '46px',
-              borderRadius: '50%',
-              background: 'rgba(15, 23, 42, 0.85)',
-              border: '1.5px solid rgba(255, 255, 255, 0.35)',
-              color: '#F8FAFC',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              fontSize: '22px',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
-            }}
-          >
-            ←
-          </button>
+      {/* STANDARDIZED TOP BAR */}
+      <GameTopBar
+        moduleNumber={3}
+        moduleTitle="Anadolu Ustalığı"
+        moduleSubtitle="Ustalığın İzleri"
+        missionTitle={
+          currentStep === 1
+            ? 'Çini formunu seç ve tasarıma başla'
+            : currentStep === 2
+            ? `${selectedObject.name} formu için geleneksel motifi belirle`
+            : currentStep === 3
+            ? 'Geleneksel Anadolu renk paletini oluştur'
+            : currentStep === 4
+            ? 'Motif bölgelerine dokunarak çini eserini boya'
+            : 'Eserini incele ve macerana devam et'
+        }
+        progressText={`${currentStep} / 5`}
+        accentKey="anadolu_ustaligi"
+        isAudioMuted={isAudioMuted}
+        isFullscreen={fullscreen}
+        onBack={currentStep > 1 ? handlePrevStep : onBack}
+        onToggleAudio={onToggleAudio}
+        onHelp={handleHelpToggle}
+        onPause={onPause}
+        onToggleFullscreen={onToggleFullscreen}
+      />
 
-          <button
-            onClick={onHome}
-            title="Ana Sayfa"
-            aria-label="Ana Sayfaya Dön"
-            style={{
-              width: '46px',
-              height: '46px',
-              borderRadius: '50%',
-              background: 'rgba(15, 23, 42, 0.85)',
-              border: '1.5px solid rgba(255, 255, 255, 0.35)',
-              color: '#F8FAFC',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              fontSize: '18px',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
-            }}
-          >
-            🏠
-          </button>
-
-          {/* Section Plaque */}
-          <div
-            style={{
-              padding: '10px 24px',
-              background: 'rgba(15, 23, 42, 0.85)',
-              backdropFilter: 'blur(10px)',
-              border: '1.5px solid rgba(217, 119, 6, 0.65)',
-              borderRadius: '9999px',
-              color: '#FFFFFF',
-              fontSize: '20px',
-              fontWeight: '700',
-              letterSpacing: '0.5px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
-            }}
-          >
-            <span style={{ color: '#F59E0B', fontWeight: '800' }}>3 / 6</span>
-            <span style={{ opacity: 0.5 }}>|</span>
-            <span>Anadolu Ustalığı – Ustalığın İzleri</span>
-          </div>
-        </div>
-
-        {/* Center Top Banner */}
-        <div
-          style={{
-            position: 'absolute',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: 'rgba(15, 23, 42, 0.92)',
-            border: '1.5px solid rgba(217, 119, 6, 0.6)',
-            borderRadius: '14px',
-            padding: '8px 26px',
-            textAlign: 'center',
-            boxShadow: '0 6px 20px rgba(0,0,0,0.4)',
-          }}
-        >
-          <div style={{ fontSize: '12px', fontWeight: '800', color: '#F59E0B', letterSpacing: '1px' }}>
-            {currentStep}. ADIM
-          </div>
-          <div style={{ fontSize: '18px', fontWeight: '800', color: '#FFFFFF' }}>
-            {currentStep === 1 && 'ÇİNİ ESERİNİ SEÇ'}
-            {currentStep === 2 && 'DESEN SEÇ'}
-            {currentStep === 3 && 'RENK SEÇ'}
-            {currentStep === 4 && 'DESENİ UYGULA'}
-            {currentStep === 5 && 'TAMAMLANDI!'}
-          </div>
-          <div style={{ fontSize: '12px', color: '#CBD5E1', fontStyle: 'italic', marginTop: '2px' }}>
-            {currentStep === 1 && 'Hangi eseri tasarlamak istersin?'}
-            {currentStep === 2 && `${selectedObject.name} formuna hangi motifi işlemek istersin?`}
-            {currentStep === 3 && 'Desenini geleneksel çini renkleriyle boyayalım.'}
-            {currentStep === 4 && 'Seçtiğin deseni ve renkleri esere işliyoruz.'}
-            {currentStep === 5 && 'Harika! Kendi çini eserini tasarladın.'}
-          </div>
-        </div>
-
-        {/* Right Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button
-            onClick={onToggleAudio}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '10px 18px',
-              borderRadius: '9999px',
-              background: 'rgba(15, 23, 42, 0.85)',
-              border: '1.5px solid rgba(255, 255, 255, 0.3)',
-              color: '#F8FAFC',
-              fontSize: '15px',
-              fontWeight: '600',
-              cursor: 'pointer',
-            }}
-          >
-            <span>{isAudioMuted ? '🔇' : '🔊'}</span>
-            <span>{isAudioMuted ? 'Ses: Kapalı' : 'Ses: Açık'}</span>
-          </button>
-
-          <button
-            onClick={onHelp}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '10px 18px',
-              borderRadius: '9999px',
-              background: 'rgba(15, 23, 42, 0.85)',
-              border: '1.5px solid rgba(255, 255, 255, 0.3)',
-              color: '#F8FAFC',
-              fontSize: '15px',
-              fontWeight: '600',
-              cursor: 'pointer',
-            }}
-          >
-            <span>❓</span>
-            <span>Yardım</span>
-          </button>
-
-          <button
-            onClick={onPause}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '10px 18px',
-              borderRadius: '9999px',
-              background: 'rgba(15, 23, 42, 0.85)',
-              border: '1.5px solid rgba(255, 255, 255, 0.3)',
-              color: '#F8FAFC',
-              fontSize: '15px',
-              fontWeight: '600',
-              cursor: 'pointer',
-            }}
-          >
-            <span>⏸</span>
-            <span>Duraklat</span>
-          </button>
-
-          <button
-            onClick={onToggleFullscreen}
-            aria-pressed={fullscreen}
-            title={fullscreen ? 'Tam Ekrandan Çık' : 'Tam Ekran'}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '10px 18px',
-              borderRadius: '9999px',
-              background: 'rgba(15, 23, 42, 0.85)',
-              border: '1.5px solid rgba(255, 255, 255, 0.3)',
-              color: '#F8FAFC',
-              fontSize: '15px',
-              fontWeight: '600',
-              cursor: 'pointer',
-            }}
-          >
-            <span>⛶</span>
-            <span>{fullscreen ? 'Tam Ekrandan Çık' : 'Tam Ekran'}</span>
-          </button>
-        </div>
-      </header>
+      {/* STANDARDIZED GUIDE ROBOT ASSISTANT */}
+      <GameAssistant
+        message={
+          currentStep === 1
+            ? 'Önce eserini seç, ardından geleneksel desenini belirle.'
+            : currentStep === 2
+            ? `${selectedObject.name} üzerine işleyeceğin motifi seç.`
+            : currentStep === 3
+            ? 'Geleneksel çini renklerini belirleyerek paletini oluştur.'
+            : currentStep === 4
+            ? 'Rengini seç, motif üzerindeki parlayan bölgelere dokunarak boya.'
+            : 'Harika bir ustalık eseri ortaya koydun!'
+        }
+        isOpen={assistantOpen}
+        onToggle={setAssistantOpen}
+        placement="bottom-left"
+        accentKey="anadolu_ustaligi"
+      />
 
       {/* =========================================================================
           MAIN WORKSHOP STAGE
@@ -776,84 +632,6 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
               <div>{parchment.callout}</div>
             </div>
           </div>
-
-          {/* Robot Mascot Kaşif with speech bubble in Step 4 */}
-          {currentStep === 4 && (
-            <div
-              className="cini-kasif-guide"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                animation: 'fadeInUp 0.4s ease-out',
-                zIndex: 20,
-              }}
-            >
-              <img
-                src="/assets/devrim/kasif_mascot.webp"
-                alt="Kaşif"
-                style={{
-                  width: '74px',
-                  height: 'auto',
-                  flexShrink: 0,
-                  filter: 'drop-shadow(0 6px 14px rgba(0, 0, 0, 0.45))',
-                }}
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).src = '/assets/kasif_3d.png';
-                }}
-              />
-              <div
-                style={{
-                  position: 'relative',
-                  background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%)',
-                  border: '1.5px solid #F59E0B',
-                  borderRadius: '14px 14px 14px 2px',
-                  padding: '10px 14px',
-                  color: '#FEF08A',
-                  fontSize: '12.5px',
-                  fontWeight: '700',
-                  lineHeight: '1.35',
-                  boxShadow: '0 6px 18px rgba(0,0,0,0.35)',
-                }}
-              >
-                {wrongStepWarning ? (
-                  <span style={{ color: '#FDE047', fontWeight: '800' }}>
-                    {wrongStepWarning}
-                  </span>
-                ) : !activeRegionDef ? (
-                  <>
-                    Tebrikler!
-                    <br />
-                    Eserin harika görünüyor!
-                  </>
-                ) : activeRegionDef.order === 1 ? (
-                  <>
-                    Rengini seç,
-                    <br />
-                    1 numaralı motife dokun!
-                  </>
-                ) : activeRegionDef.order === 2 ? (
-                  <>
-                    Harika!
-                    <br />
-                    Şimdi 2 numarayı boya.
-                  </>
-                ) : activeRegionDef.order === 3 ? (
-                  <>
-                    Süper!
-                    <br />
-                    Sırada 3 numara var.
-                  </>
-                ) : (
-                  <>
-                    Harika gidiyorsun!
-                    <br />
-                    Sırada {activeRegionDef.order} numara var.
-                  </>
-                )}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* -----------------------------------------------------------------------

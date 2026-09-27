@@ -38,6 +38,14 @@ function loadImage(src: string): Promise<HTMLImageElement> {
  * 2. Player Full Name (centered above the dotted line, dynamically auto-scaled)
  * NO QR code is rendered onto the certificate canvas.
  */
+export const CERTIFICATE_RENDER_CONFIG = {
+  MASTER_WIDTH: 3730,
+  MASTER_HEIGHT: 2635,
+  NAME_CENTER_X_RATIO: 1898 / 3730, // ~0.5088 - exact horizontal center of the dotted line under BAŞARI SERTİFİKASI
+  NAME_CENTER_Y_RATIO: 1335 / 2635, // ~0.5066 - vertical middle of the name field cleanly above dotted line (y=1380)
+  MAX_NAME_WIDTH_RATIO: 0.34, // ~1268px, comfortably within the 1355px dotted line span
+};
+
 export async function renderCertificateToCanvas(cert: CertificateRecord): Promise<HTMLCanvasElement> {
   await ensureFontsReady();
 
@@ -46,8 +54,8 @@ export async function renderCertificateToCanvas(cert: CertificateRecord): Promis
 
   // CRITICAL: Master template resolution preservation
   // Strictly use natural dimensions (3730 x 2635)
-  const canvasWidth = baseImg.naturalWidth || 3730;
-  const canvasHeight = baseImg.naturalHeight || 2635;
+  const canvasWidth = baseImg.naturalWidth || CERTIFICATE_RENDER_CONFIG.MASTER_WIDTH;
+  const canvasHeight = baseImg.naturalHeight || CERTIFICATE_RENDER_CONFIG.MASTER_HEIGHT;
 
   const canvas = document.createElement('canvas');
   canvas.width = canvasWidth;
@@ -63,13 +71,13 @@ export async function renderCertificateToCanvas(cert: CertificateRecord): Promis
   // 1. Draw Master Template at 100% full resolution
   ctx.drawImage(baseImg, 0, 0, canvasWidth, canvasHeight);
 
-  // 2. Render Player Full Name in uppercase right above the dotted line
+  // 2. Render Player Full Name in uppercase centered on the dotted line
   const name = (cert.participantName || cert.fullName || 'GENÇ KAŞİF').trim().toLocaleUpperCase('tr-TR');
 
   // Dynamic Font Sizing & Auto-Shrink for long names
-  const maxNameWidth = canvasWidth * 0.36;
-  let fontSize = Math.round(canvasWidth * 0.030); // ~112px on 3730px template
-  const minFontSize = Math.round(canvasWidth * 0.015); // ~56px
+  const maxNameWidth = canvasWidth * CERTIFICATE_RENDER_CONFIG.MAX_NAME_WIDTH_RATIO;
+  let fontSize = Math.round(canvasWidth * 0.028); // ~104px on 3730px template
+  const minFontSize = Math.round(canvasWidth * 0.013); // ~48px
 
   ctx.font = `800 ${fontSize}px 'Outfit', 'Montserrat', 'Segoe UI', -apple-system, sans-serif`;
   while (ctx.measureText(name).width > maxNameWidth && fontSize > minFontSize) {
@@ -80,15 +88,13 @@ export async function renderCertificateToCanvas(cert: CertificateRecord): Promis
   ctx.save();
   ctx.fillStyle = '#0b2d64'; // Deep royal navy matching TEKNOFEST title and text
   ctx.textAlign = 'center';
-  ctx.textBaseline = 'bottom';
+  ctx.textBaseline = 'middle';
 
-  // Normalized coordinates:
-  // x is exact center of dotted line (0.6244)
-  // y is baseline resting cleanly above dotted line (0.512)
-  const nameX = Math.round(canvasWidth * 0.6244);
-  const nameY = Math.round(canvasHeight * 0.512);
+  // Master image coordinates calculated via ratio
+  const nameCenterX = Math.round(canvasWidth * CERTIFICATE_RENDER_CONFIG.NAME_CENTER_X_RATIO);
+  const nameCenterY = Math.round(canvasHeight * CERTIFICATE_RENDER_CONFIG.NAME_CENTER_Y_RATIO);
 
-  ctx.fillText(name, nameX, nameY);
+  ctx.fillText(name, nameCenterX, nameCenterY);
   ctx.restore();
 
   return canvas;

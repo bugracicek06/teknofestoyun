@@ -27,12 +27,14 @@ import teknofest from '../assets/logos/teknofest_logo.png';
 import { MissionCard } from './MissionCard';
 import { MISSION_CARD_IMAGES } from '../data/cardImages';
 import { GobeklitepeMissionShell } from './GobeklitepeMissionShell';
+import { DemirCagiMissionShell } from './demir/DemirCagiMissionShell';
 import { CiniSanatiMissionShell } from './CiniSanatiMissionShell';
 import { DevrimOtomobiliMissionShell } from './devrim/DevrimOtomobiliMissionShell';
 import { MilliTeknolojiMissionShell } from './milli/MilliTeknolojiMissionShell';
 import { UzayTeknolojileriMissionShell } from './uzay/UzayTeknolojileriMissionShell';
 import { ModuleIntroScreen } from './ModuleIntroScreen';
 import { getModuleIntroConfig } from '../data/moduleIntros';
+import { MissionCompleteModal } from './game-ui';
 
 type Panel = 'intro' | 'help' | 'pause' | 'idle' | 'result' | null;
 
@@ -59,6 +61,21 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
   const [qrTargetUrl, setQrTargetUrl] = useState<string | null>(null);
   const [creationError, setCreationError] = useState<string | null>(null);
   const [certNumber, setCertNumber] = useState<string>(state.playerSession.certificateNumber || '');
+
+  // Standardized Shared UI States for Demir Cagi and Module Completion
+  const [demirCagiHud, setDemirCagiHud] = useState<{
+    missionTitle: string;
+    progressText: string;
+    timeText: string;
+  }>({
+    missionTitle: 'Demir Cevheri ve Kömürü Ocağa Sürükle',
+    progressText: 'İLERLEME: 0/2',
+    timeText: '00:00',
+  });
+  const [demirCagiAssistantMessage, setDemirCagiAssistantMessage] = useState<string>(
+    'Ahşap körük kolunu pompalayarak ocağı tavında tut.'
+  );
+  const [showFinalCelebrationScreen, setShowFinalCelebrationScreen] = useState<boolean>(false);
 
   const draftRecordRef = useRef<CertificateRecord | null>(null);
   const creatingLockRef = useRef(false);
@@ -128,6 +145,7 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
       setSpaceMission('mapping');
     }
     setPanel(null);
+    setShowFinalCelebrationScreen(false);
     game.scene.getScenes(false).forEach(s => {
       if (s.sys.isActive() || s.sys.isPaused()) game.scene.stop(s.sys.settings.key);
     });
@@ -268,11 +286,25 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
       setGobeklitepeSelectedId(sel);
     };
 
+    const onHudUpdate = (data: { missionTitle?: string; progressText?: string; timeText?: string }) => {
+      if (!data) return;
+      setDemirCagiHud(prev => ({
+        missionTitle: data.missionTitle || prev.missionTitle,
+        progressText: data.progressText || prev.progressText,
+        timeText: data.timeText || prev.timeText,
+      }));
+    };
+    const onAssistantMsg = (msg: string) => {
+      if (msg) setDemirCagiAssistantMessage(msg);
+    };
+
     EventBus.on('current-scene-ready', ready);
     EventBus.on('store-changed', changed);
     EventBus.on('mission-result', result);
     EventBus.on('asset-progress', progress);
     EventBus.on('gobeklitepe-progress', gobeklitepeHandler);
+    EventBus.on('module-hud-update', onHudUpdate);
+    EventBus.on('assistant-message', onAssistantMsg);
     const unsubNarration = onNarrationChange(setNarrationState);
 
     document.addEventListener('pointerdown', activity);
@@ -322,6 +354,8 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
       EventBus.off('mission-result', result);
       EventBus.off('asset-progress', progress);
       EventBus.off('gobeklitepe-progress', gobeklitepeHandler);
+      EventBus.off('module-hud-update', onHudUpdate);
+      EventBus.off('assistant-message', onAssistantMsg);
       document.removeEventListener('pointerdown', activity);
       document.removeEventListener('keydown', activity);
       document.removeEventListener('visibilitychange', hidden);
@@ -338,13 +372,14 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
   // Dialog management
   useEffect(() => {
     const isModuleIntro = panel === 'intro';
-    if (panel && !isModuleIntro && dialogRef.current && !dialogRef.current.open) {
+    const isSharedComplete = panel === 'result' && (!allComplete || !showFinalCelebrationScreen);
+    if (panel && !isModuleIntro && !isSharedComplete && dialogRef.current && !dialogRef.current.open) {
       dialogRef.current.showModal();
     }
-    if (!panel || isModuleIntro) {
+    if (!panel || isModuleIntro || isSharedComplete) {
       dialogRef.current?.close();
     }
-  }, [panel]);
+  }, [panel, allComplete, showFinalCelebrationScreen]);
 
   // Automatically trigger certificate creation when all 6 modules are completed and final screen opens
   useEffect(() => {
@@ -777,9 +812,29 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
         />
       )}
 
-      {sceneKey !== SceneKeys.GOBEKLITEPE && sceneKey !== SceneKeys.ANADOLU_USTALIGI && sceneKey !== SceneKeys.SANAYILESME && sceneKey !== SceneKeys.MILLI_TEKNOLOJI && sceneKey !== SceneKeys.UZAY_TEKNOLOJILERI && (
+      {/* Module 2: Demir Çağı Unified Mission Shell */}
+      {sceneKey === SceneKeys.DEMIR_CAGI && panel !== 'intro' && (
+        <DemirCagiMissionShell
+          missionTitle={demirCagiHud.missionTitle}
+          progressText={demirCagiHud.progressText}
+          timeText={demirCagiHud.timeText}
+          assistantMessage={demirCagiAssistantMessage || 'Kızıl demir cevheri ve meşe kömürünü ocağa sürükle.'}
+          isAudioMuted={state.isAudioMuted}
+          fullscreen={fullscreen}
+          onBack={() => navigate(SceneKeys.WORLD_MAP)}
+          onToggleAudio={() => {
+            GameStore.toggleAudioMuted();
+            stopNarration();
+          }}
+          onPause={() => pause('pause')}
+          onToggleFullscreen={toggleFullscreen}
+        />
+      )}
+
+      {/* Landing Controls only for Menu Screens (Start & World Map) */}
+      {menu && (
         <nav
-          className={`control-bar ${menu ? 'landing-controls' : 'in-game'}`}
+          className="control-bar landing-controls"
           aria-label="Oyun kontrolleri"
         >
           <button
@@ -813,15 +868,6 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
             </svg>
             <span>Yardım</span>
           </button>
-          {!menu && sceneKey !== 'loading' && (
-            <button onClick={() => pause('pause')} title="Oyunu Duraklat">
-              <svg className="control-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <rect x="6" y="4" width="4" height="16" />
-                <rect x="14" y="4" width="4" height="16" />
-              </svg>
-              <span>Duraklat</span>
-            </button>
-          )}
           <button onClick={toggleFullscreen} title={fullscreen ? 'Ekranı Küçült' : 'Tam Ekran'}>
             <svg className="control-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               {fullscreen ? (
@@ -845,6 +891,38 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
         </nav>
       )}
 
+      {/* =========================================================================
+          STANDARDIZED MISSION COMPLETE MODAL (ALL 6 MODULES)
+          ========================================================================= */}
+      {panel === 'result' && result && (!allComplete || !showFinalCelebrationScreen) && (
+        <MissionCompleteModal
+          isOpen={true}
+          moduleNumber={moduleIndex + 1}
+          moduleTitle={current ? current.title.split('–')[0].trim() : 'BÖLÜM'}
+          moduleSubtitle={current && current.title.includes('–') ? current.title.split('–')[1].trim() : ''}
+          score={result.finalScore}
+          timeText={`${result.elapsedSeconds} sn`}
+          mistakesCount={result.errorCount}
+          starsCount={result.starCount}
+          accentKey={current?.id as any}
+          isFinalModule={allComplete}
+          nextModuleTitle={next?.title ? next.title.split('–')[0].trim() : undefined}
+          onMapClick={() => {
+            setPanel(null);
+            navigate(SceneKeys.WORLD_MAP);
+          }}
+          onNextClick={() => {
+            if (allComplete) {
+              setShowFinalCelebrationScreen(true);
+              handleCreateOrFetchCertificate();
+            } else if (next) {
+              setPanel(null);
+              navigate(next.sceneKey);
+            }
+          }}
+        />
+      )}
+
       {/* Main Kiosk Dialog */}
       <dialog
         ref={dialogRef}
@@ -857,7 +935,7 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
         }}
       >
         {panel === 'result' && result ? (
-          allComplete ? (
+          allComplete && showFinalCelebrationScreen ? (
             <div className="final-celebration-container">
               {/* Başlık: 🏆 MACERA BAŞARIYLA TAMAMLANDI */}
               <h2 className="final-title">
@@ -945,35 +1023,7 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
                 </button>
               </div>
             </div>
-          ) : (
-            /* Single module result (not all 6 finished yet) */
-            <>
-              <p className="eyebrow">GÖREV TAMAMLANDI</p>
-              <h2>{current.title}</h2>
-              <div className="stars" aria-label={`${result.starCount} yıldız`}>
-                {'★'.repeat(result.starCount)}
-                {'☆'.repeat(3 - result.starCount)}
-              </div>
-              <div className="result-metrics">
-                <span><b>{result.finalScore}</b>puan</span>
-                <span><b>{result.elapsedSeconds} sn</b>oyun süresi</span>
-                <span><b>{result.errorCount}</b>yeniden deneme</span>
-              </div>
-              <p>
-                1000 puandan her hatalı deneme için 40 puan düşer; en az 300 puan. 0–2 hata: 3, 3–5 hata: 2, daha fazlası: 1 yıldız. Süre puanı etkilemez.
-              </p>
-
-              <div className="dialog-actions">
-                <button onClick={() => navigate(SceneKeys.WORLD_MAP)}>Görev Haritası</button>
-                <button
-                  className="primary"
-                  onClick={() => next && navigate(next.sceneKey)}
-                >
-                  Sonraki Görev →
-                </button>
-              </div>
-            </>
-          )
+          ) : null
         ) : (
           /* Intro / Pause / Help dialogs */
           <>

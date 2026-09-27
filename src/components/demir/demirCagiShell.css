@@ -1,0 +1,58 @@
+/* ==========================================================
+   MODULE 2: DEMİR ÇAĞI MISSION SHELL
+   Standardized layout with GameTopBar, Gameplay Viewport, and GameAssistant
+   ========================================================== */
+.demir-cagi-mission-shell {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+  user-select: none;
+  overflow: hidden;
+}
+
+.demir-cagi-mission-shell .game-top-bar {
+  pointer-events: auto;
+  flex-shrink: 0;
+}
+
+.demir-cagi-gameplay-viewport {
+  flex: 1;
+  width: 100%;
+  pointer-events: none;
+}
+
+/* Position robot assistant in far left corner so it NEVER overlaps
+   the blacksmith bench (X: 440-1480) or raw materials (X: 580+) */
+.demir-cagi-mission-shell .game-assistant-wrapper {
+  pointer-events: none;
+}
+
+.demir-cagi-mission-shell .game-assistant-wrapper.placement-bottom-left {
+  bottom: clamp(14px, 2vh, 24px);
+  left: clamp(14px, 1.8vw, 24px);
+  flex-direction: column-reverse;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.demir-cagi-mission-shell .game-assistant-wrapper .assistant-avatar-btn,
+.demir-cagi-mission-shell .game-assistant-wrapper .assistant-speech-bubble {
+  pointer-events: auto;
+}
+
+.demir-cagi-mission-shell .assistant-robot-img {
+  height: clamp(80px, 9.5vh, 110px);
+}
+
+.demir-cagi-mission-shell .assistant-speech-bubble {
+  max-width: clamp(230px, 20vw, 300px);
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.4;
+  margin-bottom: 0;
+}

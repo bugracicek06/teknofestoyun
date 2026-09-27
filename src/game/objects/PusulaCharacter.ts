@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { EventBus } from '../state/EventBus';
 
 export class PusulaCharacter extends Phaser.GameObjects.Container {
   private mascotSprite?: Phaser.GameObjects.Image;
@@ -29,6 +30,9 @@ export class PusulaCharacter extends Phaser.GameObjects.Container {
     if (initialMessage) {
       this.setMessage(initialMessage);
     }
+
+    // Hide old procedural/canvas mascot so standardized React GameAssistant is used
+    this.setVisible(false);
 
     scene.add.existing(this);
   }
@@ -164,6 +168,9 @@ export class PusulaCharacter extends Phaser.GameObjects.Container {
     if (this.bubbleText) {
       this.bubbleText.setText(text);
     }
+
+    // Forward message to React shared GameAssistant
+    EventBus.emit('assistant-message', text);
 
     // Pulse animation when speaking new message
     if (this.bubbleContainer) {

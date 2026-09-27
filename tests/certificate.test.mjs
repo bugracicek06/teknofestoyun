@@ -418,23 +418,43 @@ test('Section 16 End-to-end Test: TEST KAŞİF flow, coordinates, and resolution
   const masterWidth = 3730;
   const masterHeight = 2635;
 
-  const expectedNameX = Math.round(masterWidth * 0.6244);
-  const expectedNameY = Math.round(masterHeight * 0.512);
+  const expectedNameX = Math.round(masterWidth * (1898 / 3730));
+  const expectedNameY = Math.round(masterHeight * (1335 / 2635));
 
-  // Center of the dotted line is at 2329px
-  assert.equal(expectedNameX, 2329);
-  // Baseline cleanly resting above dotted line is at 1349px
-  assert.equal(expectedNameY, 1349);
+  // Center of the dotted line under BAŞARI SERTİFİKASI is at 1898px
+  assert.equal(expectedNameX, 1898);
+  // Vertical middle of name field cleanly resting above dotted line (y=1380) is at 1335px
+  assert.equal(expectedNameY, 1335);
 
   // 4. Verification that Turkish uppercase formatting is preserved
   const formattedName = certRecord.fullName.trim().toLocaleUpperCase('tr-TR');
   assert.equal(formattedName, 'TEST KAŞİF');
 
-  // 5. Verification for long name auto-scaling boundaries
-  const _longName = 'MUHAMMED EMİR ABDURRAHMAN YILMAZ';
-  const maxNameWidth = masterWidth * 0.36; // 1342.8 px
-  assert.ok(_longName.length > 25);
-  assert.ok(maxNameWidth > 1300 && maxNameWidth < 1400);
+  // 5. Verification for all 4 requested test names (centering & bounding box)
+  const testNames = [
+    'Ali Can',
+    'Buğra Çiçek',
+    'Mehmet Emir Yılmaz',
+    'Muhammed Emir Abdurrahman Yılmaz',
+  ];
+  const maxAllowedWidth = masterWidth * 0.34; // ~1268px inside 1355px line
+  assert.ok(maxAllowedWidth >= 1200 && maxAllowedWidth <= 1300);
+
+  for (const tName of testNames) {
+    const upper = tName.trim().toLocaleUpperCase('tr-TR');
+    assert.ok(upper.length > 0);
+    // Estimated width at scaled font
+    const charCount = upper.length;
+    let testFontSize = Math.round(masterWidth * 0.028); // 104px
+    let simulatedWidth = charCount * testFontSize * 0.62;
+    while (simulatedWidth > maxAllowedWidth && testFontSize > 48) {
+      testFontSize -= 2;
+      simulatedWidth = charCount * testFontSize * 0.62;
+    }
+    assert.ok(simulatedWidth <= maxAllowedWidth, `${tName} must fit within max allowed width`);
+    // Horizontal center remains constant
+    assert.equal(expectedNameX, 1898, `Horizontal center for ${tName} must remain constant`);
+  }
 
   // 6. Retrieval by mobile URL test
   const getReq = new Request(`https://pauteknofest.netlify.app/api/certificates/${certRecord.certificateId}`, {

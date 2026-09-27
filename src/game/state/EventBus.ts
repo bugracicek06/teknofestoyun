@@ -10,6 +10,18 @@ type Events = {
   'gobeklitepe-drag-start': [{ pieceId: string; clientX: number; clientY: number }];
   'gobeklitepe-drag-move': [{ pieceId: string; clientX: number; clientY: number }];
   'gobeklitepe-drag-end': [{ pieceId: string; clientX: number; clientY: number }];
+  'module-hud-update': [{
+    moduleNumber?: number;
+    moduleTitle?: string;
+    moduleSubtitle?: string;
+    missionTitle?: string;
+    progressText?: string;
+    timeText?: string;
+  }];
+  'assistant-message': [string];
+  'toggle-assistant': [];
+  'open-assistant': [];
+  'close-assistant': [];
 };
 class TypedEventBus {
   private target = new EventTarget();

@@ -36,9 +36,6 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
   const [isAllCompleted, setIsAllCompleted] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
 
-  // Local Kaşif dialogue bubble text
-  const [kasifText, setKasifText] = useState('Parçaları sürükle ve doğru yuvalara bırak!');
-
   const stageRef = useRef<HTMLDivElement>(null);
   const slotRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -86,7 +83,6 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
     }
 
     const victoryMsg = 'Harika! Motor hazır. Şimdi çalıştıralım!';
-    setKasifText(victoryMsg);
     onFeedbackMessageRef.current?.(victoryMsg);
 
     if (completionTimerRef.current !== null) {
@@ -113,15 +109,6 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
       setSelectedPartId(null);
       setHoveredSlotId(null);
       onPartPlacedRef.current?.(partId);
-
-      // Brief praise message
-      setKasifText('Harika oturdu! Diğer parçaya geçelim.');
-      if (feedbackTimerRef.current !== null) window.clearTimeout(feedbackTimerRef.current);
-      feedbackTimerRef.current = window.setTimeout(() => {
-        if (!completionTriggeredRef.current) {
-          setKasifText('Parçaları sürükle ve doğru yuvalara bırak!');
-        }
-      }, 2000);
 
       window.setTimeout(() => {
         setJustSnappedPartId(null);
@@ -226,15 +213,7 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
       setShakingPartId(partId);
       SoundFx.playClickTone?.();
       const retryMsg = 'Bir kez daha deneyelim!';
-      setKasifText(retryMsg);
       onFeedbackMessageRef.current?.(retryMsg);
-
-      if (feedbackTimerRef.current !== null) window.clearTimeout(feedbackTimerRef.current);
-      feedbackTimerRef.current = window.setTimeout(() => {
-        if (!completionTriggeredRef.current) {
-          setKasifText('Parçaları sürükle ve doğru yuvalara bırak!');
-        }
-      }, 2200);
 
       if (shakeTimerRef.current !== null) window.clearTimeout(shakeTimerRef.current);
       shakeTimerRef.current = window.setTimeout(() => {
@@ -390,63 +369,6 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
             >
               Tüm parçaları tamamladığında motor hazır olacak.
             </div>
-          </div>
-
-          {/* Kaşif Mascot + Speech Bubble */}
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-start',
-              position: 'relative',
-              pointerEvents: 'auto',
-            }}
-          >
-            {/* Kaşif Speech Bubble */}
-            <div
-              style={{
-                position: 'relative',
-                background: 'rgba(15, 23, 42, 0.94)',
-                border: '1.5px solid rgba(56, 189, 248, 0.6)',
-                borderRadius: '14px',
-                padding: '8px 12px',
-                color: '#E0F2FE',
-                fontSize: '11px',
-                fontWeight: '700',
-                lineHeight: '1.35',
-                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.7), 0 0 14px rgba(56, 189, 248, 0.25)',
-                backdropFilter: 'blur(10px)',
-                marginBottom: '6px',
-                maxWidth: '220px',
-                transition: 'all 0.25s ease',
-              }}
-            >
-              {kasifText}
-              {/* Little speech tail pointing down to Kaşif */}
-              <div
-                style={{
-                  position: 'absolute',
-                  bottom: '-6px',
-                  left: '28px',
-                  width: '10px',
-                  height: '6px',
-                  backgroundColor: 'rgba(15, 23, 42, 0.94)',
-                  clipPath: 'polygon(0 0, 100% 0, 50% 100%)',
-                }}
-              />
-            </div>
-
-            {/* Kaşif Mascot Graphic */}
-            <img
-              src="/assets/devrim/kasif_mascot.webp"
-              alt="Kaşif Robot"
-              style={{
-                width: 'clamp(90px, 8vw, 130px)',
-                height: 'auto',
-                filter: 'drop-shadow(0 12px 24px rgba(0, 0, 0, 0.7)) drop-shadow(0 0 16px rgba(56, 189, 248, 0.3))',
-                animation: 'devrimKasifFloat 4s ease-in-out infinite',
-              }}
-            />
           </div>
         </div>
 

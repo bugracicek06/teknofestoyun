@@ -1357,7 +1357,7 @@ export const MotifArtwork: React.FC<MotifArtworkProps> = ({
                   cx={Math.cos((i * 72 * Math.PI) / 180) * 14}
                   cy={Math.sin((i * 72 * Math.PI) / 180) * 14}
                   r="8.5"
-                  fill={getRegionFill('motif-yaprak-right-blossom', 4)}
+                  fill={getRegionFill('motif-yaprak-right-blossom', 5)}
                   stroke={getRegionStroke('motif-yaprak-right-blossom')}
                   strokeWidth="1.4"
                 />

@@ -365,11 +365,25 @@ export const MilliStage4Flight: React.FC<MilliStage4FlightProps> = ({
               flex: 1,
             }}
           >
-            <img
-              src="/assets/kasif_3d.png"
-              alt="Kaşif"
-              style={{ width: '40px', height: '40px', objectFit: 'contain', flexShrink: 0 }}
-            />
+            <div
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                background: 'rgba(0, 242, 254, 0.15)',
+                border: '1.5px solid #00F2FE',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#00F2FE',
+                flexShrink: 0,
+              }}
+              aria-hidden="true"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </div>
             <div
               style={{
                 fontSize: '12px',

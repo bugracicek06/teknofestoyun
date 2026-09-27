@@ -1169,7 +1169,8 @@ export const MilliStage3Route: React.FC<MilliStage3RouteProps> = ({
             id="start-flight-btn"
             onClick={startFlightSequence}
             style={{
-              padding: '12px 28px',
+              minHeight: '48px',
+              padding: '0 28px',
               borderRadius: '12px',
               background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
               border: '1.5px solid #FDE68A',
@@ -1179,9 +1180,11 @@ export const MilliStage3Route: React.FC<MilliStage3RouteProps> = ({
               letterSpacing: '0.6px',
               cursor: 'pointer',
               boxShadow: '0 0 25px rgba(245, 158, 11, 0.6), 0 8px 20px rgba(0, 0, 0, 0.6)',
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: '10px',
+              whiteSpace: 'nowrap',
               animation: 'pulseGlow 2s infinite ease-in-out',
             }}
           >
@@ -1245,23 +1248,26 @@ export const MilliStage3Route: React.FC<MilliStage3RouteProps> = ({
             id="proceed-to-ch6-btn"
             onClick={() => onComplete(WAYPOINTS)}
             style={{
-              padding: '10px 22px',
-              borderRadius: '10px',
+              minHeight: '48px',
+              padding: '0 24px',
+              borderRadius: '12px',
               background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-              border: '1px solid #6EE7B7',
+              border: '1.5px solid #6EE7B7',
               color: '#FFFFFF',
               fontWeight: 800,
-              fontSize: '13px',
+              fontSize: '14px',
               cursor: 'pointer',
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: '8px',
+              whiteSpace: 'nowrap',
               boxShadow: '0 0 18px rgba(16, 185, 129, 0.45)',
               flexShrink: 0,
             }}
           >
             <span>6. Bölüme Geç</span>
-            <span style={{ fontSize: '15px' }}>→</span>
+            <span style={{ fontSize: '16px' }}>→</span>
           </button>
         </div>
       )}

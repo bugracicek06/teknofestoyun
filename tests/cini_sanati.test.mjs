@@ -105,5 +105,18 @@ test('MOTIF_REGION_DEFINITIONS: defines stable region IDs and centers for all 6 
   });
 });
 
-
-
+test('MOTIF_REGION_DEFINITIONS: order sequence must be strictly contiguous 1..N without duplicates or skips (including yaprak #5)', async () => {
+  const { MOTIF_REGION_DEFINITIONS } = await import('../src/data/ciniData.ts');
+  const expectedMotifs = ['lale', 'karanfil', 'rumi', 'hatayi', 'geometrik', 'yaprak'];
+  expectedMotifs.forEach(motifId => {
+    const regions = MOTIF_REGION_DEFINITIONS[motifId];
+    const orders = regions.map(r => r.order).sort((a, b) => a - b);
+    const expectedOrders = Array.from({ length: regions.length }, (_, i) => i + 1);
+    assert.deepEqual(orders, expectedOrders, `Motif ${motifId} orders must be strictly 1..${regions.length} without skips or duplicates`);
+    
+    // Explicitly verify point 5 exists
+    const point5 = regions.find(r => r.order === 5);
+    assert.ok(point5, `Motif ${motifId} must have a valid point 5`);
+    assert.ok(point5.id.length > 0, `Point 5 in ${motifId} must have an ID`);
+  });
+});
