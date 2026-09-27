@@ -90,7 +90,9 @@ test('Final Comprehensive E2E Flow: Step 1 to 28 with TEST KAŞİF', async () =>
 
   const createRes = await serverlessHandler(createReq);
   assert.equal(createRes.status, 201);
-  const certRecord = await createRes.json();
+  const createBody = await createRes.json();
+  assert.equal(createBody.success, true);
+  const certRecord = createBody.certificate;
   assert.ok(certRecord.certificateId);
   assert.equal(certRecord.fullName, 'TEST KAŞİF');
   assert.match(certRecord.certificateNumber, /^PAU-TKF-2026-[A-Z0-9]{6}$/);
@@ -118,7 +120,9 @@ test('Final Comprehensive E2E Flow: Step 1 to 28 with TEST KAŞİF', async () =>
   });
   const mobileGetRes = await serverlessHandler(mobileGetReq);
   assert.equal(mobileGetRes.status, 200);
-  const mobileCert = await mobileGetRes.json();
+  const mobileCertBody = await mobileGetRes.json();
+  assert.equal(mobileCertBody.success, true);
+  const mobileCert = mobileCertBody.certificate;
   assert.equal(mobileCert.certificateId, certRecord.certificateId);
   assert.equal(mobileCert.fullName, 'TEST KAŞİF');
 
@@ -172,6 +176,8 @@ test('Final Comprehensive E2E Flow: Step 1 to 28 with TEST KAŞİF', async () =>
   });
   const verifyOldRes = await serverlessHandler(verifyOldReq);
   assert.equal(verifyOldRes.status, 200, 'Previous certificate must remain available on backend');
-  const verifiedOld = await verifyOldRes.json();
+  const verifiedOldBody = await verifyOldRes.json();
+  assert.equal(verifiedOldBody.success, true);
+  const verifiedOld = verifiedOldBody.certificate;
   assert.equal(verifiedOld.fullName, 'TEST KAŞİF');
 });

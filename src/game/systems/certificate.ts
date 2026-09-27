@@ -4,9 +4,11 @@
 import type { MissionResult } from './scoring';
 
 export interface CertificateRecord {
+  id?: string;
   certificateId: string;
   certificateNumber: string;
   fullName: string;
+  participantName?: string;
   completedAt: string; // ISO 8601 string
   completedModules: string[];
   projectName: string;
@@ -230,6 +232,27 @@ export interface CertificateRepository {
   getById(id: string): Promise<CertificateRecord | null>;
 }
 
+/**
+ * Helper to normalize either wrapped `{ success: true, certificate: { ... } }` or raw record
+ */
+function normalizeCertificateEnvelope(data: any): CertificateRecord {
+  const raw = (data && typeof data === 'object' && 'certificate' in data && data.certificate) ? data.certificate : data;
+  const certId = (raw.id || raw.certificateId || '').trim();
+  const name = (raw.participantName || raw.fullName || '').trim();
+
+  return {
+    id: certId,
+    certificateId: certId,
+    certificateNumber: raw.certificateNumber || '',
+    fullName: name,
+    participantName: name,
+    completedAt: raw.completedAt || new Date().toISOString(),
+    completedModules: Array.isArray(raw.completedModules) ? raw.completedModules : [],
+    projectName: raw.projectName || 'Medeniyetten Millî Teknolojiye',
+    results: raw.results || {},
+  };
+}
+
 export class ApiCertificateRepository implements CertificateRepository {
   private baseUrl: string;
 
@@ -242,8 +265,10 @@ export class ApiCertificateRepository implements CertificateRepository {
     const url = `${this.baseUrl}/api/certificates`;
     const response = await fetch(url, {
       method: 'POST',
+      cache: 'no-store',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
       body: JSON.stringify(certificate),
     });
@@ -253,13 +278,15 @@ export class ApiCertificateRepository implements CertificateRepository {
       throw new Error(`Sertifika oluşturulamadı (HTTP ${response.status}): ${errorText}`);
     }
 
-    return await response.json();
+    const json = await response.json();
+    return normalizeCertificateEnvelope(json);
   }
 
   async getById(id: string): Promise<CertificateRecord | null> {
     const url = `${this.baseUrl}/api/certificates/${encodeURIComponent(id)}`;
     const response = await fetch(url, {
       method: 'GET',
+      cache: 'no-store',
       headers: {
         'Accept': 'application/json',
       },
@@ -273,8 +300,79 @@ export class ApiCertificateRepository implements CertificateRepository {
       throw new Error(`Sertifika sorgulanamadı (HTTP ${response.status})`);
     }
 
-    return await response.json();
+    const json = await response.json();
+    if (json && json.success === false && json.error === 'CERTIFICATE_NOT_FOUND') {
+      return null;
+    }
+
+    return normalizeCertificateEnvelope(json);
   }
+}
+
+/**
+ * Verifies that a certificate is accessible and readable on the remote server via GET request.
+ * Retries with backoff: 300ms, 700ms, 1500ms.
+ */
+export async function verifyCertificateOnServer(
+  certificateId: string,
+  delays: number[] = [300, 700, 1500]
+): Promise<boolean> {
+  const repo = new ApiCertificateRepository();
+
+  for (let attempt = 0; attempt <= delays.length; attempt++) {
+    try {
+      const record = await repo.getById(certificateId);
+      if (record && record.certificateId === certificateId) {
+        return true;
+      }
+    } catch (err) {
+      console.warn(`[certificate:verify] Attempt ${attempt + 1} failed:`, err);
+    }
+
+    if (attempt < delays.length) {
+      await new Promise(resolve => setTimeout(resolve, delays[attempt]));
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Authoritative certificate creation flow:
+ * 1. Sends participant details to backend (NO client-side fake UUID).
+ * 2. Backend persists record and returns authoritative certificateId.
+ * 3. Verifies readability on remote server via GET before completing.
+ */
+export async function createCertificateAuthoritative(params: {
+  fullName: string;
+  completedAt?: string;
+  completedModules?: string[];
+  results?: Record<string, MissionResult>;
+}): Promise<CertificateRecord> {
+  const repo = new ApiCertificateRepository();
+  const participantName = params.fullName.trim();
+
+  const payload: any = {
+    fullName: participantName,
+    participantName,
+    completedAt: params.completedAt || new Date().toISOString(),
+    completedModules: params.completedModules || [...REQUIRED_MODULE_IDS],
+    projectName: 'Medeniyetten Millî Teknolojiye',
+    results: params.results || {},
+  };
+
+  const created = await repo.create(payload);
+  if (!created || !created.certificateId) {
+    throw new Error('Sertifika sunucuda oluşturulamadı.');
+  }
+
+  // Pre-QR read-back verification: verify that GET /api/certificates/:id returns 200
+  const isVerified = await verifyCertificateOnServer(created.certificateId);
+  if (!isVerified) {
+    throw new Error('Sertifika oluşturuldu ancak sunucudan okuma doğrulaması başarısız oldu.');
+  }
+
+  return created;
 }
 
 /**

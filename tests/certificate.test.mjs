@@ -8,6 +8,9 @@ import {
   areAllModulesCompleted,
   REQUIRED_MODULE_IDS,
   LocalCertificateRepository,
+  ApiCertificateRepository,
+  createCertificateAuthoritative,
+  verifyCertificateOnServer,
   getCertificatePublicUrl,
 } from '../src/game/systems/certificate.ts';
 import serverlessHandler from '../netlify/functions/certificates.ts';
@@ -168,7 +171,7 @@ test('Netlify Serverless Function: POST create and GET retrieve cross-device flo
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      fullName: 'Mustafa Kemal',
+      participantName: 'Mustafa Kemal',
       completedModules: [...REQUIRED_MODULE_IDS],
       completedAt: '2026-09-18T10:00:00.000Z',
     }),
@@ -176,31 +179,46 @@ test('Netlify Serverless Function: POST create and GET retrieve cross-device flo
 
   const createRes = await serverlessHandler(createReq);
   assert.equal(createRes.status, 201);
-  const created = await createRes.json();
+  assert.equal(createRes.headers.get('Cache-Control'), 'no-store, no-cache, must-revalidate, proxy-revalidate');
 
-  assert.ok(created.certificateId, 'certificateId must be generated');
+  const createdBody = await createRes.json();
+  assert.equal(createdBody.success, true);
+  assert.ok(createdBody.certificate, 'Must return certificate in standardized envelope');
+  const created = createdBody.certificate;
+
+  assert.ok(created.id, 'id must be generated');
+  assert.equal(created.id, created.certificateId);
   assert.match(created.certificateNumber, /^PAU-TKF-2026-[A-Z0-9]{6}$/);
+  assert.equal(created.participantName, 'Mustafa Kemal');
   assert.equal(created.fullName, 'Mustafa Kemal');
 
   // Test GET /api/certificates/:id
-  const getReq = new Request(`https://pauteknofest.netlify.app/api/certificates/${created.certificateId}`, {
+  const getReq = new Request(`https://pauteknofest.netlify.app/api/certificates/${created.id}`, {
     method: 'GET',
     headers: { 'Accept': 'application/json' },
   });
 
   const getRes = await serverlessHandler(getReq);
   assert.equal(getRes.status, 200);
-  const fetched = await getRes.json();
-  assert.equal(fetched.certificateId, created.certificateId);
+  assert.equal(getRes.headers.get('Cache-Control'), 'no-store, no-cache, must-revalidate, proxy-revalidate');
+
+  const fetchedBody = await getRes.json();
+  assert.equal(fetchedBody.success, true);
+  const fetched = fetchedBody.certificate;
+  assert.equal(fetched.id, created.id);
+  assert.equal(fetched.participantName, 'Mustafa Kemal');
   assert.equal(fetched.fullName, 'Mustafa Kemal');
   assert.equal(fetched.certificateNumber, created.certificateNumber);
 
-  // Test GET non-existent
+  // Test GET non-existent -> 404 with CERTIFICATE_NOT_FOUND
   const notFoundReq = new Request('https://pauteknofest.netlify.app/api/certificates/00000000-0000-0000-0000-000000000000', {
     method: 'GET',
   });
   const notFoundRes = await serverlessHandler(notFoundReq);
   assert.equal(notFoundRes.status, 404);
+  const notFoundBody = await notFoundRes.json();
+  assert.equal(notFoundBody.success, false);
+  assert.equal(notFoundBody.error, 'CERTIFICATE_NOT_FOUND');
 });
 
 test('getCertificatePublicUrl: validates HTTPS and rejects localhost / private IPs in production', () => {
@@ -263,10 +281,14 @@ test('Module 6 Finale: End-to-end flow from player session to API certificate cr
 
   const createRes = await serverlessHandler(createReq);
   assert.equal(createRes.status, 201);
-  const createdRecord = await createRes.json();
+  const createBody = await createRes.json();
+  assert.equal(createBody.success, true);
+  const createdRecord = createBody.certificate;
 
   assert.ok(createdRecord.certificateId, 'Real UUID certificateId must be returned');
+  assert.equal(createdRecord.id, createdRecord.certificateId);
   assert.equal(createdRecord.fullName, 'Ahmet Yılmaz');
+  assert.equal(createdRecord.participantName, 'Ahmet Yılmaz');
   assert.match(createdRecord.certificateNumber, /^PAU-TKF-2026-[A-Z0-9]{6}$/);
 
   // 7, 8 & 9. Resolve production QR URL
@@ -297,7 +319,9 @@ test('Module 6 Finale: End-to-end flow from player session to API certificate cr
   });
   const fetchRes = await serverlessHandler(fetchReq);
   assert.equal(fetchRes.status, 200);
-  const fetched = await fetchRes.json();
+  const fetchBody = await fetchRes.json();
+  assert.equal(fetchBody.success, true);
+  const fetched = fetchBody.certificate;
   assert.equal(fetched.certificateId, createdRecord.certificateId);
   assert.equal(fetched.fullName, 'Ahmet Yılmaz');
 });
@@ -369,7 +393,9 @@ test('Section 16 End-to-end Test: TEST KAŞİF flow, coordinates, and resolution
 
   const createRes = await serverlessHandler(createReq);
   assert.equal(createRes.status, 201);
-  const certRecord = await createRes.json();
+  const certRecordBody = await createRes.json();
+  assert.equal(certRecordBody.success, true);
+  const certRecord = certRecordBody.certificate;
   assert.equal(certRecord.fullName, 'TEST KAŞİF');
 
   // 3. Normalized positioning calculation
@@ -401,7 +427,55 @@ test('Section 16 End-to-end Test: TEST KAŞİF flow, coordinates, and resolution
   });
   const getRes = await serverlessHandler(getReq);
   assert.equal(getRes.status, 200);
-  const mobileFetched = await getRes.json();
+  const mobileFetchedBody = await getRes.json();
+  assert.equal(mobileFetchedBody.success, true);
+  const mobileFetched = mobileFetchedBody.certificate;
   assert.equal(mobileFetched.fullName, 'TEST KAŞİF');
   assert.equal(mobileFetched.certificateId, certRecord.certificateId);
 });
+
+test('ApiCertificateRepository & createCertificateAuthoritative: round-trip atomic persistence and verification', async () => {
+  // Mock global fetch to route to serverlessHandler
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, options) => {
+    const fullUrl = typeof url === 'string' && url.startsWith('http') ? url : `https://pauteknofest.netlify.app${url}`;
+    const req = new Request(fullUrl, options);
+    return serverlessHandler(req);
+  };
+
+  try {
+    // 1. Test createCertificateAuthoritative
+    const created = await createCertificateAuthoritative({
+      fullName: 'Ayşe Demir',
+      completedModules: [...REQUIRED_MODULE_IDS],
+    });
+
+    assert.ok(created.certificateId, 'Must have authoritative server certificateId');
+    assert.equal(created.id, created.certificateId);
+    assert.equal(created.fullName, 'Ayşe Demir');
+    assert.equal(created.participantName, 'Ayşe Demir');
+    assert.match(created.certificateNumber, /^PAU-TKF-\d{4}-[A-Z0-9]{6}$/);
+
+    // 2. Test verifyCertificateOnServer succeeds for created record
+    const isVerified = await verifyCertificateOnServer(created.certificateId);
+    assert.equal(isVerified, true, 'verifyCertificateOnServer must return true for persisted certificate');
+
+    // 3. Test verifyCertificateOnServer returns false for non-existent id
+    const nonExistentVerified = await verifyCertificateOnServer('00000000-0000-0000-0000-000000000000', [50, 100]);
+    assert.equal(nonExistentVerified, false, 'verifyCertificateOnServer must return false for non-existent record');
+
+    // 4. Test ApiCertificateRepository getById
+    const repo = new ApiCertificateRepository();
+    const fetched = await repo.getById(created.certificateId);
+    assert.ok(fetched, 'Fetched record must exist');
+    assert.equal(fetched.certificateId, created.certificateId);
+    assert.equal(fetched.fullName, 'Ayşe Demir');
+
+    // 5. Test ApiCertificateRepository 404
+    const notFound = await repo.getById('00000000-0000-0000-0000-000000000000');
+    assert.equal(notFound, null, 'Repository must return null for 404');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+

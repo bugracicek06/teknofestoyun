@@ -17,9 +17,8 @@ import { getNarrationByModuleId } from '../data/narrations';
 import {
   type CertificateRecord,
   type CertificateCreationStatus,
-  generateCertificateId,
-  generateCertificateNumber,
-  certificateRepository,
+  createCertificateAuthoritative,
+  verifyCertificateOnServer,
 } from '../game/systems/certificate.ts';
 import { generateCertificateQr } from '../game/systems/qr';
 import hero from '../assets/landing_hero_bg.jpg';
@@ -153,31 +152,32 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
 
     const existingCertId = state.playerSession.certificateId || GameStore.getPlayerSession().certificateId;
 
-    // 1. If certificate already exists in session, don't create duplicate!
+    // 1. If certificate already exists in session, verify it on remote server first!
     if (existingCertId && !forceRetry) {
       if (creationStatus !== 'created') {
         setCreationStatus('creating');
         creatingLockRef.current = true;
         try {
-          const qrRes = await generateCertificateQr(existingCertId);
-          if (qrRes.success && qrRes.dataUrl) {
-            setQrDataUrl(qrRes.dataUrl);
-            setQrTargetUrl(qrRes.targetUrl || null);
-            setCertNumber(state.playerSession.certificateNumber || GameStore.getPlayerSession().certificateNumber || '');
-            setCreationStatus('created');
-          } else {
-            setCreationStatus('error');
-            setCreationError('Sertifika hazırlanamadı. Tekrar dene.');
+          const isVerified = await verifyCertificateOnServer(existingCertId);
+          if (isVerified) {
+            const qrRes = await generateCertificateQr(existingCertId);
+            if (qrRes.success && qrRes.dataUrl) {
+              setQrDataUrl(qrRes.dataUrl);
+              setQrTargetUrl(qrRes.targetUrl || null);
+              setCertNumber(state.playerSession.certificateNumber || GameStore.getPlayerSession().certificateNumber || '');
+              setCreationStatus('created');
+              return;
+            }
           }
+          // If existingCertId was not verified on server, proceed to authoritative creation below
         } catch (err: any) {
-          console.error('[Kiosk] QR reload error:', err);
-          setCreationStatus('error');
-          setCreationError('Sertifika hazırlanamadı. Tekrar dene.');
+          console.error('[Kiosk] Existing certificate verification error:', err);
         } finally {
           creatingLockRef.current = false;
         }
+      } else {
+        return;
       }
-      return;
     }
 
     if (creationStatus === 'creating' || (creationStatus === 'created' && !forceRetry)) {
@@ -189,32 +189,23 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
     setCreationError(null);
 
     try {
-      const certId = draftRecordRef.current?.certificateId || generateCertificateId();
-      const completedAt = state.playerSession.completedAt || GameStore.getPlayerSession().completedAt || new Date().toISOString();
-      const cNumber = draftRecordRef.current?.certificateNumber || generateCertificateNumber(completedAt);
-
       const participantName = (state.playerSession.fullName || GameStore.getPlayerSession().fullName || '').trim() || 'Genç Kâşif';
+      const completedAt = state.playerSession.completedAt || GameStore.getPlayerSession().completedAt || new Date().toISOString();
 
-      const record: CertificateRecord = {
-        certificateId: certId,
-        certificateNumber: cNumber,
+      // Authoritative remote creation & read-back verification:
+      // Backend generates authoritative UUID, persists it, and verifyCertificateOnServer confirms GET 200
+      const createdRecord = await createCertificateAuthoritative({
         fullName: participantName,
         completedAt,
         completedModules: [...GameStore.getState().completedModuleIds],
-        projectName: 'Medeniyetten Millî Teknolojiye',
         results: GameStore.getState().results,
-      };
-
-      draftRecordRef.current = record;
-
-      // Persist certificate on authoritative server API
-      const createdRecord = await certificateRepository.create(record);
+      });
 
       // Update central store with server-confirmed certificate data
       GameStore.setCertificateData(createdRecord.certificateId, createdRecord.certificateNumber);
       setCertNumber(createdRecord.certificateNumber);
 
-      // Generate QR Code with server-confirmed certificateId
+      // ONLY after backend persistence is 100% verified, generate QR Code with server-confirmed certificateId
       const qrRes = await generateCertificateQr(createdRecord.certificateId);
       if (qrRes.success && qrRes.dataUrl) {
         setQrDataUrl(qrRes.dataUrl);
@@ -222,12 +213,12 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
         setCreationStatus('created');
       } else {
         setCreationStatus('error');
-        setCreationError('Sertifika hazırlanamadı. Tekrar dene.');
+        setCreationError('Sertifika QR kodu oluşturulamadı. Tekrar deneyiniz.');
       }
     } catch (err: any) {
       console.error('[Kiosk] Certificate creation error:', err);
       setCreationStatus('error');
-      setCreationError('Sertifika hazırlanamadı. Tekrar dene.');
+      setCreationError('Sertifikanız hazırlanıyor... Lütfen bekleyip tekrar deneyin.');
     } finally {
       creatingLockRef.current = false;
     }

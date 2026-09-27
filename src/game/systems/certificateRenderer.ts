@@ -64,7 +64,7 @@ export async function renderCertificateToCanvas(cert: CertificateRecord): Promis
   ctx.drawImage(baseImg, 0, 0, canvasWidth, canvasHeight);
 
   // 2. Render Player Full Name in uppercase right above the dotted line
-  const name = (cert.fullName || 'GENÇ KAŞİF').trim().toLocaleUpperCase('tr-TR');
+  const name = (cert.participantName || cert.fullName || 'GENÇ KAŞİF').trim().toLocaleUpperCase('tr-TR');
 
   // Dynamic Font Sizing & Auto-Shrink for long names
   const maxNameWidth = canvasWidth * 0.36;

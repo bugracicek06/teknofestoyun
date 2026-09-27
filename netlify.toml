@@ -24,6 +24,16 @@
   status = 200
 
 [[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate, proxy-revalidate"
+
+[[headers]]
   for = "/*"
   [headers.values]
     X-Frame-Options = "DENY"
