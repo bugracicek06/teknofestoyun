@@ -53,9 +53,32 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
   const shakeTimerRef = useRef<number | null>(null);
   const feedbackTimerRef = useRef<number | null>(null);
 
+  const dragAvatarRef = useRef<HTMLDivElement | null>(null);
+  const dragRafRef = useRef<number | null>(null);
+  const dragCoordsRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const hoveredSlotIdRef = useRef<string | null>(null);
+  const cachedSlotRectsRef = useRef<
+    Map<
+      string,
+      {
+        left: number;
+        right: number;
+        top: number;
+        bottom: number;
+        centerX: number;
+        centerY: number;
+        radiusTolerance: number;
+      }
+    >
+  >(new Map());
+
   // Clean unmount cleanup
   useEffect(() => {
     return () => {
+      if (dragRafRef.current !== null) {
+        cancelAnimationFrame(dragRafRef.current);
+        dragRafRef.current = null;
+      }
       if (completionTimerRef.current !== null) {
         window.clearTimeout(completionTimerRef.current);
         completionTimerRef.current = null;
@@ -135,6 +158,18 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
 
   // Generous Proximity & Overlap detection for kids (~55-60% overlap tolerance)
   const checkSlotProximity = useCallback((partId: string, clientX: number, clientY: number) => {
+    const cached = cachedSlotRectsRef.current.get(partId);
+    if (cached) {
+      const distance = Math.hypot(clientX - cached.centerX, clientY - cached.centerY);
+      const isInsideBounds =
+        clientX >= cached.left - 40 &&
+        clientX <= cached.right + 40 &&
+        clientY >= cached.top - 40 &&
+        clientY <= cached.bottom + 40;
+
+      return isInsideBounds || distance < Math.max(90, cached.radiusTolerance);
+    }
+
     const slotEl = slotRefs.current[partId];
     if (!slotEl) return false;
 
@@ -168,6 +203,25 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
       // Safe fallback
     }
 
+    // Cache slot target rects at pointerdown once to avoid getBoundingClientRect on move
+    cachedSlotRectsRef.current.clear();
+    Object.entries(slotRefs.current).forEach(([pId, el]) => {
+      if (el) {
+        const r = el.getBoundingClientRect();
+        cachedSlotRectsRef.current.set(pId, {
+          left: r.left,
+          right: r.right,
+          top: r.top,
+          bottom: r.bottom,
+          centerX: r.left + r.width / 2,
+          centerY: r.top + r.height / 2,
+          radiusTolerance: Math.max(r.width, r.height) * 0.62,
+        });
+      }
+    });
+
+    dragCoordsRef.current = { x: e.clientX, y: e.clientY };
+    hoveredSlotIdRef.current = null;
     setHasInteracted(true);
     setDragState({
       partId: part.id,
@@ -184,14 +238,32 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!dragState || dragState.pointerId !== e.pointerId) return;
 
-    setDragState(prev => (prev ? { ...prev, currentX: e.clientX, currentY: e.clientY } : null));
+    const x = e.clientX;
+    const y = e.clientY;
+    dragCoordsRef.current = { x, y };
 
-    const isHovering = checkSlotProximity(dragState.partId, e.clientX, e.clientY);
-    setHoveredSlotId(isHovering ? dragState.partId : null);
+    if (dragRafRef.current !== null) cancelAnimationFrame(dragRafRef.current);
+    dragRafRef.current = requestAnimationFrame(() => {
+      if (dragAvatarRef.current) {
+        dragAvatarRef.current.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%) scale(1.08)`;
+      }
+    });
+
+    const isHovering = checkSlotProximity(dragState.partId, x, y);
+    const targetHoverId = isHovering ? dragState.partId : null;
+    if (targetHoverId !== hoveredSlotIdRef.current) {
+      hoveredSlotIdRef.current = targetHoverId;
+      setHoveredSlotId(targetHoverId);
+    }
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!dragState || dragState.pointerId !== e.pointerId) return;
+
+    if (dragRafRef.current !== null) {
+      cancelAnimationFrame(dragRafRef.current);
+      dragRafRef.current = null;
+    }
 
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
@@ -223,10 +295,17 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
 
     setDragState(null);
     setHoveredSlotId(null);
+    hoveredSlotIdRef.current = null;
   };
 
   const handlePointerCancel = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!dragState || dragState.pointerId !== e.pointerId) return;
+
+    if (dragRafRef.current !== null) {
+      cancelAnimationFrame(dragRafRef.current);
+      dragRafRef.current = null;
+    }
+
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
     } catch {
@@ -234,6 +313,7 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
     }
     setDragState(null);
     setHoveredSlotId(null);
+    hoveredSlotIdRef.current = null;
   };
 
   return (
@@ -732,15 +812,16 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
 
       {/* =========================================================================
           ACTIVE DRAG GHOST (Follows Cursor / Touch)
-          ONLY the mechanical part moves with the cursor (as requested)
+          GPU-accelerated translate3d with 60fps requestAnimationFrame
           ========================================================================= */}
       {dragState && (
         <div
+          ref={dragAvatarRef}
           style={{
             position: 'fixed',
-            left: `${dragState.currentX}px`,
-            top: `${dragState.currentY}px`,
-            transform: 'translate(-50%, -50%) scale(1.08)',
+            left: 0,
+            top: 0,
+            transform: `translate3d(${dragState.startX}px, ${dragState.startY}px, 0) translate(-50%, -50%) scale(1.08)`,
             width: '120px',
             height: '90px',
             pointerEvents: 'none',
@@ -750,6 +831,7 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
             alignItems: 'center',
             justifyContent: 'center',
             filter: 'drop-shadow(0 14px 28px rgba(0,0,0,0.8)) drop-shadow(0 0 18px rgba(245, 158, 11, 0.65))',
+            willChange: 'transform',
           }}
         >
           <DevrimEnginePartSvg id={dragState.partId} width="100%" height="100%" />

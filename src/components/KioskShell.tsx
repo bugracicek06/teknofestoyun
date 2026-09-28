@@ -22,6 +22,7 @@ import {
 } from '../game/systems/certificate.ts';
 import { generateCertificateQr } from '../game/systems/qr';
 import hero from '../assets/landing_hero_bg.jpg';
+import homeHeroBg from '../assets/home/home-hero-background.png';
 import pau from '../assets/logos/pau_logo.png';
 import teknofest from '../assets/logos/teknofest_logo.png';
 import { MissionCard } from './MissionCard';
@@ -35,10 +36,22 @@ import { UzayTeknolojileriMissionShell } from './uzay/UzayTeknolojileriMissionSh
 import { ModuleIntroScreen } from './ModuleIntroScreen';
 import { getModuleIntroConfig } from '../data/moduleIntros';
 import { MissionCompleteModal } from './game-ui';
+import { preloadCriticalSceneAssets } from '../game/utils/assetPreloader';
 
 type Panel = 'intro' | 'help' | 'pause' | 'idle' | 'result' | null;
 
 export function KioskShell({ game }: { game: Phaser.Game | null }) {
+  // Pre-decode critical background assets in idle time to eliminate scene transition flickers
+  useEffect(() => {
+    preloadCriticalSceneAssets([
+      homeHeroBg,
+      hero,
+      pau,
+      teknofest,
+      '/assets/uzay/space_hangar_bg.jpg',
+      '/assets/uzay/earth_orbit_cinematic_bg.jpg',
+    ]);
+  }, []);
   const [sceneKey, setSceneKey] = useState<string>('loading');
   const [state, setState] = useState(GameStore.getState());
   const [selected, setSelected] = useState('gobeklitepe');
@@ -407,21 +420,23 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
           style={{
             backgroundImage:
               sceneKey === SceneKeys.START
-                ? `linear-gradient(90deg, rgba(7,17,31,0.94) 0%, rgba(7,17,31,0.84) 30%, rgba(7,17,31,0.48) 52%, rgba(7,17,31,0.12) 72%, rgba(7,17,31,0.04) 86%, rgba(7,17,31,0.22) 100%), linear-gradient(180deg, rgba(7,17,31,0.45) 0%, transparent 20%, transparent 78%, rgba(7,17,31,0.72) 100%), url(${hero})`
+                ? `linear-gradient(90deg, rgba(6, 16, 29, 0.68) 0%, rgba(6, 16, 29, 0.42) 22%, rgba(6, 16, 29, 0.12) 34%, transparent 44%), url(${homeHeroBg})`
                 : `linear-gradient(180deg, rgba(5,14,27,0.65) 0%, rgba(5,14,27,0.86) 100%), linear-gradient(90deg, rgba(5,14,27,0.72) 0%, rgba(5,14,27,0.42) 50%, rgba(5,14,27,0.72) 100%), url(${hero})`,
           }}
         >
-          <header className="brand-bar">
-            <img className="pau-logo" src={pau} alt="Pamukkale Üniversitesi" />
-            <div className="brand-separator" aria-hidden="true" />
-            <img className="festival-logo" src={teknofest} alt="TEKNOFEST" />
-            {sceneKey === SceneKeys.WORLD_MAP && state.playerSession.fullName && (
-              <div className="player-badge">
-                <span>Kâşif:</span>
-                <strong>{state.playerSession.fullName}</strong>
-              </div>
-            )}
-          </header>
+          {sceneKey !== SceneKeys.START && (
+            <header className="brand-bar">
+              <img className="pau-logo" src={pau} alt="Pamukkale Üniversitesi" />
+              <div className="brand-separator" aria-hidden="true" />
+              <img className="festival-logo" src={teknofest} alt="TEKNOFEST" />
+              {sceneKey === SceneKeys.WORLD_MAP && state.playerSession.fullName && (
+                <div className="player-badge">
+                  <span>Kâşif:</span>
+                  <strong>{state.playerSession.fullName}</strong>
+                </div>
+              )}
+            </header>
+          )}
 
           {sceneKey === SceneKeys.START ? (
             <section className="hero-copy">
@@ -438,7 +453,7 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
               {/* Player Name Input Card */}
               <div className="start-player-card">
                 <label htmlFor="player-name-input" className="start-input-label">
-                  <span>Kâşif Adı & Soyadı</span>
+                  <span>KAŞİF ADI & SOYADI</span>
                   <small>Başarı sertifikanız bu isimle oluşturulacaktır</small>
                 </label>
                 <div className="start-input-wrap">
@@ -446,7 +461,7 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
                     id="player-name-input"
                     type="text"
                     className="start-player-input"
-                    placeholder="Örn. Ahmet Yılmaz"
+                    placeholder="Adınızı ve soyadınızı yazın..."
                     value={playerNameInput}
                     maxLength={50}
                     autoComplete="off"

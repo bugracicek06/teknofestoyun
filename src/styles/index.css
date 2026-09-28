@@ -70,6 +70,35 @@ html, body {
   max-height: 100dvh;
   overflow: hidden;
   touch-action: none;
+  background-color: var(--bg-deep);
+}
+
+.game-canvas-container {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-deep);
+}
+
+/* Smooth scene surface micro-transition (150ms) to eliminate blank frame / flicker */
+.gobeklitepe-shell,
+.cini-workshop-shell,
+.devrim-mission-shell,
+.milli-mission-shell,
+.uzay-stage1-assembly,
+.uzay-mission-shell {
+  animation: sceneSurfaceMicroFade 0.15s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes sceneSurfaceMicroFade {
+  from {
+    opacity: 0.90;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* ==========================================================
@@ -129,10 +158,19 @@ button:disabled {
 }
 
 .menu-surface.landing {
+  width: 100%;
+  height: 100dvh;
+  min-height: 100dvh;
+  box-sizing: border-box;
   background-size: cover;
-  background-position: center right;
+  background-position: center top;
   background-repeat: no-repeat;
   animation: landingFadeIn 0.75s cubic-bezier(0.16, 1, 0.3, 1) both;
+  overflow: hidden;
+  padding: clamp(20px, 3vh, 36px) clamp(32px, 5vw, 84px) clamp(16px, 2.5vh, 28px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 @keyframes landingFadeIn {
@@ -190,6 +228,29 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.control-bar.landing-controls {
+  top: clamp(16px, 2.5vh, 28px);
+  right: clamp(16px, 2.5vw, 36px);
+  gap: 8px;
+}
+
+.control-bar.landing-controls button {
+  height: 42px;
+  min-height: 42px;
+  padding: 0 14px;
+  font-size: 13.5px;
+  background: rgba(7, 18, 33, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.control-bar.landing-controls button:hover {
+  background: rgba(14, 32, 54, 0.92);
+  border-color: rgba(83, 213, 205, 0.45);
 }
 
 .control-bar button {
@@ -251,39 +312,42 @@ button:disabled {
 .hero-copy {
   margin-top: auto;
   margin-bottom: auto;
-  max-width: clamp(580px, 48vw, 740px);
+  max-width: clamp(440px, 36vw, 560px);
   text-align: left;
-  padding-bottom: clamp(10px, 2.5vh, 32px);
   z-index: 20;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .eyebrow {
   color: var(--accent-cyan);
   font-family: var(--font-family-main);
-  font-size: 14.5px;
+  font-size: clamp(12.5px, 0.95vw, 14.5px);
   font-weight: 750;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
   animation: heroFadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.05s both;
 }
 
 .hero-copy h1 {
   font-family: var(--font-family-main);
-  font-size: clamp(3.2rem, 5.2vw, 5.8rem);
-  line-height: 1.02;
+  font-size: clamp(2.4rem, 3.5vw, 3.8rem);
+  line-height: 1.06;
   font-weight: 800;
-  letter-spacing: -0.025em;
-  margin-bottom: 22px;
-  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  margin-bottom: 14px;
+  color: #ffffff;
   display: flex;
   flex-direction: column;
   animation: heroFadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
 }
 
 .hero-copy h1 span {
-  color: var(--text-primary);
-  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.55);
+  color: #ffffff;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.65);
 }
 
 .hero-copy h1 em,
@@ -291,16 +355,16 @@ button:disabled {
   display: block;
   font-style: normal;
   color: var(--accent-gold);
-  text-shadow: 0 4px 24px rgba(242, 198, 109, 0.22);
+  text-shadow: 0 4px 24px rgba(242, 198, 109, 0.28), 0 2px 8px rgba(0, 0, 0, 0.6);
 }
 
 .hero-copy > p:not(.eyebrow) {
   font-family: var(--font-family-main);
-  font-size: clamp(18px, 1.35vw, 22px);
-  line-height: 1.48;
-  color: var(--text-secondary);
-  max-width: 530px;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+  font-size: clamp(15px, 1.1vw, 18px);
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.88);
+  max-width: 480px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
   animation: heroFadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.25s both;
 }
 
@@ -1061,13 +1125,13 @@ button:disabled {
    ========================================================== */
 @media (max-width: 1180px) {
   .menu-surface.landing {
-    background-position: 70% center;
+    background-position: center top;
   }
   .hero-copy {
-    max-width: 530px;
+    max-width: 500px;
   }
   .hero-copy h1 {
-    font-size: clamp(2.6rem, 4.6vw, 4.4rem);
+    font-size: clamp(2.2rem, 3.8vw, 3.4rem);
   }
   .brand-bar .pau-logo {
     height: 48px;
@@ -1086,7 +1150,7 @@ button:disabled {
 @media (max-width: 860px) {
   .menu-surface.landing {
     padding: 24px 28px;
-    background-position: 75% center;
+    background-position: center top;
   }
   .hero-copy {
     max-width: 100%;
@@ -1442,9 +1506,28 @@ button:disabled {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: clamp(10px, 1.6vh, 20px) clamp(16px, 2.5vw, 40px);
+  padding: 0 0 clamp(10px, 1.6vh, 20px) 0;
   pointer-events: none;
   user-select: none;
+}
+
+.gobeklitepe-shell .game-top-bar {
+  pointer-events: auto !important;
+  flex-shrink: 0;
+}
+
+.gobeklitepe-shell .game-top-bar button {
+  pointer-events: auto !important;
+}
+
+.gobeklitepe-shell .game-assistant-wrapper {
+  pointer-events: none;
+}
+
+.gobeklitepe-shell .game-assistant-wrapper .assistant-avatar-btn,
+.gobeklitepe-shell .game-assistant-wrapper .assistant-speech-bubble,
+.gobeklitepe-shell .game-assistant-wrapper button {
+  pointer-events: auto !important;
 }
 
 .gobeklitepe-hud button,
@@ -2319,17 +2402,19 @@ button:disabled {
    ========================================================== */
 .start-player-card {
   width: 100%;
-  max-width: 480px;
-  margin-top: 24px;
+  max-width: 440px;
+  margin-top: 18px;
+  margin-bottom: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background: rgba(14, 28, 48, 0.72);
-  border: 1px solid rgba(83, 213, 205, 0.28);
-  border-radius: 20px;
-  padding: 20px 24px;
-  backdrop-filter: blur(12px);
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
+  background: rgba(7, 18, 33, 0.74);
+  border: 1px solid rgba(83, 213, 205, 0.32);
+  border-radius: 18px;
+  padding: 18px 22px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 .start-input-label {
@@ -2340,16 +2425,16 @@ button:disabled {
 }
 
 .start-input-label span {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 13.5px;
+  font-weight: 750;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   color: var(--accent-gold);
 }
 
 .start-input-label small {
-  font-size: 13px;
-  color: var(--text-secondary);
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.68);
 }
 
 .start-input-wrap {
@@ -2358,47 +2443,71 @@ button:disabled {
 
 .start-player-input {
   width: 100%;
-  height: 56px;
-  padding: 0 18px;
-  background: rgba(6, 17, 31, 0.85);
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 14px;
+  height: 52px;
+  min-height: 48px;
+  padding: 0 16px;
+  background: rgba(4, 12, 22, 0.85);
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
   color: #ffffff;
-  font-size: 19px;
+  font-size: 17px;
   font-weight: 600;
   letter-spacing: 0.02em;
-  transition: all 0.25s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
   user-select: text;
   -webkit-user-select: text;
+  box-sizing: border-box;
 }
 
 .start-player-input:focus {
   outline: none;
   border-color: var(--accent-cyan);
-  box-shadow: 0 0 0 4px rgba(83, 213, 205, 0.25);
-  background: rgba(6, 17, 31, 0.98);
+  box-shadow: 0 0 0 3px rgba(83, 213, 205, 0.25);
+  background: rgba(4, 12, 22, 0.98);
 }
 
 .start-player-input::placeholder {
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.42);
   font-weight: 400;
+  font-size: 15px;
 }
 
 .start-name-error {
   color: #ff6b6b;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
   text-align: left;
-  margin-top: -4px;
+  margin-top: -2px;
 }
 
 .start-cta-btn {
   width: 100%;
+  height: 52px;
+  min-height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  margin-top: 4px;
+  gap: 10px;
+  margin: 4px 0 0;
+  background: var(--accent-cyan);
+  color: #051421;
+  border: none;
+  border-radius: 12px;
+  font-size: 17.5px;
+  font-weight: 750;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(83, 213, 205, 0.32);
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease, filter 0.18s ease;
+}
+
+.start-cta-btn:hover {
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 24px rgba(83, 213, 205, 0.48);
+  filter: brightness(1.05);
+}
+
+.start-cta-btn:active {
+  transform: translateY(0);
 }
 
 /* ==========================================================

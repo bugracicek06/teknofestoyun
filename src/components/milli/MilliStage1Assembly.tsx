@@ -124,23 +124,16 @@ export const MilliStage1Assembly: React.FC<MilliStage1AssemblyProps> = ({
     }, 230);
   }, []);
 
-  // Global safety listener for pointer up / cancel
+  // Cleanup ref for active window listeners
+  const windowListenersCleanRef = useRef<(() => void) | null>(null);
+
   useEffect(() => {
-    const handleGlobalPointerUp = (e: PointerEvent) => {
-      if (activePointerIdRef.current !== null && e.pointerId === activePointerIdRef.current) {
-        if (dragSessionRef.current && !isSnapping) {
-          handleCancelDrag();
-        }
+    return () => {
+      if (windowListenersCleanRef.current) {
+        windowListenersCleanRef.current();
       }
     };
-
-    window.addEventListener('pointerup', handleGlobalPointerUp);
-    window.addEventListener('pointercancel', handleGlobalPointerUp);
-    return () => {
-      window.removeEventListener('pointerup', handleGlobalPointerUp);
-      window.removeEventListener('pointercancel', handleGlobalPointerUp);
-    };
-  }, [handleCancelDrag, isSnapping]);
+  }, []);
 
   // Pointer Down on Part Card
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>, part: IhaPart) => {
@@ -149,16 +142,22 @@ export const MilliStage1Assembly: React.FC<MilliStage1AssemblyProps> = ({
     e.preventDefault();
     e.stopPropagation();
 
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-      activePointerIdRef.current = e.pointerId;
-    } catch {
-      // Safe fallback
+    if (windowListenersCleanRef.current) {
+      windowListenersCleanRef.current();
     }
+
+    const pointerId = e.pointerId;
+    activePointerIdRef.current = pointerId;
 
     updateCardBounds();
     SoundFx.playClickTone();
     setSelectedKey(part.stableKey);
+
+    const box = assemblyBoxRef.current;
+    const cachedBoxRect = box ? box.getBoundingClientRect() : null;
+    const cachedTargetCenterX = cachedBoxRect ? cachedBoxRect.left + (part.mountPointPercent.x / 100) * cachedBoxRect.width : 0;
+    const cachedTargetCenterY = cachedBoxRect ? cachedBoxRect.top + (part.mountPointPercent.y / 100) * cachedBoxRect.height : 0;
+    const nearStateRef = { current: false };
 
     const initialSession: DragSession = {
       part,
@@ -169,118 +168,109 @@ export const MilliStage1Assembly: React.FC<MilliStage1AssemblyProps> = ({
     };
     dragSessionRef.current = initialSession;
     setDragSession(initialSession);
-  };
 
-  // Pointer Move during Drag: 60fps via requestAnimationFrame + magnetic proximity check
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragSessionRef.current || isSnapping) return;
-    if (activePointerIdRef.current !== null && e.pointerId !== activePointerIdRef.current) return;
+    const onWindowMove = (moveEvt: PointerEvent) => {
+      if (moveEvt.pointerId !== pointerId) return;
+      if (!dragSessionRef.current || isSnapping) return;
 
-    const x = e.clientX;
-    const y = e.clientY;
+      const x = moveEvt.clientX;
+      const y = moveEvt.clientY;
+      dragSessionRef.current.currentX = x;
+      dragSessionRef.current.currentY = y;
 
-    if (dragRafRef.current) cancelAnimationFrame(dragRafRef.current);
-    dragRafRef.current = requestAnimationFrame(() => {
-      if (dragAvatarRef.current) {
-        dragAvatarRef.current.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%) scale(1.06)`;
+      if (dragRafRef.current) cancelAnimationFrame(dragRafRef.current);
+      dragRafRef.current = requestAnimationFrame(() => {
+        if (dragAvatarRef.current) {
+          dragAvatarRef.current.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%) scale(1.06)`;
+        }
+      });
+
+      if (cachedTargetCenterX && cachedTargetCenterY) {
+        const dist = Math.hypot(x - cachedTargetCenterX, y - cachedTargetCenterY);
+        const isNear = dist <= 200;
+        if (isNear !== nearStateRef.current) {
+          nearStateRef.current = isNear;
+          setIsNearTargetZone(isNear);
+        }
       }
-    });
+    };
 
-    // Check proximity to target mold for magnetic visual feedback
-    const box = assemblyBoxRef.current;
-    if (box) {
-      const boxRect = box.getBoundingClientRect();
+    const onWindowUp = (upEvt: PointerEvent) => {
+      if (upEvt.pointerId !== pointerId) return;
+      if (windowListenersCleanRef.current) {
+        windowListenersCleanRef.current();
+      }
+
+      if (!dragSessionRef.current || isSnapping) return;
       const currentPart = dragSessionRef.current.part;
+      const box = assemblyBoxRef.current;
+      if (!box) {
+        handleCancelDrag();
+        return;
+      }
+
+      const boxRect = box.getBoundingClientRect();
+      const dropX = upEvt.clientX;
+      const dropY = upEvt.clientY;
+
       const targetCenterX = boxRect.left + (currentPart.mountPointPercent.x / 100) * boxRect.width;
       const targetCenterY = boxRect.top + (currentPart.mountPointPercent.y / 100) * boxRect.height;
-      const dist = Math.hypot(x - targetCenterX, y - targetCenterY);
-      setIsNearTargetZone(dist <= 180);
-    }
-  };
 
-  // Pointer Up / Drop Detection
-  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragSessionRef.current || isSnapping) return;
+      let isHit = false;
+      const distFromMount = Math.hypot(dropX - targetCenterX, dropY - targetCenterY);
 
-    try {
-      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-        e.currentTarget.releasePointerCapture(e.pointerId);
-      }
-    } catch {
-      // Safe fallback
-    }
-    activePointerIdRef.current = null;
-
-    const currentPart = dragSessionRef.current.part;
-    const box = assemblyBoxRef.current;
-    if (!box) {
-      handleCancelDrag();
-      return;
-    }
-
-    const boxRect = box.getBoundingClientRect();
-    const dropX = e.clientX;
-    const dropY = e.clientY;
-
-    const targetCenterX = boxRect.left + (currentPart.mountPointPercent.x / 100) * boxRect.width;
-    const targetCenterY = boxRect.top + (currentPart.mountPointPercent.y / 100) * boxRect.height;
-
-    let isHit = false;
-    const distFromMount = Math.hypot(dropX - targetCenterX, dropY - targetCenterY);
-
-    // Generous radial margin around mount silhouette (220px radius)
-    if (distFromMount <= 220) {
-      isHit = true;
-    } else {
-      // Also check normalized 1000x500 box coordinates
-      const normX = ((dropX - boxRect.left) / boxRect.width) * 1000;
-      const normY = ((dropY - boxRect.top) / boxRect.height) * 500;
-      const margin = 140;
-      const targetX = (currentPart.mountPointPercent.x / 100) * 1000;
-      const targetY = (currentPart.mountPointPercent.y / 100) * 500;
-      if (
-        normX >= targetX - margin &&
-        normX <= targetX + margin &&
-        normY >= targetY - margin &&
-        normY <= targetY + margin
-      ) {
+      if (distFromMount <= 220) {
         isHit = true;
+      } else {
+        const normX = ((dropX - boxRect.left) / boxRect.width) * 1000;
+        const normY = ((dropY - boxRect.top) / boxRect.height) * 500;
+        const margin = 160;
+        const targetX = (currentPart.mountPointPercent.x / 100) * 1000;
+        const targetY = (currentPart.mountPointPercent.y / 100) * 500;
+        if (
+          normX >= targetX - margin &&
+          normX <= targetX + margin &&
+          normY >= targetY - margin &&
+          normY <= targetY + margin
+        ) {
+          isHit = true;
+        }
       }
-    }
 
-    if (isHit) {
-      setIsSnapping(true);
-      // Execute 200ms smooth snap animation into exact final target
-      if (dragAvatarRef.current) {
-        dragAvatarRef.current.style.transition = 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease';
-        dragAvatarRef.current.style.transform = `translate3d(${targetCenterX}px, ${targetCenterY}px, 0) translate(-50%, -50%) scale(0.95)`;
-        dragAvatarRef.current.style.opacity = '0.9';
+      if (isHit) {
+        setIsSnapping(true);
+        if (dragAvatarRef.current) {
+          dragAvatarRef.current.style.transition = 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease';
+          dragAvatarRef.current.style.transform = `translate3d(${targetCenterX}px, ${targetCenterY}px, 0) translate(-50%, -50%) scale(0.95)`;
+          dragAvatarRef.current.style.opacity = '0.9';
+        }
+        setTimeout(() => {
+          handleSnapPart(currentPart);
+        }, 200);
+        return;
       }
-      setTimeout(() => {
-        handleSnapPart(currentPart);
-      }, 200);
-      return;
-    }
 
-    // Invalid drop: smooth return to card
-    handleCancelDrag();
-  };
+      handleCancelDrag();
+    };
 
-  // Direct Click / Touch on Ghost Mold (accessible kiosk fallback)
-  const handleMoldClick = (part: IhaPart) => {
-    if (placedParts.has(part.stableKey) || placedParts.has(part.id) || isSnapping) return;
-    handleSnapPart(part);
-  };
+    const onWindowCancel = (cancelEvt: PointerEvent) => {
+      if (cancelEvt.pointerId !== pointerId) return;
+      if (windowListenersCleanRef.current) {
+        windowListenersCleanRef.current();
+      }
+      handleCancelDrag();
+    };
 
-  // Direct Click on Card: select or snap if already selected
-  const handleCardClick = (part: IhaPart) => {
-    if (placedParts.has(part.stableKey) || placedParts.has(part.id)) return;
-    if (selectedKey === part.stableKey) {
-      handleSnapPart(part);
-    } else {
-      setSelectedKey(part.stableKey);
-      SoundFx.playClickTone();
-    }
+    window.addEventListener('pointermove', onWindowMove);
+    window.addEventListener('pointerup', onWindowUp);
+    window.addEventListener('pointercancel', onWindowCancel);
+
+    windowListenersCleanRef.current = () => {
+      window.removeEventListener('pointermove', onWindowMove);
+      window.removeEventListener('pointerup', onWindowUp);
+      window.removeEventListener('pointercancel', onWindowCancel);
+      windowListenersCleanRef.current = null;
+    };
   };
 
   return (
@@ -563,14 +553,7 @@ export const MilliStage1Assembly: React.FC<MilliStage1AssemblyProps> = ({
                 <DroneTailGeometry />
               </g>
             ) : (
-              <g
-                id="mold-tail"
-                onClick={() => {
-                  const part = IHA_PARTS.find(p => p.stableKey === 'tail');
-                  if (part) handleMoldClick(part);
-                }}
-                style={{ cursor: 'pointer' }}
-              >
+              <g id="mold-tail">
                 <DroneTailGeometry
                   isMold={true}
                   isTargeted={dragSession?.part.stableKey === 'tail' || selectedKey === 'tail'}
@@ -588,14 +571,7 @@ export const MilliStage1Assembly: React.FC<MilliStage1AssemblyProps> = ({
                 <DroneLandingGearGeometry />
               </g>
             ) : (
-              <g
-                id="mold-gear"
-                onClick={() => {
-                  const part = IHA_PARTS.find(p => p.stableKey === 'landingGear');
-                  if (part) handleMoldClick(part);
-                }}
-                style={{ cursor: 'pointer' }}
-              >
+              <g id="mold-gear">
                 <DroneLandingGearGeometry
                   isMold={true}
                   isTargeted={dragSession?.part.stableKey === 'landingGear' || selectedKey === 'landingGear'}
@@ -613,14 +589,7 @@ export const MilliStage1Assembly: React.FC<MilliStage1AssemblyProps> = ({
                 <DroneWingGeometry section="left" />
               </g>
             ) : (
-              <g
-                id="mold-wing"
-                onClick={() => {
-                  const part = IHA_PARTS.find(p => p.stableKey === 'wing');
-                  if (part) handleMoldClick(part);
-                }}
-                style={{ cursor: 'pointer' }}
-              >
+              <g id="mold-wing">
                 <DroneWingGeometry
                   section="all"
                   isMold={true}
@@ -636,14 +605,7 @@ export const MilliStage1Assembly: React.FC<MilliStage1AssemblyProps> = ({
                 <DroneMotorGeometry />
               </g>
             ) : (
-              <g
-                id="mold-motor"
-                onClick={() => {
-                  const part = IHA_PARTS.find(p => p.stableKey === 'engine');
-                  if (part) handleMoldClick(part);
-                }}
-                style={{ cursor: 'pointer' }}
-              >
+              <g id="mold-motor">
                 <DroneMotorGeometry
                   isMold={true}
                   isTargeted={dragSession?.part.stableKey === 'engine' || selectedKey === 'engine'}
@@ -711,10 +673,6 @@ export const MilliStage1Assembly: React.FC<MilliStage1AssemblyProps> = ({
               key={part.id}
               id={`part-card-${part.stableKey}`}
               onPointerDown={e => handlePointerDown(e, part)}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              onPointerCancel={handleCancelDrag}
-              onClick={() => handleCardClick(part)}
               style={{
                 position: 'relative',
                 flex: 1,

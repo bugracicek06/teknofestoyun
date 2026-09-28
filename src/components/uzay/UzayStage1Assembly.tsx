@@ -41,6 +41,7 @@ export const UzayStage1Assembly: React.FC<UzayStage1AssemblyProps> = ({
   const assemblySvgRef = useRef<SVGSVGElement | null>(null);
   const dragAvatarRef = useRef<HTMLDivElement | null>(null);
   const dragSessionRef = useRef<DragSession | null>(null);
+  const dragRafRef = useRef<number | null>(null);
   const cardBoundsRef = useRef<Map<SpacecraftPartId, DOMRect>>(new Map());
 
   const placedCount = placedPartIds.length;
@@ -53,6 +54,12 @@ export const UzayStage1Assembly: React.FC<UzayStage1AssemblyProps> = ({
   useEffect(() => {
     onProgressChange?.(placedCount);
   }, [placedCount, onProgressChange]);
+
+  useEffect(() => {
+    return () => {
+      if (dragRafRef.current) cancelAnimationFrame(dragRafRef.current);
+    };
+  }, []);
 
   // Update card bounds for smooth return animation on drop miss
   const updateCardBounds = useCallback(() => {
@@ -130,16 +137,41 @@ export const UzayStage1Assembly: React.FC<UzayStage1AssemblyProps> = ({
     return pt.matrixTransform(ctm.inverse());
   };
 
+  // Cleanup ref for active window listeners
+  const windowListenersCleanRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (windowListenersCleanRef.current) {
+        windowListenersCleanRef.current();
+      }
+    };
+  }, []);
+
   // Pointer Down on draggable card
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>, part: SpacecraftPart) => {
     if (placedPartIds.includes(part.id)) return;
 
     e.preventDefault();
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch {
-      // Safe fallback
+    e.stopPropagation();
+
+    if (windowListenersCleanRef.current) {
+      windowListenersCleanRef.current();
     }
+
+    const pointerId = e.pointerId;
+
+    // Precalculate target screen coordinates once to avoid DOM reads on pointermove
+    let cachedTargetScreenX = 0;
+    let cachedTargetScreenY = 0;
+    let cachedAllowedRadius = 120;
+    if (assemblySvgRef.current) {
+      const svgRect = assemblySvgRef.current.getBoundingClientRect();
+      cachedTargetScreenX = svgRect.left + (part.targetX / 1000) * svgRect.width;
+      cachedTargetScreenY = svgRect.top + (part.targetY / 700) * svgRect.height;
+      cachedAllowedRadius = Math.max(120, (part.snapRadius / 1000) * svgRect.width * 1.35);
+    }
+    const nearStateRef = { current: false };
 
     const session: DragSession = {
       part,
@@ -147,96 +179,123 @@ export const UzayStage1Assembly: React.FC<UzayStage1AssemblyProps> = ({
       startY: e.clientY,
       currentX: e.clientX,
       currentY: e.clientY,
-      pointerId: e.pointerId,
+      pointerId,
     };
 
     setDragSession(session);
     dragSessionRef.current = session;
     updateCardBounds();
-  };
 
-  // Pointer Move
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragSessionRef.current || dragSessionRef.current.pointerId !== e.pointerId) return;
-    e.preventDefault();
+    const onWindowMove = (moveEvt: PointerEvent) => {
+      if (moveEvt.pointerId !== pointerId) return;
+      if (!dragSessionRef.current) return;
 
-    const curX = e.clientX;
-    const curY = e.clientY;
+      const curX = moveEvt.clientX;
+      const curY = moveEvt.clientY;
 
-    dragSessionRef.current.currentX = curX;
-    dragSessionRef.current.currentY = curY;
+      dragSessionRef.current.currentX = curX;
+      dragSessionRef.current.currentY = curY;
 
-    if (dragAvatarRef.current) {
-      dragAvatarRef.current.style.transform = `translate3d(${curX}px, ${curY}px, 0) translate(-50%, -50%)`;
-    }
+      if (dragRafRef.current) cancelAnimationFrame(dragRafRef.current);
+      dragRafRef.current = requestAnimationFrame(() => {
+        if (dragAvatarRef.current) {
+          dragAvatarRef.current.style.transform = `translate3d(${curX}px, ${curY}px, 0) translate(-50%, -50%)`;
+        }
+      });
 
-    // Hit test with SVG assembly canvas using inverse CTM
-    if (assemblySvgRef.current) {
-      const localPt = getLocalSvgPoint(curX, curY);
-      if (localPt) {
-        const normX = localPt.x;
-        const normY = localPt.y;
-        const part = dragSessionRef.current.part;
-
-        const dx = normX - part.targetX;
-        const dy = normY - part.targetY;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-
-        // Generous kid-friendly proximity detection
-        if (dist <= part.snapRadius * 1.35) {
-          setNearTargetPartId(part.id);
-        } else {
-          setNearTargetPartId(null);
+      // Optimized proximity check: zero getBoundingClientRect calls during drag
+      if (cachedTargetScreenX && cachedTargetScreenY) {
+        const screenDist = Math.hypot(curX - cachedTargetScreenX, curY - cachedTargetScreenY);
+        const isNear = screenDist <= cachedAllowedRadius;
+        if (isNear !== nearStateRef.current) {
+          nearStateRef.current = isNear;
+          setNearTargetPartId(isNear ? part.id : null);
         }
       }
-    }
-  };
+    };
 
-  // Pointer Up
-  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragSessionRef.current || dragSessionRef.current.pointerId !== e.pointerId) return;
-    e.preventDefault();
+    const onWindowUp = (upEvt: PointerEvent) => {
+      if (upEvt.pointerId !== pointerId) return;
+      if (windowListenersCleanRef.current) {
+        windowListenersCleanRef.current();
+      }
 
-    try {
-      e.currentTarget.releasePointerCapture(e.pointerId);
-    } catch {
-      // Ignore if already released
-    }
+      if (!dragSessionRef.current) return;
+      const currentPart = dragSessionRef.current.part;
+      const dropX = upEvt.clientX;
+      const dropY = upEvt.clientY;
 
-    const session = dragSessionRef.current;
-    const part = session.part;
+      let isHit = false;
+      let targetScreenX = dropX;
+      let targetScreenY = dropY;
 
-    if (assemblySvgRef.current) {
-      const localPt = getLocalSvgPoint(e.clientX, e.clientY);
-      if (localPt) {
-        const normX = localPt.x;
-        const normY = localPt.y;
+      if (assemblySvgRef.current) {
+        const svgRect = assemblySvgRef.current.getBoundingClientRect();
+        targetScreenX = svgRect.left + (currentPart.targetX / 1000) * svgRect.width;
+        targetScreenY = svgRect.top + (currentPart.targetY / 700) * svgRect.height;
 
-        const dx = normX - part.targetX;
-        const dy = normY - part.targetY;
-        const dist = Math.sqrt(dx * dx + dy * dy);
+        const localPt = getLocalSvgPoint(dropX, dropY);
+        if (localPt) {
+          const dx = localPt.x - currentPart.targetX;
+          const dy = localPt.y - currentPart.targetY;
+          if (Math.hypot(dx, dy) <= currentPart.snapRadius * 1.35) {
+            isHit = true;
+          }
+        }
 
-        // Generous kid snap tolerance (broad hit area)
-        if (dist <= part.snapRadius * 1.35) {
-          handleSnapPart(part);
+        const screenDist = Math.hypot(dropX - targetScreenX, dropY - targetScreenY);
+        const allowedRadius = Math.max(120, (currentPart.snapRadius / 1000) * svgRect.width * 1.35);
+        if (screenDist <= allowedRadius) {
+          isHit = true;
+        }
+      }
+
+      if (isHit) {
+        // Dependency rule: Ana Gövde ('body') must be placed before peripheral parts
+        if (currentPart.id !== 'body' && !placedPartIds.includes('body')) {
+          SoundFx.playErrorTone?.();
+          setSuccessToast('Önce Ana Gövdeyi yerleştirmelisin!');
+          setOrderHint(true);
+          setTimeout(() => setSuccessToast(null), 1200);
+          handleCancelDrag();
           return;
         }
+
+        // Animate avatar to exact target
+        if (dragAvatarRef.current) {
+          dragAvatarRef.current.style.transition = 'transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s ease';
+          dragAvatarRef.current.style.transform = `translate3d(${targetScreenX}px, ${targetScreenY}px, 0) translate(-50%, -50%) scale(0.95)`;
+          dragAvatarRef.current.style.opacity = '0.9';
+        }
+
+        setTimeout(() => {
+          handleSnapPart(currentPart);
+        }, 180);
+        return;
       }
-    }
 
-    // If not snapped, cancel smoothly
-    handleCancelDrag();
-  };
+      // If not hit, return smoothly to bottom card
+      handleCancelDrag();
+    };
 
-  const handlePointerCancel = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragSessionRef.current || dragSessionRef.current.pointerId !== e.pointerId) return;
-    handleCancelDrag();
-  };
+    const onWindowCancel = (cancelEvt: PointerEvent) => {
+      if (cancelEvt.pointerId !== pointerId) return;
+      if (windowListenersCleanRef.current) {
+        windowListenersCleanRef.current();
+      }
+      handleCancelDrag();
+    };
 
-  // Direct click / tap fallback
-  const handleCardClick = (part: SpacecraftPart) => {
-    if (placedPartIds.includes(part.id)) return;
-    handleSnapPart(part);
+    window.addEventListener('pointermove', onWindowMove);
+    window.addEventListener('pointerup', onWindowUp);
+    window.addEventListener('pointercancel', onWindowCancel);
+
+    windowListenersCleanRef.current = () => {
+      window.removeEventListener('pointermove', onWindowMove);
+      window.removeEventListener('pointerup', onWindowUp);
+      window.removeEventListener('pointercancel', onWindowCancel);
+      windowListenersCleanRef.current = null;
+    };
   };
 
   // Check if a part slot is the current active target
@@ -900,10 +959,6 @@ export const UzayStage1Assembly: React.FC<UzayStage1AssemblyProps> = ({
                 id={`part-card-${part.id}`}
                 key={part.id}
                 onPointerDown={e => handlePointerDown(e, part)}
-                onPointerMove={handlePointerMove}
-                onPointerUp={handlePointerUp}
-                onPointerCancel={handlePointerCancel}
-                onClick={() => handleCardClick(part)}
                 style={{
                   position: 'relative',
                   height: '118px',
