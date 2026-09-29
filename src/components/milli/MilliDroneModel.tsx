@@ -556,26 +556,26 @@ export const DroneLandingGearGeometry: React.FC<{
       : isTargeted
       ? 'rgba(0, 242, 254, 0.18)'
       : 'rgba(0, 220, 235, 0.12)';
-    const filter = isMagneticNear ? 'url(#moldGlowGreen)' : isTargeted ? 'url(#moldGlowCyan)' : undefined;
+    const filter = isMagneticNear ? 'drop-shadow(0 0 6px #14E6B4)' : isTargeted ? 'drop-shadow(0 0 5px #00F2FE)' : undefined;
 
     return (
-      <g id="drone-gear-mold" style={style}>
+      <g id="drone-gear-mold" style={{ ...style, filter }}>
         {/* Fuselage Belly Attachment Sockets */}
-        <rect x="264" y="326" width="22" height="8" rx="2" fill={fillColor} stroke={strokeColor} strokeWidth={2} filter={filter} />
-        <rect x="428" y="324" width="24" height="8" rx="2" fill={fillColor} stroke={strokeColor} strokeWidth={2} filter={filter} />
-        <rect x="574" y="324" width="24" height="8" rx="2" fill={fillColor} stroke={strokeColor} strokeWidth={2} filter={filter} />
+        <rect x="264" y="326" width="22" height="8" rx="2" fill={fillColor} stroke={strokeColor} strokeWidth={2} />
+        <rect x="428" y="324" width="24" height="8" rx="2" fill={fillColor} stroke={strokeColor} strokeWidth={2} />
+        <rect x="574" y="324" width="24" height="8" rx="2" fill={fillColor} stroke={strokeColor} strokeWidth={2} />
 
         {/* Nose Gear Strut & Wheel Silhouette */}
-        <line x1="275" y1="330" x2="275" y2="408" stroke={strokeColor} strokeWidth={4.5} strokeLinecap="round" filter={filter} />
-        <ellipse cx="275" cy="410" rx="14" ry="17" fill={fillColor} stroke={strokeColor} strokeWidth={2} filter={filter} />
+        <rect x="272" y="330" width="6" height="78" rx="3" fill={strokeColor} stroke="none" />
+        <ellipse cx="275" cy="410" rx="14" ry="17" fill={fillColor} stroke={strokeColor} strokeWidth={2} />
 
         {/* Left Main Gear Strut & Wheel Silhouette */}
-        <path d="M 440,328 Q 454,370 468,394 L 468,406" fill="none" stroke={strokeColor} strokeWidth={5} strokeLinecap="round" filter={filter} />
-        <ellipse cx="468" cy="410" rx="15" ry="18" fill={fillColor} stroke={strokeColor} strokeWidth={2} filter={filter} />
+        <path d="M 440,328 Q 454,370 468,394 L 468,406" fill="none" stroke={strokeColor} strokeWidth={5} strokeLinecap="round" />
+        <ellipse cx="468" cy="410" rx="15" ry="18" fill={fillColor} stroke={strokeColor} strokeWidth={2} />
 
         {/* Right Main Gear Strut & Wheel Silhouette */}
-        <path d="M 585,328 Q 604,366 618,392 L 618,404" fill="none" stroke={strokeColor} strokeWidth={5} strokeLinecap="round" filter={filter} />
-        <ellipse cx="618" cy="408" rx="15" ry="18" fill={fillColor} stroke={strokeColor} strokeWidth={2} filter={filter} />
+        <path d="M 585,328 Q 604,366 618,392 L 618,404" fill="none" stroke={strokeColor} strokeWidth={5} strokeLinecap="round" />
+        <ellipse cx="618" cy="408" rx="15" ry="18" fill={fillColor} stroke={strokeColor} strokeWidth={2} />
       </g>
     );
   }
@@ -588,44 +588,46 @@ export const DroneLandingGearGeometry: React.FC<{
       <rect x="428" y="324" width="24" height="8" rx="2" fill="#334155" stroke="#475569" strokeWidth={1} />
       <rect x="574" y="324" width="24" height="8" rx="2" fill="#334155" stroke="#475569" strokeWidth={1} />
 
-      {/* 1. NOSE GEAR: Steerable Oleo Strut (Titanium & Chrome) */}
-      <line x1="275" y1="330" x2="275" y2="384" stroke="url(#strutTitaniumGrad)" strokeWidth={7} strokeLinecap="round" />
-      <line x1="275" y1="380" x2="275" y2="408" stroke="url(#pistonChromeGrad)" strokeWidth={4.5} />
+      {/* 1. NOSE GEAR: Steerable Oleo Strut (Titanium & Chrome) with 3D rect geometry for universal cross-platform rendering */}
+      <rect x="271.5" y="330" width="7" height="54" rx="3.5" fill="#64748B" style={{ fill: 'url(#strutTitaniumGrad) #64748B' }} stroke="#475569" strokeWidth={0.8} />
+      <rect x="272.75" y="380" width="4.5" height="28" rx="2" fill="#CBD5E1" style={{ fill: 'url(#pistonChromeGrad) #CBD5E1' }} stroke="#94A3B8" strokeWidth={0.6} />
       {/* Scissor Torque Link */}
       <polyline points="275,370 266,380 275,390" fill="none" stroke="#475569" strokeWidth={2} />
       {/* Nose Wheel Tire (Ground: y=425) */}
-      <ellipse cx="275" cy="410" rx="14" ry="17" fill="url(#tireTreadGrad)" stroke="#334155" strokeWidth={1.8} />
-      <circle cx="275" cy="410" r="7" fill="url(#alloyRimGrad)" stroke="#00F2FE" strokeWidth={1.2} />
+      <ellipse cx="275" cy="410" rx="14" ry="17" fill="#0F172A" style={{ fill: 'url(#tireTreadGrad) #0F172A' }} stroke="#334155" strokeWidth={1.8} />
+      <circle cx="275" cy="410" r="7" fill="#CBD5E1" style={{ fill: 'url(#alloyRimGrad) #CBD5E1' }} stroke="#00F2FE" strokeWidth={1.2} />
       <circle cx="275" cy="410" r="2.8" fill="#0F172A" />
 
       {/* 2. LEFT MAIN GEAR: Cantilever Trailing-Arm Shock Strut */}
       <path
         d="M 440,328 Q 454,370 468,394 L 468,406"
         fill="none"
-        stroke="url(#strutTitaniumGrad)"
+        stroke="#64748B"
+        style={{ stroke: 'url(#strutTitaniumGrad) #64748B' }}
         strokeWidth={8}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <circle cx="440" cy="328" r="4.5" fill="#334155" />
       {/* Left Wheel (Ground: y=425) */}
-      <ellipse cx="468" cy="410" rx="15" ry="18" fill="url(#tireTreadGrad)" stroke="#334155" strokeWidth={1.8} />
-      <circle cx="468" cy="410" r="7.5" fill="url(#alloyRimGrad)" stroke="#00F2FE" strokeWidth={1.2} />
+      <ellipse cx="468" cy="410" rx="15" ry="18" fill="#0F172A" style={{ fill: 'url(#tireTreadGrad) #0F172A' }} stroke="#334155" strokeWidth={1.8} />
+      <circle cx="468" cy="410" r="7.5" fill="#CBD5E1" style={{ fill: 'url(#alloyRimGrad) #CBD5E1' }} stroke="#00F2FE" strokeWidth={1.2} />
       <circle cx="468" cy="410" r="2.8" fill="#0F172A" />
 
       {/* 3. RIGHT MAIN GEAR: Cantilever Trailing-Arm Shock Strut */}
       <path
         d="M 585,328 Q 604,366 618,392 L 618,404"
         fill="none"
-        stroke="url(#strutTitaniumGrad)"
+        stroke="#64748B"
+        style={{ stroke: 'url(#strutTitaniumGrad) #64748B' }}
         strokeWidth={8}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <circle cx="585" cy="328" r="4.5" fill="#334155" />
       {/* Right Wheel (Ground: y=423) */}
-      <ellipse cx="618" cy="408" rx="15" ry="18" fill="url(#tireTreadGrad)" stroke="#334155" strokeWidth={1.8} />
-      <circle cx="618" cy="408" r="7.5" fill="url(#alloyRimGrad)" stroke="#00F2FE" strokeWidth={1.2} />
+      <ellipse cx="618" cy="408" rx="15" ry="18" fill="#0F172A" style={{ fill: 'url(#tireTreadGrad) #0F172A' }} stroke="#334155" strokeWidth={1.8} />
+      <circle cx="618" cy="408" r="7.5" fill="#CBD5E1" style={{ fill: 'url(#alloyRimGrad) #CBD5E1' }} stroke="#00F2FE" strokeWidth={1.2} />
       <circle cx="618" cy="408" r="2.8" fill="#0F172A" />
     </g>
   );
@@ -663,7 +665,6 @@ export const DronePartCardVisual: React.FC<{
         ...style,
       }}
     >
-      <DroneSvgDefs />
       {partKey === 'kanat' && <DroneWingGeometry section="all" />}
       {partKey === 'motor' && <DroneMotorGeometry />}
       {partKey === 'kuyruk' && <DroneTailGeometry />}

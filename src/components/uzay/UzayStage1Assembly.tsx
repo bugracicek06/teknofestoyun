@@ -753,7 +753,6 @@ export const UzayStage1Assembly: React.FC<UzayStage1AssemblyProps> = ({
               }}
             >
               <svg viewBox="0 0 1000 700" style={{ width: '92%', height: '92%' }}>
-                <SatelliteDefs />
                 <FullyAssembledSatellite />
               </svg>
             </div>

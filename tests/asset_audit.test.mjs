@@ -88,3 +88,76 @@ test('Critical Assets in Git: Aircraft, Spacecraft, Robot Mascot, and Certificat
     assert.ok(exists, `Critical asset must exist on disk: ${f}`);
   }
 });
+
+test('Bölüm 5 (Milli Teknoloji) & Bölüm 6 (Uzay): Placed-part visual rendering integrity', () => {
+  // 1. Verify Bölüm 6 Spacecraft Model has no fragile unresolved filter references
+  const uzayModelPath = path.join(projectRoot, 'src/components/uzay/UzaySatelliteModel.tsx');
+  const uzayContent = fs.readFileSync(uzayModelPath, 'utf8');
+
+  // Must NOT have filter="url(#partDropShadow)" on placed parts
+  assert.doesNotMatch(
+    uzayContent,
+    /filter="url\(#partDropShadow\)"/,
+    'UzaySatelliteModel must not use fragile filter="url(#partDropShadow)" on placed parts'
+  );
+
+  // Must export all 6 placed geometries
+  const requiredUzayExports = [
+    'SatelliteBodyGeometry',
+    'SatelliteSolarLeftGeometry',
+    'SatelliteSolarRightGeometry',
+    'SatelliteAntennaGeometry',
+    'SatelliteSensorGeometry',
+    'SatelliteHeatShieldGeometry',
+    'SatellitePartCardPreview',
+    'FullyAssembledSatellite',
+  ];
+  for (const exp of requiredUzayExports) {
+    assert.ok(uzayContent.includes(`export const ${exp}`), `Must export ${exp}`);
+  }
+
+  // 2. Verify Bölüm 5 Drone Model has no zero-width stroke lines for oleo struts and uses reliable rects
+  const milliModelPath = path.join(projectRoot, 'src/components/milli/MilliDroneModel.tsx');
+  const milliContent = fs.readFileSync(milliModelPath, 'utf8');
+
+  const requiredMilliExports = [
+    'DroneFuselageGeometry',
+    'DroneWingGeometry',
+    'DroneMotorGeometry',
+    'DroneTailGeometry',
+    'DroneLandingGearGeometry',
+    'DronePartCardVisual',
+    'CompletedDroneSvg',
+  ];
+  for (const exp of requiredMilliExports) {
+    assert.ok(milliContent.includes(`export const ${exp}`), `Must export ${exp}`);
+  }
+
+  // Verify landing gear nose strut uses 3D rect geometry (not zero-width line with boundingBox gradient)
+  assert.ok(
+    milliContent.includes('<rect x="271.5" y="330" width="7" height="54"'),
+    'Nose gear strut must use reliable rect geometry to ensure gradient evaluation'
+  );
+
+  // 3. Verify no duplicate defs inside card visual components
+  const cardPreviewSnippet = uzayContent.slice(
+    uzayContent.indexOf('SatellitePartCardPreview'),
+    uzayContent.indexOf('FullyAssembledSatellite')
+  );
+  assert.doesNotMatch(
+    cardPreviewSnippet,
+    /<SatelliteDefs\s*\/>/,
+    'SatellitePartCardPreview must not contain duplicate SatelliteDefs'
+  );
+
+  const cardVisualSnippet = milliContent.slice(
+    milliContent.indexOf('DronePartCardVisual'),
+    milliContent.indexOf('CompletedDroneSvg')
+  );
+  assert.doesNotMatch(
+    cardVisualSnippet,
+    /<DroneSvgDefs\s*\/>/,
+    'DronePartCardVisual must not contain duplicate DroneSvgDefs'
+  );
+});
+

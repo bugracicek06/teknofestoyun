@@ -138,8 +138,10 @@ export const SatelliteBodyGeometry: React.FC<GeometryGhostProps> = ({
     return (
       <g
         className="satellite-ghost-body"
-        opacity={opacityVal}
-        filter={isNear || isActiveTarget ? 'url(#cyanGlow)' : 'url(#blueprintGlow)'}
+        style={{
+          opacity: opacityVal,
+          filter: isNear || isActiveTarget ? 'drop-shadow(0 0 6px #38BDF8)' : 'drop-shadow(0 0 3px rgba(56, 189, 248, 0.6))',
+        }}
       >
         {/* Main hexagon/octagonal hull outline */}
         <polygon
@@ -167,7 +169,7 @@ export const SatelliteBodyGeometry: React.FC<GeometryGhostProps> = ({
   }
 
   return (
-    <g id="satellite-body-group" filter="url(#partDropShadow)">
+    <g id="satellite-body-group" style={{ filter: 'drop-shadow(0 5px 8px rgba(2, 6, 23, 0.65))' }}>
       {/* Structural side panels (Left facet) */}
       <polygon points="380,290 425,268 425,430 380,410" fill="url(#bodyMetalSide)" stroke="#94A3B8" strokeWidth="1" />
 
@@ -252,8 +254,10 @@ export const SatelliteSolarLeftGeometry: React.FC<GeometryGhostProps> = ({
     return (
       <g
         className="satellite-ghost-solar-left"
-        opacity={opacityVal}
-        filter={isNear || isActiveTarget ? 'url(#cyanGlow)' : 'url(#blueprintGlow)'}
+        style={{
+          opacity: opacityVal,
+          filter: isNear || isActiveTarget ? 'drop-shadow(0 0 6px #38BDF8)' : 'drop-shadow(0 0 3px rgba(56, 189, 248, 0.6))',
+        }}
       >
         <rect x="135" y="280" width="225" height="140" rx="4" fill="rgba(8, 22, 50, 0.45)" stroke={strokeColor} strokeWidth={strokeW} strokeDasharray={isNear ? 'none' : '5,4'} />
         <line x1="245" y1="280" x2="245" y2="420" stroke={strokeColor} strokeWidth="1.2" strokeDasharray="3,3" />
@@ -264,7 +268,7 @@ export const SatelliteSolarLeftGeometry: React.FC<GeometryGhostProps> = ({
   }
 
   return (
-    <g id="satellite-solar-left-group" filter="url(#partDropShadow)">
+    <g id="satellite-solar-left-group" style={{ filter: 'drop-shadow(0 5px 8px rgba(2, 6, 23, 0.65))' }}>
       {/* Titanium & Gold Articulation Truss */}
       <g id="left-truss-root">
         <polygon points="360,335 380,350 360,365" fill="url(#darkTitanium)" stroke="#94A3B8" strokeWidth="1" />
@@ -308,8 +312,10 @@ export const SatelliteSolarRightGeometry: React.FC<GeometryGhostProps> = ({
     return (
       <g
         className="satellite-ghost-solar-right"
-        opacity={opacityVal}
-        filter={isNear || isActiveTarget ? 'url(#cyanGlow)' : 'url(#blueprintGlow)'}
+        style={{
+          opacity: opacityVal,
+          filter: isNear || isActiveTarget ? 'drop-shadow(0 0 6px #38BDF8)' : 'drop-shadow(0 0 3px rgba(56, 189, 248, 0.6))',
+        }}
       >
         <rect x="640" y="280" width="225" height="140" rx="4" fill="rgba(8, 22, 50, 0.45)" stroke={strokeColor} strokeWidth={strokeW} strokeDasharray={isNear ? 'none' : '5,4'} />
         <line x1="755" y1="280" x2="755" y2="420" stroke={strokeColor} strokeWidth="1.2" strokeDasharray="3,3" />
@@ -320,7 +326,7 @@ export const SatelliteSolarRightGeometry: React.FC<GeometryGhostProps> = ({
   }
 
   return (
-    <g id="satellite-solar-right-group" filter="url(#partDropShadow)">
+    <g id="satellite-solar-right-group" style={{ filter: 'drop-shadow(0 5px 8px rgba(2, 6, 23, 0.65))' }}>
       {/* Titanium & Gold Articulation Truss */}
       <g id="right-truss-root">
         <polygon points="640,335 620,350 640,365" fill="url(#darkTitanium)" stroke="#94A3B8" strokeWidth="1" />
@@ -364,8 +370,10 @@ export const SatelliteAntennaGeometry: React.FC<GeometryGhostProps> = ({
     return (
       <g
         className="satellite-ghost-antenna"
-        opacity={opacityVal}
-        filter={isNear || isActiveTarget ? 'url(#cyanGlow)' : 'url(#blueprintGlow)'}
+        style={{
+          opacity: opacityVal,
+          filter: isNear || isActiveTarget ? 'drop-shadow(0 0 6px #38BDF8)' : 'drop-shadow(0 0 3px rgba(56, 189, 248, 0.6))',
+        }}
       >
         <ellipse cx="500" cy="140" rx="125" ry="46" fill="rgba(8, 22, 50, 0.45)" stroke={strokeColor} strokeWidth={strokeW} strokeDasharray={isNear ? 'none' : '5,4'} />
         <line x1="500" y1="75" x2="445" y2="140" stroke={strokeColor} strokeWidth="1.2" strokeDasharray="3,3" />
@@ -377,7 +385,7 @@ export const SatelliteAntennaGeometry: React.FC<GeometryGhostProps> = ({
   }
 
   return (
-    <g id="satellite-antenna-group" filter="url(#partDropShadow)">
+    <g id="satellite-antenna-group" style={{ filter: 'drop-shadow(0 5px 8px rgba(2, 6, 23, 0.65))' }}>
       {/* Gimbal Mounting Base */}
       <g id="antenna-gimbal-mount">
         <polygon points="488,250 512,250 508,205 492,205" fill="url(#darkTitanium)" stroke="#94A3B8" strokeWidth="1" />
@@ -423,8 +431,10 @@ export const SatelliteSensorGeometry: React.FC<GeometryGhostProps> = ({
     return (
       <g
         className="satellite-ghost-sensor"
-        opacity={opacityVal}
-        filter={isNear || isActiveTarget ? 'url(#cyanGlow)' : 'url(#blueprintGlow)'}
+        style={{
+          opacity: opacityVal,
+          filter: isNear || isActiveTarget ? 'drop-shadow(0 0 6px #38BDF8)' : 'drop-shadow(0 0 3px rgba(56, 189, 248, 0.6))',
+        }}
       >
         <circle cx="475" cy="350" r="36" fill="rgba(8, 22, 50, 0.45)" stroke={strokeColor} strokeWidth={strokeW} strokeDasharray={isNear ? 'none' : '4,3'} />
         <circle cx="475" cy="350" r="24" fill="none" stroke={strokeColor} strokeWidth="1.2" strokeDasharray="3,2" />
@@ -435,7 +445,7 @@ export const SatelliteSensorGeometry: React.FC<GeometryGhostProps> = ({
   }
 
   return (
-    <g id="satellite-sensor-group" filter="url(#partDropShadow)">
+    <g id="satellite-sensor-group" style={{ filter: 'drop-shadow(0 5px 8px rgba(2, 6, 23, 0.65))' }}>
       {/* Titanium Barrel Flange & Mounting Ring */}
       <circle cx="475" cy="350" r="34" fill="url(#darkTitanium)" stroke="#94A3B8" strokeWidth="2" />
       <circle cx="475" cy="350" r="30" fill="#090D16" stroke="#64748B" strokeWidth="1" />
@@ -482,8 +492,10 @@ export const SatelliteHeatShieldGeometry: React.FC<GeometryGhostProps> = ({
     return (
       <g
         className="satellite-ghost-heat-shield"
-        opacity={opacityVal}
-        filter={isNear || isActiveTarget ? 'url(#cyanGlow)' : 'url(#blueprintGlow)'}
+        style={{
+          opacity: opacityVal,
+          filter: isNear || isActiveTarget ? 'drop-shadow(0 0 6px #38BDF8)' : 'drop-shadow(0 0 3px rgba(56, 189, 248, 0.6))',
+        }}
       >
         <polygon
           points="442,440 558,440 575,500 425,500"
@@ -499,7 +511,7 @@ export const SatelliteHeatShieldGeometry: React.FC<GeometryGhostProps> = ({
   }
 
   return (
-    <g id="satellite-heat-shield-group" filter="url(#partDropShadow)">
+    <g id="satellite-heat-shield-group" style={{ filter: 'drop-shadow(0 5px 8px rgba(2, 6, 23, 0.65))' }}>
       {/* Top Interface Adapter Ring */}
       <ellipse cx="500" cy="440" rx="56" ry="12" fill="url(#darkTitanium)" stroke="#94A3B8" strokeWidth="1.5" />
 
@@ -526,7 +538,6 @@ export const SatelliteHeatShieldGeometry: React.FC<GeometryGhostProps> = ({
   );
 };
 
-// Bottom Card Preview Component (Self-contained, perfectly centered and scaled for EVERY part)
 export const SatellitePartCardPreview: React.FC<{ partId: SpacecraftPartId }> = ({ partId }) => {
   return (
     <svg
@@ -538,7 +549,6 @@ export const SatellitePartCardPreview: React.FC<{ partId: SpacecraftPartId }> = 
         overflow: 'visible',
       }}
     >
-      <SatelliteDefs />
       {partId === 'body' && (
         <g transform="translate(80, 55) scale(0.44) translate(-500, -350)">
           <SatelliteBodyGeometry />
@@ -576,7 +586,7 @@ export const SatellitePartCardPreview: React.FC<{ partId: SpacecraftPartId }> = 
 // Fully Assembled Unified Satellite View
 export const FullyAssembledSatellite: React.FC = () => {
   return (
-    <g id="fully-assembled-satellite" filter="url(#softGlow)">
+    <g id="fully-assembled-satellite" style={{ filter: 'drop-shadow(0 0 12px rgba(56, 189, 248, 0.45))' }}>
       {/* 1. Left Solar Array */}
       <SatelliteSolarLeftGeometry />
       {/* 2. Right Solar Array */}
