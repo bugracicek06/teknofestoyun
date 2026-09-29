@@ -2146,7 +2146,7 @@ button:disabled {
 
 .animal-tile {
   min-height: unset;
-  height: clamp(80px, 9.2vh, 96px);
+  height: clamp(66px, 8.5vh, 96px);
   padding: 8px 10px;
   border-radius: 12px;
   background: rgba(9, 23, 40, 0.74);
@@ -2316,6 +2316,25 @@ button:disabled {
   }
   .animal-tile-name {
     font-size: 13px;
+  }
+}
+
+@media (max-height: 740px) {
+  .gobeklitepe-shell {
+    padding: 6px 16px;
+  }
+  .animal-tile {
+    height: 64px;
+    padding: 4px 6px;
+  }
+  .animal-tile-icon-wrap {
+    height: 28px;
+  }
+  .animal-tile-svg {
+    max-height: 26px;
+  }
+  .animal-tile-name {
+    font-size: 11.5px;
   }
 }
 

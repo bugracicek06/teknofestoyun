@@ -328,7 +328,7 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
         alignItems: 'center',
         justifyContent: 'space-between',
         userSelect: 'none',
-        padding: '0 16px 48px 16px',
+        padding: '0 16px 8px 16px',
         boxSizing: 'border-box',
         overflow: 'hidden',
       }}
@@ -460,9 +460,9 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
           className="devrim-engine-stage"
           style={{
             position: 'relative',
-            width: 'min(920px, 60vw)',
+            width: 'min(900px, 58vw)',
             aspectRatio: '16 / 10',
-            maxHeight: 'calc(100vh - 250px)',
+            maxHeight: 'clamp(220px, 45vh, 460px)',
             borderRadius: '24px',
             overflow: 'hidden',
             boxShadow: '0 24px 70px rgba(0,0,0,0.85), 0 0 0 1.5px rgba(245, 158, 11, 0.35)',
@@ -614,11 +614,12 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
       <div
         className="devrim-parts-tray-container"
         style={{
-          width: 'min(920px, 60vw)',
+          width: 'min(900px, 58vw)',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           gap: '3px',
+          flexShrink: 0,
           zIndex: 30,
         }}
       >
@@ -684,7 +685,7 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
                   alignItems: 'center',
                   padding: '4px 8px',
                   borderRadius: '12px',
-                  height: '76px',
+                  height: 'clamp(62px, 8.5vh, 76px)',
                   background: isPlaced
                     ? 'rgba(15, 23, 42, 0.4)'
                     : isSelected

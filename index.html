@@ -32,7 +32,7 @@
             const txt = (a.textContent || '').toLowerCase();
             if (txt.includes('netlify') || a.querySelector('img[src*="netlify"]')) {
               const root = document.getElementById('root');
-              let curr = a as HTMLElement;
+              let curr = a;
               while (curr && curr.parentElement && curr.parentElement !== document.body && curr.parentElement !== root) {
                 curr = curr.parentElement;
               }

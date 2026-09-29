@@ -515,11 +515,11 @@ export const CiniSanatiMissionShell: React.FC<CiniSanatiMissionShellProps> = ({
           zIndex: 10,
           flex: 1,
           display: 'grid',
-          gridTemplateColumns: currentStep === 1 ? '320px 1fr' : '310px 1fr 380px',
+          gridTemplateColumns: currentStep === 1 ? 'clamp(260px, 24vw, 320px) 1fr' : 'clamp(230px, 19vw, 290px) 1fr clamp(260px, 22vw, 350px)',
           alignItems: 'center',
-          padding: '0 32px',
-          gap: '20px',
-          maxHeight: 'calc(100% - 145px)',
+          padding: '0 clamp(12px, 2vw, 28px)',
+          gap: 'clamp(10px, 1.5vw, 20px)',
+          maxHeight: 'calc(100% - 130px)',
         }}
       >
         {/* -----------------------------------------------------------------------

@@ -504,10 +504,10 @@ export const MilliStage1Assembly: React.FC<MilliStage1AssemblyProps> = ({
           ref={assemblyBoxRef}
           style={{
             position: 'relative',
-            width: 'clamp(920px, 60vw, 1160px)',
+            width: 'min(1100px, 68vw)',
             aspectRatio: '1000 / 500',
-            maxHeight: 'clamp(410px, 56vh, 580px)',
-            transform: 'translateY(clamp(32px, 5vh, 58px))',
+            maxHeight: 'clamp(240px, 46vh, 480px)',
+            transform: 'translateY(clamp(4px, 1.5vh, 24px))',
           }}
         >
           <svg
@@ -655,11 +655,12 @@ export const MilliStage1Assembly: React.FC<MilliStage1AssemblyProps> = ({
           display: 'flex',
           alignItems: 'stretch',
           justifyContent: 'center',
-          gap: '16px',
+          gap: 'clamp(8px, 1.2vw, 16px)',
           width: '100%',
           maxWidth: '1360px',
           margin: '0 auto',
-          padding: '0 24px clamp(12px, 1.8vh, 18px)',
+          padding: '0 clamp(12px, 2vw, 24px) clamp(6px, 1vh, 14px)',
+          flexShrink: 0,
           zIndex: 25,
         }}
       >
@@ -677,8 +678,8 @@ export const MilliStage1Assembly: React.FC<MilliStage1AssemblyProps> = ({
                 position: 'relative',
                 flex: 1,
                 maxWidth: '320px',
-                minWidth: '200px',
-                height: 'clamp(145px, 17vh, 175px)',
+                minWidth: 'clamp(140px, 17vw, 220px)',
+                height: 'clamp(94px, 13.5vh, 150px)',
                 borderRadius: '16px',
                 background: isPlaced
                   ? 'linear-gradient(180deg, rgba(8, 36, 32, 0.96) 0%, rgba(4, 22, 18, 0.96) 100%)'
@@ -754,8 +755,8 @@ export const MilliStage1Assembly: React.FC<MilliStage1AssemblyProps> = ({
               {/* Card Bottom Row: Icon, Title & Sürükle ve Tak Action */}
               <div
                 style={{
-                  height: '46px',
-                  padding: '0 14px 10px',
+                  height: 'clamp(36px, 4.5vh, 46px)',
+                  padding: '0 clamp(8px, 1vw, 14px) clamp(4px, 0.6vh, 8px)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
@@ -771,8 +772,8 @@ export const MilliStage1Assembly: React.FC<MilliStage1AssemblyProps> = ({
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <div
                     style={{
-                      width: '26px',
-                      height: '26px',
+                      width: 'clamp(22px, 2.5vh, 26px)',
+                      height: 'clamp(22px, 2.5vh, 26px)',
                       borderRadius: '6px',
                       background: isPlaced
                         ? 'rgba(16, 185, 129, 0.18)'

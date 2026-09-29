@@ -561,10 +561,10 @@ export const MilliStage2Payload: React.FC<MilliStage2PayloadProps> = ({
           bottom: 'clamp(14px, 2.5vh, 28px)',
           left: '50%',
           transform: 'translateX(-50%)',
-          width: 'clamp(620px, 68vw, 920px)',
+          width: 'clamp(560px, 65vw, 920px)',
           display: 'grid',
           gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: 'clamp(12px, 1.8vw, 24px)',
+          gap: 'clamp(10px, 1.5vw, 20px)',
           zIndex: 25,
         }}
       >
@@ -601,7 +601,7 @@ export const MilliStage2Payload: React.FC<MilliStage2PayloadProps> = ({
               <div
                 style={{
                   width: '100%',
-                  height: 'clamp(82px, 11vh, 112px)',
+                  height: 'clamp(70px, 9.5vh, 105px)',
                   borderRadius: '10px',
                   background: 'rgba(2, 6, 16, 0.88)',
                   border: isSelected

@@ -192,8 +192,8 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
       style={{
         position: 'fixed',
         inset: 0,
-        width: '100vw',
-        height: '100vh',
+        width: '100%',
+        height: '100%',
         zIndex: 50,
         display: 'flex',
         flexDirection: 'column',
@@ -384,9 +384,9 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
           alignItems: 'center',
           justifyContent: currentStep === 3 ? 'center' : 'space-between',
           padding: currentStep === 3 ? '0 16px' : '0 clamp(12px, 2vw, 28px)',
-          paddingBottom: 'clamp(56px, 8vh, 76px)',
+          paddingBottom: currentStep === 3 ? '6px' : 'clamp(52px, 7vh, 72px)',
           gap: currentStep === 3 ? '0' : 'clamp(10px, 1.8vw, 24px)',
-          maxHeight: 'calc(100vh - 110px)',
+          maxHeight: 'calc(100% - 70px)',
           overflow: 'hidden',
           boxSizing: 'border-box',
         }}

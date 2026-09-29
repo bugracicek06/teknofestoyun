@@ -316,7 +316,7 @@ export const UzayStage1Assembly: React.FC<UzayStage1AssemblyProps> = ({
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
-        padding: '8px 24px 12px 24px',
+        padding: 'clamp(4px, 0.8vh, 8px) clamp(12px, 1.8vw, 24px) clamp(6px, 1vh, 10px)',
         boxSizing: 'border-box',
         overflow: 'hidden',
         userSelect: 'none',
@@ -351,8 +351,8 @@ export const UzayStage1Assembly: React.FC<UzayStage1AssemblyProps> = ({
         className="uzay-assembly-body"
         style={{
           display: 'grid',
-          gridTemplateColumns: '300px 1fr 290px',
-          gap: '16px',
+          gridTemplateColumns: 'clamp(230px, 18.5vw, 290px) 1fr clamp(220px, 17.5vw, 270px)',
+          gap: 'clamp(8px, 1.2vw, 16px)',
           alignItems: 'stretch',
           flex: 1,
           minHeight: 0,
@@ -909,16 +909,17 @@ export const UzayStage1Assembly: React.FC<UzayStage1AssemblyProps> = ({
       <div
         className="uzay-bottom-tray"
         style={{
-          marginTop: '10px',
+          marginTop: 'clamp(4px, 0.7vh, 8px)',
           background: 'rgba(8, 18, 38, 0.94)',
           border: '1px solid rgba(56, 189, 248, 0.3)',
           borderRadius: '16px',
-          padding: '10px 16px',
+          padding: 'clamp(6px, 0.9vh, 10px) clamp(10px, 1.4vw, 16px)',
           boxShadow: '0 8px 32px rgba(2, 6, 23, 0.65)',
           backdropFilter: 'blur(12px)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '8px',
+          gap: 'clamp(4px, 0.6vh, 8px)',
+          flexShrink: 0,
           zIndex: 10,
         }}
       >
@@ -946,7 +947,7 @@ export const UzayStage1Assembly: React.FC<UzayStage1AssemblyProps> = ({
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(6, 1fr)',
-            gap: '12px',
+            gap: 'clamp(8px, 1vw, 12px)',
           }}
         >
           {SPACECRAFT_PARTS.map(part => {
@@ -961,7 +962,7 @@ export const UzayStage1Assembly: React.FC<UzayStage1AssemblyProps> = ({
                 onPointerDown={e => handlePointerDown(e, part)}
                 style={{
                   position: 'relative',
-                  height: '118px',
+                  height: 'clamp(76px, 11vh, 112px)',
                   borderRadius: '12px',
                   background: isPlaced
                     ? 'linear-gradient(180deg, rgba(6, 78, 59, 0.5) 0%, rgba(15, 23, 42, 0.85) 100%)'

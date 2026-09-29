@@ -677,16 +677,17 @@ export const UzayStage3Orbit: React.FC<UzayStage3OrbitProps> = ({
       <div
         className="uzay-bottom-orbits"
         style={{
-          marginTop: '10px',
+          marginTop: 'clamp(4px, 0.7vh, 8px)',
           background: 'rgba(8, 18, 38, 0.94)',
           border: '1px solid rgba(56, 189, 248, 0.3)',
           borderRadius: '16px',
-          padding: '10px 18px',
+          padding: 'clamp(6px, 0.9vh, 10px) clamp(10px, 1.4vw, 18px)',
           boxShadow: '0 8px 32px rgba(2, 6, 23, 0.65)',
           backdropFilter: 'blur(12px)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '8px',
+          gap: 'clamp(4px, 0.6vh, 8px)',
+          flexShrink: 0,
           zIndex: 10,
         }}
       >
@@ -725,7 +726,7 @@ export const UzayStage3Orbit: React.FC<UzayStage3OrbitProps> = ({
                 onClick={() => handleSelectOrbit(orbit)}
                 style={{
                   position: 'relative',
-                  height: '115px',
+                  height: 'clamp(78px, 11vh, 110px)',
                   borderRadius: '12px',
                   background: isSelected
                     ? `linear-gradient(180deg, ${orbit.id === 'leo' ? 'rgba(2, 132, 199, 0.25)' : orbit.id === 'meo' ? 'rgba(217, 119, 6, 0.25)' : 'rgba(147, 51, 234, 0.25)'} 0%, rgba(15, 23, 42, 0.95) 100%)`
