@@ -8,6 +8,7 @@ interface DevrimEngineAssemblyProps {
   onComplete: () => void;
   onPartPlaced?: (partId: string) => void;
   onFeedbackMessage?: (msg: string) => void;
+  bottomSlot?: React.ReactNode;
 }
 
 interface DragState {
@@ -23,6 +24,7 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
   onComplete,
   onPartPlaced,
   onFeedbackMessage,
+  bottomSlot,
 }) => {
   // Stable shuffled tray order: randomized ONCE on initial mount via Fisher-Yates
   const [shuffledParts] = useState<DevrimEnginePart[]>(() => shuffleArray(DEVRIM_ENGINE_PARTS));
@@ -328,7 +330,7 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
         alignItems: 'center',
         justifyContent: 'space-between',
         userSelect: 'none',
-        padding: '0 16px 8px 16px',
+        padding: '0 16px 0 16px',
         boxSizing: 'border-box',
         overflow: 'hidden',
       }}
@@ -460,9 +462,9 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
           className="devrim-engine-stage"
           style={{
             position: 'relative',
-            width: 'min(900px, 58vw)',
+            width: 'min(960px, 60vw)',
             aspectRatio: '16 / 10',
-            maxHeight: 'clamp(220px, 45vh, 460px)',
+            maxHeight: 'clamp(200px, 43vh, 430px)',
             borderRadius: '24px',
             overflow: 'hidden',
             boxShadow: '0 24px 70px rgba(0,0,0,0.85), 0 0 0 1.5px rgba(245, 158, 11, 0.35)',
@@ -470,7 +472,9 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            transform: isAllCompleted ? 'scale(1.015)' : 'scale(1)',
+            transform: isAllCompleted
+              ? 'translateY(clamp(-8px, -1vh, -4px)) scale(1.015)'
+              : 'translateY(clamp(-8px, -1vh, -4px)) scale(1)',
             transition: 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)',
           }}
         >
@@ -609,20 +613,33 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
       </div>
 
       {/* =========================================================================
-          BOTTOM: PARÇALAR TEPSİSİ (4 Draggable Cards, Shuffled at Start)
+          BOTTOM DOCK AREA: PARÇALAR TEPSİSİ + ADIM GÖSTERGESİ (FLEX COLUMN)
+          Structural guarantee: partsTray.bottom + minimum 8px <= progressBar.top
           ========================================================================= */}
       <div
-        className="devrim-parts-tray-container"
+        className="devrim-assembly-bottom-area"
         style={{
-          width: 'min(900px, 58vw)',
+          width: '100%',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '3px',
+          gap: 'clamp(8px, 1.2vh, 12px)',
           flexShrink: 0,
           zIndex: 30,
         }}
       >
+        {/* ÜST: PARÇALAR TEPSİSİ */}
+        <div
+          className="devrim-parts-tray-container"
+          style={{
+            width: 'min(860px, 55vw)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '3px',
+            flexShrink: 0,
+          }}
+        >
         {/* Tray Header Bar */}
         <div
           style={{
@@ -685,7 +702,7 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
                   alignItems: 'center',
                   padding: '4px 8px',
                   borderRadius: '12px',
-                  height: 'clamp(62px, 8.5vh, 76px)',
+                  height: 'clamp(66px, 8.8vh, 78px)',
                   background: isPlaced
                     ? 'rgba(15, 23, 42, 0.4)'
                     : isSelected
@@ -754,7 +771,7 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
                   <div
                     style={{
                       width: '100%',
-                      height: '50px',
+                      height: 'clamp(40px, 5.2vh, 48px)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -810,6 +827,10 @@ export const DevrimEngineAssembly: React.FC<DevrimEngineAssemblyProps> = ({
           })}
         </div>
       </div>
+
+      {/* ALT: ADIM GÖSTERGESİ (PROGRESS BAR) */}
+      {bottomSlot}
+    </div>
 
       {/* =========================================================================
           ACTIVE DRAG GHOST (Follows Cursor / Touch)

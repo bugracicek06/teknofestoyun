@@ -186,6 +186,106 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
     EventBus.emit('mission-result', 'sanayilesme');
   };
 
+  const renderStepProgressDock = (isFlow: boolean) => (
+    <div
+      className="devrim-step-dock"
+      style={{
+        position: isFlow ? 'relative' : 'absolute',
+        bottom: isFlow ? undefined : 'clamp(8px, 1.4vh, 14px)',
+        left: isFlow ? undefined : '50%',
+        transform: isFlow ? undefined : 'translateX(-50%)',
+        zIndex: 30,
+        background: 'rgba(8, 14, 26, 0.85)',
+        backdropFilter: 'blur(12px)',
+        border: '1px solid rgba(255, 255, 255, 0.14)',
+        borderRadius: '9999px',
+        padding: '5px 22px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '16px',
+        boxShadow: '0 8px 30px rgba(0,0,0,0.6), 0 0 16px rgba(245, 164, 0, 0.15)',
+        flexShrink: 0,
+      }}
+    >
+      {[
+        { num: 1, label: 'TANIŞ' },
+        { num: 2, label: 'KAPUT' },
+        { num: 3, label: 'İNŞA ET' },
+        { num: 4, label: 'ÇALIŞTIR' },
+        { num: 5, label: 'TAMAMLA' },
+      ].map((s, idx) => {
+        const isCompleted = currentStep > s.num;
+        const isCurrent = currentStep === s.num;
+
+        return (
+          <React.Fragment key={s.num}>
+            {idx > 0 && (
+              <div
+                style={{
+                  width: '32px',
+                  height: '2px',
+                  background: currentStep > idx
+                    ? '#10B981'
+                    : 'rgba(255, 255, 255, 0.18)',
+                  transition: 'background 0.4s ease',
+                }}
+              />
+            )}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <div
+                style={{
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '50%',
+                  background: isCompleted
+                    ? '#10B981'
+                    : isCurrent
+                    ? 'linear-gradient(135deg, #F5A400 0%, #D97706 100%)'
+                    : 'rgba(255, 255, 255, 0.08)',
+                  border: isCurrent
+                    ? '2px solid #FEF08A'
+                    : isCompleted
+                    ? '1.5px solid #6EE7B7'
+                    : '1.5px solid rgba(255, 255, 255, 0.2)',
+                  color: isCompleted ? '#FFFFFF' : isCurrent ? '#0F172A' : '#94A3B8',
+                  fontSize: '12px',
+                  fontWeight: '900',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: isCurrent
+                    ? '0 0 16px rgba(245, 164, 0, 0.9)'
+                    : isCompleted
+                    ? '0 0 10px rgba(16, 185, 129, 0.5)'
+                    : 'none',
+                  transition: 'all 0.3s ease',
+                }}
+              >
+                {isCompleted ? '✓' : s.num}
+              </div>
+              <span
+                style={{
+                  fontSize: '11px',
+                  fontWeight: isCurrent ? '900' : '700',
+                  color: isCurrent ? '#F5A400' : isCompleted ? '#A7F3D0' : '#64748B',
+                  letterSpacing: '0.6px',
+                }}
+              >
+                {s.label}
+              </span>
+            </div>
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+
   return (
     <div
       className="devrim-mission-shell"
@@ -384,9 +484,9 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
           alignItems: 'center',
           justifyContent: currentStep === 3 ? 'center' : 'space-between',
           padding: currentStep === 3 ? '0 16px' : '0 clamp(12px, 2vw, 28px)',
-          paddingBottom: currentStep === 3 ? '6px' : 'clamp(52px, 7vh, 72px)',
+          paddingBottom: currentStep === 3 ? '4px' : 'clamp(52px, 7vh, 72px)',
           gap: currentStep === 3 ? '0' : 'clamp(10px, 1.8vw, 24px)',
-          maxHeight: 'calc(100% - 70px)',
+          maxHeight: currentStep === 3 ? 'calc(100% - 46px)' : 'calc(100% - 60px)',
           overflow: 'hidden',
           boxSizing: 'border-box',
         }}
@@ -561,7 +661,10 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
               justifyContent: 'center',
             }}
           >
-            <DevrimEngineAssembly onComplete={handleAssemblyComplete} />
+            <DevrimEngineAssembly
+              onComplete={handleAssemblyComplete}
+              bottomSlot={renderStepProgressDock(true)}
+            />
           </div>
         ) : (
           /* Steps 1, 2, 4, 5: Interactive Museum Vehicle Scene */
@@ -928,103 +1031,10 @@ export const DevrimOtomobiliMissionShell: React.FC<DevrimOtomobiliMissionShellPr
       </main>
 
       {/* =========================================================================
-          BOTTOM CENTER FLOATING 5-STEP PROGRESS DOCK
+          BOTTOM CENTER FLOATING 5-STEP PROGRESS DOCK (Steps 1, 2, 4, 5)
+          Step 3 renders the progress dock directly inside the assembly layout flow.
           ========================================================================= */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 'clamp(10px, 1.8vh, 18px)',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          zIndex: 30,
-          background: 'rgba(8, 14, 26, 0.85)',
-          backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(255, 255, 255, 0.14)',
-          borderRadius: '9999px',
-          padding: '6px 24px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '16px',
-          boxShadow: '0 8px 30px rgba(0,0,0,0.6), 0 0 16px rgba(245, 164, 0, 0.15)',
-        }}
-      >
-        {[
-          { num: 1, label: 'TANIŞ' },
-          { num: 2, label: 'KAPUT' },
-          { num: 3, label: 'İNŞA ET' },
-          { num: 4, label: 'ÇALIŞTIR' },
-          { num: 5, label: 'TAMAMLA' },
-        ].map((s, idx) => {
-          const isCompleted = currentStep > s.num;
-          const isCurrent = currentStep === s.num;
-
-          return (
-            <React.Fragment key={s.num}>
-              {idx > 0 && (
-                <div
-                  style={{
-                    width: '32px',
-                    height: '2px',
-                    background: currentStep > idx
-                      ? '#10B981'
-                      : 'rgba(255, 255, 255, 0.18)',
-                    transition: 'background 0.4s ease',
-                  }}
-                />
-              )}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}
-              >
-                <div
-                  style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '50%',
-                    background: isCompleted
-                      ? '#10B981'
-                      : isCurrent
-                      ? 'linear-gradient(135deg, #F5A400 0%, #D97706 100%)'
-                      : 'rgba(255, 255, 255, 0.08)',
-                    border: isCurrent
-                      ? '2px solid #FEF08A'
-                      : isCompleted
-                      ? '1.5px solid #6EE7B7'
-                      : '1.5px solid rgba(255, 255, 255, 0.2)',
-                    color: isCompleted ? '#FFFFFF' : isCurrent ? '#0F172A' : '#94A3B8',
-                    fontSize: '12px',
-                    fontWeight: '900',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: isCurrent
-                      ? '0 0 16px rgba(245, 164, 0, 0.9)'
-                      : isCompleted
-                      ? '0 0 10px rgba(16, 185, 129, 0.5)'
-                      : 'none',
-                    transition: 'all 0.3s ease',
-                  }}
-                >
-                  {isCompleted ? '✓' : s.num}
-                </div>
-                <span
-                  style={{
-                    fontSize: '11px',
-                    fontWeight: isCurrent ? '900' : '700',
-                    color: isCurrent ? '#F5A400' : isCompleted ? '#A7F3D0' : '#64748B',
-                    letterSpacing: '0.6px',
-                  }}
-                >
-                  {s.label}
-                </span>
-              </div>
-            </React.Fragment>
-          );
-        })}
-      </div>
+      {currentStep !== 3 && renderStepProgressDock(false)}
 
       {/* Subtle Atatürk Quote & Signature (Bottom Right Floating) */}
       <div

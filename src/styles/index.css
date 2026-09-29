@@ -3870,12 +3870,13 @@ body.cert-route-active #root,
 
 @media (max-height: 900px) {
   .devrim-mission-shell main {
-    padding: 0 20px !important;
+    padding-left: 20px !important;
+    padding-right: 20px !important;
     gap: 16px !important;
   }
   .devrim-parts-tray {
-    min-height: 86px !important;
-    padding: 8px 12px !important;
+    min-height: 68px !important;
+    padding: 6px 12px !important;
     gap: 8px !important;
   }
 }
@@ -3888,13 +3889,14 @@ body.cert-route-active #root,
     padding: 6px 18px !important;
   }
   .devrim-mission-shell main {
-    padding: 0 16px !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
     gap: 12px !important;
-    max-height: calc(100vh - 120px) !important;
+    max-height: calc(100% - 46px) !important;
   }
   .devrim-parts-tray {
-    margin-top: 6px !important;
-    padding: 6px 10px !important;
+    margin-top: 4px !important;
+    padding: 5px 10px !important;
   }
 }
 
