@@ -14,6 +14,7 @@ export interface CertificateRecord {
   completedAt: string;
   completedModules: string[];
   projectName: string;
+  selectedGame?: string;
   results?: Record<string, unknown>;
 }
 
@@ -159,6 +160,7 @@ function createStandardEnvelope(record: CertificateRecord) {
       certificateNumber: record.certificateNumber,
       completedModules: record.completedModules,
       projectName: record.projectName,
+      selectedGame: record.selectedGame,
       results: record.results || {},
     },
   };
@@ -276,6 +278,7 @@ export default async function handler(req: Request | any, context?: any) {
         completedAt,
         completedModules,
         projectName: 'Medeniyetten Millî Teknolojiye',
+        selectedGame: typeof data.selectedGame === 'string' ? data.selectedGame : undefined,
         results: data.results || {},
       };
 

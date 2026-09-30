@@ -10,6 +10,8 @@ export interface GameTopBarProps {
   progressText?: string;
   timeText?: string;
   accentKey?: 'gobeklitepe' | 'demir_cagi' | 'anadolu_ustaligi' | 'sanayilesme' | 'milli_teknoloji' | 'uzay_teknolojileri';
+  stepInGame?: number;
+  totalModulesInGame?: number;
   isAudioMuted?: boolean;
   isPaused?: boolean;
   isFullscreen?: boolean;
@@ -28,6 +30,8 @@ export const GameTopBar: React.FC<GameTopBarProps> = ({
   progressText,
   timeText,
   accentKey,
+  stepInGame,
+  totalModulesInGame = 2,
   isAudioMuted = false,
   isPaused = false,
   isFullscreen = false,
@@ -37,6 +41,8 @@ export const GameTopBar: React.FC<GameTopBarProps> = ({
   onPause,
   onToggleFullscreen,
 }) => {
+  const displayStep = stepInGame ?? (((moduleNumber - 1) % 2) + 1);
+
   return (
     <header className="game-top-bar" data-module-accent={accentKey}>
       {/* SOL: Geri Butonu + Bölüm Bilgisi */}
@@ -45,8 +51,8 @@ export const GameTopBar: React.FC<GameTopBarProps> = ({
           type="button"
           className="top-bar-back-btn"
           onClick={onBack}
-          aria-label="Haritaya Geri Dön"
-          title="Bölüm Haritasına Dön"
+          aria-label="Ana Menüye Geri Dön"
+          title="Ana Menüye Dön"
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
@@ -54,7 +60,7 @@ export const GameTopBar: React.FC<GameTopBarProps> = ({
         </button>
 
         <div className="top-bar-module-badge">
-          <span className="top-bar-eyebrow">BÖLÜM {moduleNumber} / 6</span>
+          <span className="top-bar-eyebrow">BÖLÜM {displayStep} / {totalModulesInGame}</span>
           <div className="top-bar-title-wrap">
             <h1 className="top-bar-module-title">{moduleTitle}</h1>
             {moduleSubtitle && (

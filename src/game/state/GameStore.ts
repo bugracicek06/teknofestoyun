@@ -7,8 +7,16 @@ import {
   REQUIRED_MODULE_IDS,
   areAllModulesCompleted,
 } from '../systems/certificate.ts';
+import {
+  type GameGroupId,
+  type GameGroupConfig,
+  GAME_GROUPS,
+  normalizeModuleId,
+  areGameModulesCompleted,
+} from '../../config/gameGroups.ts';
 
 export interface GameProgressState {
+  selectedGame: GameGroupId | null;
   unlockedModuleIds: string[];
   completedModuleIds: string[];
   currentModuleId: string;
@@ -29,6 +37,7 @@ class GameStoreManager {
   ];
 
   private state: GameProgressState = {
+    selectedGame: null,
     unlockedModuleIds: ['gobeklitepe'],
     completedModuleIds: [],
     currentModuleId: 'gobeklitepe',
@@ -56,6 +65,38 @@ class GameStoreManager {
     return structuredClone(this.state.playerSession);
   }
 
+  public getSelectedGame(): GameGroupId | null {
+    return this.state.selectedGame;
+  }
+
+  public getCurrentGameGroup(): GameGroupConfig | null {
+    if (!this.state.selectedGame) return null;
+    return GAME_GROUPS[this.state.selectedGame] || null;
+  }
+
+  /**
+   * Select a game group ('game-1', 'game-2', 'game-3').
+   * Cleans any half-session state deterministically to avoid state bleed.
+   */
+  public selectGame(gameId: GameGroupId): void {
+    const group = GAME_GROUPS[gameId];
+    if (!group) return;
+
+    this.state.selectedGame = gameId;
+    this.state.playerSession.selectedGame = gameId;
+    this.state.completedModuleIds = [];
+    this.state.results = {};
+    this.state.playerSession.completedModules = [];
+    this.state.playerSession.completedAt = null;
+    this.state.playerSession.certificateId = null;
+    this.state.playerSession.certificateNumber = null;
+
+    this.state.unlockedModuleIds = [group.modules[0]];
+    this.state.currentModuleId = group.modules[0];
+
+    this.persistAndNotify();
+  }
+
   public setPlayerFullName(rawName: string): { success: boolean; cleanedName: string; error?: string } {
     const { isValid, cleanedName, error } = validateAndCleanFullName(rawName);
     if (!isValid) {
@@ -74,38 +115,77 @@ class GameStoreManager {
     this.persistAndNotify();
   }
 
-  public isAllModulesCompleted(): boolean {
+  /**
+   * Checks if the currently selected game's 2 modules are completed.
+   */
+  public isCurrentGameCompleted(): boolean {
+    if (this.state.selectedGame) {
+      return areGameModulesCompleted(this.state.selectedGame, this.state.completedModuleIds);
+    }
     return areAllModulesCompleted(this.state.completedModuleIds);
   }
 
+  /**
+   * Authoritative check for certificate qualification.
+   * In the new structure, completing the 2 modules of the selected game qualifies for certificate.
+   */
+  public isAllModulesCompleted(): boolean {
+    return this.isCurrentGameCompleted();
+  }
+
   public getUnlockedModuleIds(): string[] {
+    if (this.state.selectedGame) {
+      const group = GAME_GROUPS[this.state.selectedGame];
+      if (group) {
+        return group.modules.filter(id => this.isModuleUnlocked(id));
+      }
+    }
     return this.moduleOrder.filter(id => this.isModuleUnlocked(id));
   }
 
   public isModuleUnlocked(moduleId: string): boolean {
-    const normalizedId = moduleId === 'serinhisar_bicakciligi' ? 'sanayilesme' : moduleId;
+    const normalizedId = normalizeModuleId(moduleId);
+
+    // If an active game is selected:
+    if (this.state.selectedGame) {
+      const group = GAME_GROUPS[this.state.selectedGame];
+      if (!group) return false;
+      if (!group.modules.includes(normalizedId as any)) {
+        return false;
+      }
+      // 1st module of the selected game is always unlocked
+      if (normalizedId === group.modules[0]) {
+        return true;
+      }
+      // 2nd module requires the 1st module to be completed
+      if (normalizedId === group.modules[1]) {
+        return this.isModuleCompleted(group.modules[0]);
+      }
+      return false;
+    }
+
+    // Fallback when no game is explicitly selected yet (legacy/linear mode):
     const index = this.moduleOrder.indexOf(normalizedId);
     if (index === -1) return false;
-    if (index === 0) return true; // 1. Bölüm her zaman açık
-    // 2. Bölüm için 1. tamamlanmalı, 3. için 2., 4. için 3., 5. için 4., 6. için 5.
+    if (index === 0) return true;
     const previousModuleId = this.moduleOrder[index - 1];
     return this.isModuleCompleted(previousModuleId);
   }
 
   public isModuleCompleted(moduleId: string): boolean {
-    const normalizedId = moduleId === 'serinhisar_bicakciligi' ? 'sanayilesme' : moduleId;
+    const normalizedId = normalizeModuleId(moduleId);
     return this.state.completedModuleIds.includes(normalizedId);
   }
 
   public unlockModule(moduleId: string): void {
-    const normalizedId = moduleId === 'serinhisar_bicakciligi' ? 'sanayilesme' : moduleId;
+    const normalizedId = normalizeModuleId(moduleId);
     if (!this.state.unlockedModuleIds.includes(normalizedId)) {
       this.state.unlockedModuleIds.push(normalizedId);
       this.persistAndNotify();
     }
   }
 
-  public startNewGame(rawName: string): { success: boolean; cleanedName: string; error?: string } {
+  public startNewGame(rawName: string, selectedGame?: GameGroupId): { success: boolean; cleanedName: string; error?: string } {
     const { isValid, cleanedName, error } = validateAndCleanFullName(rawName);
     if (!isValid) {
       return { success: false, cleanedName, error };
@@ -114,19 +194,25 @@ class GameStoreManager {
     this.resetSession();
     this.state.playerSession.fullName = cleanedName;
     this.state.playerSession.startedAt = new Date().toISOString();
+
+    if (selectedGame) {
+      this.selectGame(selectedGame);
+    }
+
     this.persistAndNotify();
     return { success: true, cleanedName };
   }
 
   public saveResult(moduleId: string, result: MissionResult): void {
-    if (!this.moduleOrder.includes(moduleId) || !this.isModuleUnlocked(moduleId)) return;
-    this.state.results[moduleId] = structuredClone(result);
-    this.completeModule(moduleId);
+    const normalizedId = normalizeModuleId(moduleId);
+    if (!this.moduleOrder.includes(normalizedId) || !this.isModuleUnlocked(normalizedId)) return;
+    this.state.results[normalizedId] = structuredClone(result);
+    this.completeModule(normalizedId);
     this.persistAndNotify();
   }
 
   public completeModule(moduleId: string): void {
-    const normalizedId = moduleId === 'serinhisar_bicakciligi' ? 'sanayilesme' : moduleId;
+    const normalizedId = normalizeModuleId(moduleId);
     if (!this.moduleOrder.includes(normalizedId) || !this.isModuleUnlocked(normalizedId)) return;
 
     let changed = false;
@@ -134,11 +220,21 @@ class GameStoreManager {
       this.state.completedModuleIds.push(normalizedId);
       changed = true;
 
-      const currentIndex = this.moduleOrder.indexOf(normalizedId);
-      if (currentIndex !== -1 && currentIndex + 1 < this.moduleOrder.length) {
-        const nextModuleId = this.moduleOrder[currentIndex + 1];
-        if (!this.state.unlockedModuleIds.includes(nextModuleId)) {
-          this.state.unlockedModuleIds.push(nextModuleId);
+      if (this.state.selectedGame) {
+        const group = GAME_GROUPS[this.state.selectedGame];
+        if (group && normalizedId === group.modules[0]) {
+          const nextModuleId = group.modules[1];
+          if (!this.state.unlockedModuleIds.includes(nextModuleId)) {
+            this.state.unlockedModuleIds.push(nextModuleId);
+          }
+        }
+      } else {
+        const currentIndex = this.moduleOrder.indexOf(normalizedId);
+        if (currentIndex !== -1 && currentIndex + 1 < this.moduleOrder.length) {
+          const nextModuleId = this.moduleOrder[currentIndex + 1];
+          if (!this.state.unlockedModuleIds.includes(nextModuleId)) {
+            this.state.unlockedModuleIds.push(nextModuleId);
+          }
         }
       }
     }
@@ -149,8 +245,8 @@ class GameStoreManager {
       changed = true;
     }
 
-    // Freeze completion timestamp once when all 6 modules are successfully completed
-    if (this.isAllModulesCompleted() && !this.state.playerSession.completedAt) {
+    // Freeze completion timestamp once when selected game is completed
+    if (this.isCurrentGameCompleted() && !this.state.playerSession.completedAt) {
       this.state.playerSession.completedAt = new Date().toISOString();
       changed = true;
     }
@@ -181,20 +277,27 @@ class GameStoreManager {
    * Reset game progress (retains session if any)
    */
   public resetProgress(): void {
-    this.state.unlockedModuleIds = ['gobeklitepe'];
+    if (this.state.selectedGame) {
+      const group = GAME_GROUPS[this.state.selectedGame];
+      this.state.unlockedModuleIds = [group.modules[0]];
+      this.state.currentModuleId = group.modules[0];
+    } else {
+      this.state.unlockedModuleIds = ['gobeklitepe'];
+      this.state.currentModuleId = 'gobeklitepe';
+    }
     this.state.completedModuleIds = [];
     this.state.results = {};
-    this.state.currentModuleId = 'gobeklitepe';
     this.state.playerSession.completedModules = [];
     this.state.playerSession.completedAt = null;
     this.persistAndNotify();
   }
 
   /**
-   * Full Kiosk Session Reset: clears player name, session, scores, and progress.
+   * Full Kiosk Session Reset: clears player name, selected game, session, scores, and progress.
    * Does NOT delete previously issued certificates from the backend.
    */
   public resetSession(): void {
+    this.state.selectedGame = null;
     this.state.unlockedModuleIds = ['gobeklitepe'];
     this.state.completedModuleIds = [];
     this.state.results = {};

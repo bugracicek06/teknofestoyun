@@ -2,7 +2,7 @@
 // Generates scannable QR pointing to ${PUBLIC_BASE_URL}/certificate/${certificateId}
 
 import QRCode from 'qrcode';
-import { getCertificatePublicUrl } from './certificate';
+import { getCertificatePublicUrl } from './certificate.ts';
 
 export interface QrGenerationResult {
   success: boolean;

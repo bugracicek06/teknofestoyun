@@ -2,6 +2,11 @@
 // Pamukkale University & TEKNOFEST Medeniyetten Millî Teknolojiye
 
 import type { MissionResult } from './scoring';
+import {
+  type GameGroupId,
+  GAME_GROUPS,
+  areGameModulesCompleted,
+} from '../../config/gameGroups.ts';
 
 export interface CertificateRecord {
   id?: string;
@@ -13,6 +18,7 @@ export interface CertificateRecord {
   completedModules: string[];
   projectName: string;
   results?: Record<string, MissionResult>;
+  selectedGame?: string;
 }
 
 export interface PlayerSession {
@@ -22,6 +28,7 @@ export interface PlayerSession {
   certificateId: string | null;
   certificateNumber: string | null;
   completedModules: string[];
+  selectedGame?: GameGroupId | null;
 }
 
 export type CertificateCreationStatus = 'idle' | 'creating' | 'created' | 'error';
@@ -52,6 +59,7 @@ export function createEmptyPlayerSession(): PlayerSession {
     certificateId: null,
     certificateNumber: null,
     completedModules: [],
+    selectedGame: null,
   };
 }
 
@@ -131,10 +139,15 @@ export function formatCertificateDate(isoDate: string): string {
 }
 
 /**
- * Validates that all 6 required modules are completed.
+ * Validates module completion.
+ * If selectedGame is specified, checks if the 2 modules for that game are completed.
+ * Otherwise checks if all 6 modules or any 2-module game group is completed.
  */
-export function areAllModulesCompleted(completedModuleIds: string[]): boolean {
+export function areAllModulesCompleted(completedModuleIds: string[], selectedGame?: GameGroupId | null): boolean {
   if (!Array.isArray(completedModuleIds)) return false;
+  if (selectedGame && GAME_GROUPS[selectedGame]) {
+    return areGameModulesCompleted(selectedGame, completedModuleIds);
+  }
   return REQUIRED_MODULE_IDS.every(id => completedModuleIds.includes(id));
 }
 
@@ -249,6 +262,7 @@ function normalizeCertificateEnvelope(data: any): CertificateRecord {
     completedAt: raw.completedAt || new Date().toISOString(),
     completedModules: Array.isArray(raw.completedModules) ? raw.completedModules : [],
     projectName: raw.projectName || 'Medeniyetten Millî Teknolojiye',
+    selectedGame: raw.selectedGame,
     results: raw.results || {},
   };
 }
@@ -347,6 +361,7 @@ export async function createCertificateAuthoritative(params: {
   fullName: string;
   completedAt?: string;
   completedModules?: string[];
+  selectedGame?: string;
   results?: Record<string, MissionResult>;
 }): Promise<CertificateRecord> {
   const repo = new ApiCertificateRepository();
@@ -357,6 +372,7 @@ export async function createCertificateAuthoritative(params: {
     participantName,
     completedAt: params.completedAt || new Date().toISOString(),
     completedModules: params.completedModules || [...REQUIRED_MODULE_IDS],
+    selectedGame: params.selectedGame,
     projectName: 'Medeniyetten Millî Teknolojiye',
     results: params.results || {},
   };

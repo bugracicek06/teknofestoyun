@@ -21,9 +21,19 @@ import {
   verifyCertificateOnServer,
 } from '../game/systems/certificate.ts';
 import { generateCertificateQr } from '../game/systems/qr';
+import {
+  type GameGroupId,
+  GAME_GROUPS,
+  GAME_GROUP_LIST,
+  getGameGroupByModuleId,
+  getModuleStepInGame,
+  isSecondModuleOfGame,
+  getNextModuleInGame,
+} from '../config/gameGroups';
 import hero from '../assets/landing_hero_bg.jpg';
 import homeHeroBg from '../assets/home/home-hero-background.png';
 import pau from '../assets/logos/pau_logo.png';
+import teknokent from '../assets/logos/teknokent_logo.png';
 import teknofest from '../assets/logos/teknofest_logo.png';
 import { MissionCard } from './MissionCard';
 import { MISSION_CARD_IMAGES } from '../data/cardImages';
@@ -69,6 +79,12 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
   // Player Name & Certificate States
   const [playerNameInput, setPlayerNameInput] = useState(state.playerSession.fullName || '');
   const [nameError, setNameError] = useState('');
+  const [landingStep, setLandingStep] = useState<'name' | 'select-game'>(
+    state.playerSession.fullName ? 'select-game' : 'name'
+  );
+  const [activeGameId, setActiveGameId] = useState<GameGroupId>(
+    state.selectedGame || 'game-1'
+  );
   const [creationStatus, setCreationStatus] = useState<CertificateCreationStatus>('idle');
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [qrTargetUrl, setQrTargetUrl] = useState<string | null>(null);
@@ -108,8 +124,11 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
   const isCurrentNarrating = narrationState.isPlaying && narrationState.currentId === current?.id;
   const introConfig = current ? getModuleIntroConfig(current.id) : undefined;
   const menu = sceneKey === SceneKeys.START || sceneKey === SceneKeys.WORLD_MAP;
-  const allComplete = GameStore.isAllModulesCompleted();
-  const next = GAME_MODULES.find(m => !state.completedModuleIds.includes(m.id));
+  const activeGameGroup = GameStore.getCurrentGameGroup() || (current ? getGameGroupByModuleId(current.id) : null);
+  const isGameComplete = GameStore.isCurrentGameCompleted();
+  const currentStepInGame = current ? getModuleStepInGame(current.id, activeGameGroup?.id) : 1;
+  const isCurrentModuleFinal = current ? isSecondModuleOfGame(current.id, activeGameGroup?.id) : false;
+  const nextModuleInGame = current ? getNextModuleInGame(current.id, activeGameGroup?.id) : null;
 
   const pause = (kind: Panel) => {
     stopNarration();
@@ -132,11 +151,24 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
     if (!game || transition.current) return;
 
     // Route / Scene Level Guard:
-    // If target is a module scene, verify that the module is actually unlocked!
     const targetModule = GAME_MODULES.find(m => m.sceneKey === key);
-    if (targetModule && !GameStore.isModuleUnlocked(targetModule.id)) {
-      console.warn(`[KioskShell] Access denied to locked module scene: ${targetModule.id}. Redirecting to World Map.`);
-      key = SceneKeys.WORLD_MAP;
+    if (targetModule) {
+      const selectedGame = GameStore.getSelectedGame();
+      if (!selectedGame) {
+        console.warn(`[KioskShell] No game selected. Redirecting to Start screen.`);
+        key = SceneKeys.START;
+      } else {
+        const group = GAME_GROUPS[selectedGame];
+        if (!group || !group.modules.includes(targetModule.id as any)) {
+          console.warn(`[KioskShell] Access denied to module ${targetModule.id} not in ${selectedGame}. Redirecting to game start.`);
+          const firstMod = GAME_MODULES.find(m => m.id === group.modules[0]);
+          key = firstMod ? firstMod.sceneKey : SceneKeys.START;
+        } else if (!GameStore.isModuleUnlocked(targetModule.id)) {
+          console.warn(`[KioskShell] Access denied to locked module ${targetModule.id}. Redirecting to first module.`);
+          const firstMod = GAME_MODULES.find(m => m.id === group.modules[0]);
+          key = firstMod ? firstMod.sceneKey : SceneKeys.START;
+        }
+      }
     }
 
     transition.current = true;
@@ -156,6 +188,8 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
       creatingLockRef.current = false;
       setCivilMission('forest_fire');
       setSpaceMission('mapping');
+      setLandingStep('name');
+      setActiveGameId('game-1');
     }
     setPanel(null);
     setShowFinalCelebrationScreen(false);
@@ -165,21 +199,43 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
     game.scene.start(key);
   };
 
-  const handleStartJourney = () => {
-    const res = GameStore.startNewGame(playerNameInput);
+  const handleContinueToGameSelection = () => {
+    const res = GameStore.setPlayerFullName(playerNameInput);
     if (!res.success) {
       setNameError(res.error || 'Lütfen adınızı ve soyadınızı girin.');
       return;
     }
-    setSelected('gobeklitepe');
+    setNameError('');
+    setLandingStep('select-game');
     SoundFx.playTelemetryBeep();
-    navigate(SceneKeys.WORLD_MAP);
+  };
+
+  const handleStartGame = (gameId: GameGroupId) => {
+    const currentName = (state.playerSession.fullName || playerNameInput).trim();
+    if (!currentName || currentName.length < 2) {
+      setLandingStep('name');
+      setNameError('Lütfen adınızı ve soyadınızı girin.');
+      return;
+    }
+
+    GameStore.setPlayerFullName(currentName);
+    GameStore.selectGame(gameId);
+    setActiveGameId(gameId);
+    setSelected(GAME_GROUPS[gameId].modules[0]);
+    SoundFx.playTelemetryBeep();
+
+    const group = GAME_GROUPS[gameId];
+    const firstModuleId = group.modules[0];
+    const firstMod = GAME_MODULES.find(m => m.id === firstModuleId);
+    if (firstMod) {
+      navigate(firstMod.sceneKey);
+    }
   };
 
   // Idempotent Certificate Creation & QR Generation
   const handleCreateOrFetchCertificate = useCallback(async (forceRetry = false) => {
     if (creatingLockRef.current) return;
-    if (!GameStore.isAllModulesCompleted()) return;
+    if (!GameStore.isCurrentGameCompleted()) return;
 
     const existingCertId = state.playerSession.certificateId || GameStore.getPlayerSession().certificateId;
 
@@ -222,13 +278,16 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
     try {
       const participantName = (state.playerSession.fullName || GameStore.getPlayerSession().fullName || '').trim() || 'Genç Kâşif';
       const completedAt = state.playerSession.completedAt || GameStore.getPlayerSession().completedAt || new Date().toISOString();
+      const currentGroup = GameStore.getCurrentGameGroup();
+      const completedModules = currentGroup ? [...currentGroup.modules] : [...GameStore.getState().completedModuleIds];
 
       // Authoritative remote creation & read-back verification:
       // Backend generates authoritative UUID, persists it, and verifyCertificateOnServer confirms GET 200
       const createdRecord = await createCertificateAuthoritative({
         fullName: participantName,
         completedAt,
-        completedModules: [...GameStore.getState().completedModuleIds],
+        completedModules,
+        selectedGame: currentGroup?.id,
         results: GameStore.getState().results,
       });
 
@@ -385,21 +444,21 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
   // Dialog management
   useEffect(() => {
     const isModuleIntro = panel === 'intro';
-    const isSharedComplete = panel === 'result' && (!allComplete || !showFinalCelebrationScreen);
+    const isSharedComplete = panel === 'result' && (!isGameComplete || !showFinalCelebrationScreen);
     if (panel && !isModuleIntro && !isSharedComplete && dialogRef.current && !dialogRef.current.open) {
       dialogRef.current.showModal();
     }
     if (!panel || isModuleIntro || isSharedComplete) {
       dialogRef.current?.close();
     }
-  }, [panel, allComplete, showFinalCelebrationScreen]);
+  }, [panel, isGameComplete, showFinalCelebrationScreen]);
 
-  // Automatically trigger certificate creation when all 6 modules are completed and final screen opens
+  // Automatically trigger certificate creation when 2/2 modules are completed and final screen opens
   useEffect(() => {
-    if (panel === 'result' && (allComplete || GameStore.isAllModulesCompleted()) && creationStatus === 'idle') {
+    if (panel === 'result' && GameStore.isCurrentGameCompleted() && creationStatus === 'idle') {
       handleCreateOrFetchCertificate();
     }
-  }, [panel, allComplete, creationStatus, handleCreateOrFetchCertificate]);
+  }, [panel, creationStatus, handleCreateOrFetchCertificate]);
 
   const toggleFullscreen = async () => {
     try {
@@ -439,101 +498,244 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
           )}
 
           {sceneKey === SceneKeys.START ? (
-            <section className="hero-copy">
-              <p className="eyebrow">KEŞFET · ÜRET · TASARLA</p>
-              <h1>
-                <span>Medeniyetten</span>
-                <em className="title-highlight">Millî Teknolojiye</em>
-              </h1>
-              <p>
-                Geçmişi keşfet, teknolojiyi deneyimle,<br />
-                geleceği kendi ellerinle tasarla.
-              </p>
+            landingStep === 'name' ? (
+              <section className="hero-copy">
+                <p className="eyebrow">KEŞFET · ÜRET · TASARLA</p>
+                <h1>
+                  <span>Medeniyetten</span>
+                  <em className="title-highlight">Millî Teknolojiye</em>
+                </h1>
+                <p>
+                  Geçmişi keşfet, teknolojiyi deneyimle,<br />
+                  geleceği kendi ellerinle tasarla.
+                </p>
 
-              {/* Player Name Input Card */}
-              <div className="start-player-card">
-                <label htmlFor="player-name-input" className="start-input-label">
-                  <span>KAŞİF ADI & SOYADI</span>
-                  <small>Başarı sertifikanız bu isimle oluşturulacaktır</small>
-                </label>
-                <div className="start-input-wrap">
-                  <input
-                    id="player-name-input"
-                    type="text"
-                    className="start-player-input"
-                    placeholder="Adınızı ve soyadınızı yazın..."
-                    value={playerNameInput}
-                    maxLength={50}
-                    autoComplete="off"
-                    onChange={e => {
-                      setPlayerNameInput(e.target.value);
-                      if (nameError) setNameError('');
-                    }}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') {
-                        handleStartJourney();
-                      }
-                    }}
-                  />
-                </div>
-                {nameError && (
-                  <p className="start-name-error" role="alert">
-                    {nameError}
-                  </p>
-                )}
-                <button
-                  type="button"
-                  className="primary start-cta-btn"
-                  onClick={handleStartJourney}
-                  aria-label="Yolculuğa Başla"
-                >
-                  <span>Yolculuğa Başla</span>
-                  <svg
-                    className="cta-arrow"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
+                {/* Player Name Input Card */}
+                <div className="start-player-card">
+                  <label htmlFor="player-name-input" className="start-input-label">
+                    <span>KAŞİF ADI & SOYADI</span>
+                    <small>Başarı sertifikanız bu isimle oluşturulacaktır</small>
+                  </label>
+                  <div className="start-input-wrap">
+                    <input
+                      id="player-name-input"
+                      type="text"
+                      className="start-player-input"
+                      placeholder="Adınızı ve soyadınızı yazın..."
+                      value={playerNameInput}
+                      maxLength={50}
+                      autoComplete="off"
+                      onChange={e => {
+                        setPlayerNameInput(e.target.value);
+                        if (nameError) setNameError('');
+                      }}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          handleContinueToGameSelection();
+                        }
+                      }}
+                    />
+                  </div>
+                  {nameError && (
+                    <p className="start-name-error" role="alert">
+                      {nameError}
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    className="primary start-cta-btn"
+                    onClick={handleContinueToGameSelection}
+                    aria-label="Oyununu Seç"
                   >
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                    <polyline points="12 5 19 12 12 19" />
-                  </svg>
-                </button>
-              </div>
+                    <span>OYUNUNU SEÇ</span>
+                    <svg
+                      className="cta-arrow"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                      <polyline points="12 5 19 12 12 19" />
+                    </svg>
+                  </button>
+                </div>
 
-              <div className="hero-meta-row" aria-label="Keşif Özeti">
-                <span className="hero-meta-item">
-                  <svg className="meta-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                    <circle cx="12" cy="10" r="3" />
-                  </svg>
-                  <span>6 durak</span>
-                </span>
-                <span className="meta-divider" aria-hidden="true" />
-                <span className="hero-meta-item">
-                  <svg className="meta-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <circle cx="12" cy="12" r="10" />
-                    <polyline points="12 6 12 12 16 14" />
-                  </svg>
-                  <span>4–6 dakikalık keşif</span>
-                </span>
-                <span className="meta-divider" aria-hidden="true" />
-                <span className="hero-meta-item">
-                  <svg className="meta-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                    <circle cx="9" cy="7" r="4" />
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                  </svg>
-                  <span>5–15 yaş</span>
-                </span>
-              </div>
-            </section>
+                <div className="hero-meta-row" aria-label="Keşif Özeti">
+                  <span className="hero-meta-item">
+                    <svg className="meta-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                    </svg>
+                    <span>3 Bağımsız Oyun</span>
+                  </span>
+                  <span className="meta-divider" aria-hidden="true" />
+                  <span className="hero-meta-item">
+                    <svg className="meta-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                    <span>2'şer Bölüm (3–5 dk)</span>
+                  </span>
+                  <span className="meta-divider" aria-hidden="true" />
+                  <span className="hero-meta-item">
+                    <svg className="meta-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
+                    <span>5–15 yaş</span>
+                  </span>
+                </div>
+              </section>
+            ) : (
+              /* Step 2: OYUNUNU SEÇ */
+              <section className="game-select-section" aria-label="Oyununu Seç">
+                <header className="brand-bar game-select-brand-bar">
+                  <img className="pau-logo" src={pau} alt="Pamukkale Üniversitesi" />
+                  <div className="brand-separator" aria-hidden="true" />
+                  <img className="teknokent-logo" src={teknokent} alt="Pamukkale Teknokent" />
+                  <div className="brand-separator" aria-hidden="true" />
+                  <img className="festival-logo" src={teknofest} alt="TEKNOFEST" />
+                  <div className="player-badge">
+                    <span>Kâşif:</span>
+                    <strong>{playerNameInput || state.playerSession.fullName}</strong>
+                    <button
+                      type="button"
+                      className="badge-edit-btn"
+                      onClick={() => setLandingStep('name')}
+                      title="Adı Değiştir"
+                      aria-label="Adı Değiştir"
+                    >
+                      ✎
+                    </button>
+                  </div>
+                </header>
+
+                <div className="game-select-header">
+                  <p className="eyebrow">TEKNOFEST 2026 ŞANLIURFA</p>
+                  <h1 className="game-select-main-title">OYUNUNU SEÇ</h1>
+                  <p className="game-select-subtitle">
+                    Oynamak istediğin 2 bölümlük keşif yolculuğunu seç ve başla.
+                  </p>
+                </div>
+
+                <div className="game-select-grid" role="region" aria-label="Oyun Seçenekleri">
+                  {GAME_GROUP_LIST.map((group) => {
+                    const isSelected = activeGameId === group.id;
+                    return (
+                      <div
+                        key={group.id}
+                        className={`game-select-card ${isSelected ? 'is-selected' : ''}`}
+                        data-game={group.id}
+                        onClick={() => {
+                          setActiveGameId(group.id);
+                          SoundFx.playTelemetryBeep();
+                        }}
+                        onDoubleClick={() => handleStartGame(group.id)}
+                        role="button"
+                        tabIndex={0}
+                        aria-pressed={isSelected}
+                        aria-label={`${group.badge}: ${group.title}`}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleStartGame(group.id);
+                          }
+                        }}
+                      >
+                        <div className="game-card-header">
+                          <span className="game-card-badge">{group.badge}</span>
+                          <span className="game-card-tag">{group.tagline}</span>
+                        </div>
+
+                        <div className="game-card-icon-wrap" aria-hidden="true">
+                          <span className="game-card-icon">{group.icon}</span>
+                        </div>
+
+                        <h2 className="game-card-title">{group.title}</h2>
+
+                        <div className="game-card-modules-box">
+                          <div className="game-card-module-row">
+                            <span className="mod-number-dot">1</span>
+                            <div className="mod-text-group">
+                              <strong className="mod-title">{group.moduleNames[0]}</strong>
+                              <span className="mod-sub">{group.moduleSubtitles[0]}</span>
+                            </div>
+                          </div>
+
+                          <div className="game-card-plus-separator" aria-hidden="true">+</div>
+
+                          <div className="game-card-module-row">
+                            <span className="mod-number-dot">2</span>
+                            <div className="mod-text-group">
+                              <strong className="mod-title">{group.moduleNames[1]}</strong>
+                              <span className="mod-sub">{group.moduleSubtitles[1]}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="game-card-cta-wrap">
+                          <button
+                            type="button"
+                            className={`game-card-btn ${isSelected ? 'is-active' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStartGame(group.id);
+                            }}
+                          >
+                            <span>{isSelected ? 'BAŞLA' : 'SEÇ'}</span>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <line x1="5" y1="12" x2="19" y2="12" />
+                              <polyline points="12 5 19 12 12 19" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <footer className="game-select-bottom-bar">
+                  <button
+                    type="button"
+                    className="action-btn-back-step"
+                    onClick={() => setLandingStep('name')}
+                    title="İsmi Değiştir"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="19" y1="12" x2="5" y2="12" />
+                      <polyline points="12 19 5 12 12 5" />
+                    </svg>
+                    <span>İsmi Değiştir</span>
+                  </button>
+
+                  <div className="game-select-summary-pill">
+                    <span className="summary-label">Seçilen Macera:</span>
+                    <strong className="summary-title">{GAME_GROUPS[activeGameId].title}</strong>
+                    <span className="summary-tag">({GAME_GROUPS[activeGameId].tagline})</span>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="primary start-main-btn"
+                    onClick={() => handleStartGame(activeGameId)}
+                    aria-label={`${GAME_GROUPS[activeGameId].title} Macerasına Başla`}
+                  >
+                    <span>BAŞLA</span>
+                    <svg className="cta-arrow" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                      <polyline points="12 5 19 12 12 19" />
+                    </svg>
+                  </button>
+                </footer>
+              </section>
+            )
           ) : (
             <section className="journey">
               <div className="journey-header-wrap">
@@ -752,7 +954,7 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
           isAudioMuted={state.isAudioMuted}
           fullscreen={fullscreen}
           onHome={() => navigate(SceneKeys.START, false)}
-          onBack={() => navigate(SceneKeys.WORLD_MAP)}
+          onBack={() => navigate(SceneKeys.START, false)}
           onToggleAudio={() => {
             GameStore.toggleAudioMuted();
             stopNarration();
@@ -768,7 +970,7 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
           isAudioMuted={state.isAudioMuted}
           fullscreen={fullscreen}
           onHome={() => navigate(SceneKeys.START, false)}
-          onBack={() => navigate(SceneKeys.WORLD_MAP)}
+          onBack={() => navigate(SceneKeys.START, false)}
           onToggleAudio={() => {
             GameStore.toggleAudioMuted();
             stopNarration();
@@ -784,7 +986,7 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
           isAudioMuted={state.isAudioMuted}
           fullscreen={fullscreen}
           onHome={() => navigate(SceneKeys.START, false)}
-          onBack={() => navigate(SceneKeys.WORLD_MAP)}
+          onBack={() => navigate(SceneKeys.START, false)}
           onToggleAudio={() => {
             GameStore.toggleAudioMuted();
             stopNarration();
@@ -801,7 +1003,7 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
           isAudioMuted={state.isAudioMuted}
           fullscreen={fullscreen}
           onHome={() => navigate(SceneKeys.START, false)}
-          onBack={() => navigate(SceneKeys.WORLD_MAP)}
+          onBack={() => navigate(SceneKeys.START, false)}
           onToggleAudio={() => {
             GameStore.toggleAudioMuted();
             stopNarration();
@@ -836,7 +1038,7 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
           assistantMessage={demirCagiAssistantMessage || 'Kızıl demir cevheri ve meşe kömürünü ocağa sürükle.'}
           isAudioMuted={state.isAudioMuted}
           fullscreen={fullscreen}
-          onBack={() => navigate(SceneKeys.WORLD_MAP)}
+          onBack={() => navigate(SceneKeys.START, false)}
           onToggleAudio={() => {
             GameStore.toggleAudioMuted();
             stopNarration();
@@ -907,12 +1109,13 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
       )}
 
       {/* =========================================================================
-          STANDARDIZED MISSION COMPLETE MODAL (ALL 6 MODULES)
+          STANDARDIZED MISSION COMPLETE MODAL (2-MODULE GROUP PROGRESSION)
           ========================================================================= */}
-      {panel === 'result' && result && (!allComplete || !showFinalCelebrationScreen) && (
+      {panel === 'result' && result && (!isGameComplete || !showFinalCelebrationScreen) && (
         <MissionCompleteModal
           isOpen={true}
-          moduleNumber={moduleIndex + 1}
+          moduleNumber={currentStepInGame}
+          stepInGame={currentStepInGame}
           moduleTitle={current ? current.title.split('–')[0].trim() : 'BÖLÜM'}
           moduleSubtitle={current && current.title.includes('–') ? current.title.split('–')[1].trim() : ''}
           score={result.finalScore}
@@ -920,19 +1123,23 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
           mistakesCount={result.errorCount}
           starsCount={result.starCount}
           accentKey={current?.id as any}
-          isFinalModule={allComplete}
-          nextModuleTitle={next?.title ? next.title.split('–')[0].trim() : undefined}
+          isFinalModule={isCurrentModuleFinal}
+          nextModuleTitle={nextModuleInGame ? GAME_MODULES.find(m => m.id === nextModuleInGame)?.title.split('–')[0].trim() : undefined}
           onMapClick={() => {
             setPanel(null);
-            navigate(SceneKeys.WORLD_MAP);
+            navigate(SceneKeys.START, false);
           }}
           onNextClick={() => {
-            if (allComplete) {
+            if (isCurrentModuleFinal) {
               setShowFinalCelebrationScreen(true);
               handleCreateOrFetchCertificate();
-            } else if (next) {
+            } else if (nextModuleInGame) {
               setPanel(null);
-              navigate(next.sceneKey);
+              GameStore.unlockModule(nextModuleInGame);
+              const nextModObj = GAME_MODULES.find(m => m.id === nextModuleInGame);
+              if (nextModObj) {
+                navigate(nextModObj.sceneKey);
+              }
             }
           }}
         />
@@ -941,7 +1148,7 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
       {/* Main Kiosk Dialog */}
       <dialog
         ref={dialogRef}
-        className={`kiosk-dialog ${allComplete && panel === 'result' ? 'kiosk-dialog-final' : ''}`}
+        className={`kiosk-dialog ${isGameComplete && panel === 'result' ? 'kiosk-dialog-final' : ''}`}
         aria-label="Oyun bilgisi"
         onCancel={e => {
           e.preventDefault();
@@ -950,7 +1157,7 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
         }}
       >
         {panel === 'result' && result ? (
-          allComplete && showFinalCelebrationScreen ? (
+          isGameComplete && showFinalCelebrationScreen ? (
             <div className="final-celebration-container">
               {/* Başlık: 🏆 MACERA BAŞARIYLA TAMAMLANDI */}
               <h2 className="final-title">
@@ -969,13 +1176,13 @@ export function KioskShell({ game }: { game: Phaser.Game | null }) {
 
               {/* Metin */}
               <p className="final-description-text">
-                Medeniyetten Millî Teknolojiye yolculuğundaki 6 bölümün tamamını başarıyla tamamladın.
+                {activeGameGroup?.completionText || 'Medeniyetten Millî Teknolojiye yolculuğundaki 2 bölümü başarıyla tamamladın.'}
               </p>
 
-              {/* 6 / 6 BÖLÜM TAMAMLANDI */}
+              {/* 2 / 2 BÖLÜM TAMAMLANDI */}
               <div className="final-status-pill">
                 <span className="final-status-dot" aria-hidden="true" />
-                <span>6 / 6 BÖLÜM TAMAMLANDI</span>
+                <span>2 / 2 BÖLÜM TAMAMLANDI</span>
               </div>
 
               {/* Büyük ve rahat okutulabilir QR kod alanı */}

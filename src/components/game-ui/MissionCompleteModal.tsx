@@ -14,6 +14,7 @@ export interface MissionCompleteModalProps {
   nextModuleTitle?: string;
   isFinalModule?: boolean;
   accentKey?: 'gobeklitepe' | 'demir_cagi' | 'anadolu_ustaligi' | 'sanayilesme' | 'milli_teknoloji' | 'uzay_teknolojileri';
+  stepInGame?: number;
   onMapClick: () => void;
   onNextClick: () => void;
 }
@@ -31,6 +32,7 @@ export const MissionCompleteModal: React.FC<MissionCompleteModalProps> = ({
   nextModuleTitle,
   isFinalModule = false,
   accentKey,
+  stepInGame,
   onMapClick,
   onNextClick,
 }) => {
@@ -39,6 +41,8 @@ export const MissionCompleteModal: React.FC<MissionCompleteModalProps> = ({
   if (!isOpen) {
     return null;
   }
+
+  const displayStep = stepInGame ?? (((moduleNumber - 1) % 2) + 1);
 
   // Next module titles fallback map
   const defaultNextTitles: Record<number, string> = {
@@ -65,7 +69,7 @@ export const MissionCompleteModal: React.FC<MissionCompleteModalProps> = ({
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <polyline points="20 6 9 17 4 12" />
           </svg>
-          <span>Bölüm {moduleNumber} Tamamlandı</span>
+          <span>Bölüm {displayStep} / 2 Tamamlandı</span>
         </div>
 
         {/* Titles */}
@@ -131,9 +135,9 @@ export const MissionCompleteModal: React.FC<MissionCompleteModalProps> = ({
             type="button"
             className="complete-btn-secondary"
             onClick={onMapClick}
-            aria-label="Bölüm Haritasına Dön"
+            aria-label="Ana Menüye Dön"
           >
-            Bölüm Haritası
+            Ana Menü
           </button>
 
           {isFinalModule ? (
